@@ -13,7 +13,7 @@ public class Communicator {
     BufferedReader reader;
     OutputStream os;
 
-    public Communicator(String ip, int port) throws UnknownHostException, IOException {
+    public init(String ip, int port) throws UnknownHostException, IOException {
         socket = new Socket(ip, port);
         reader = new BufferedReader(new InputStreamReader(socket.getInputStream(),  StandardCharsets.UTF_8));
         os = socket.getOutputStream();
