@@ -1,4 +1,4 @@
-package main.java.com.theknife.app;
+package com.theknife.app;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -6,15 +6,15 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.sql.SQLException;
 
 public class ClientThread extends Thread {
-    Socket socket;
-    String ip;
-    BufferedReader reader;
-    OutputStream os;
+    private String ip;
+    private BufferedReader reader;
+    private OutputStream os;
+    private int user_id = -1;
 
     public ClientThread(Socket socket) throws IOException {
-        this.socket = socket;
         ip = socket.getInetAddress().toString();
         reader = new BufferedReader(new InputStreamReader(socket.getInputStream(),  StandardCharsets.UTF_8));
         os = socket.getOutputStream();
@@ -24,7 +24,7 @@ public class ClientThread extends Thread {
     public void run() {
         try {
             exec();
-        } catch(InterruptedException | IOException e) {
+        } catch(InterruptedException | IOException | SQLException e) {
             if(e.getMessage().equals("Connection reset"))
                 log("Disconnected");
             else
@@ -44,7 +44,7 @@ public class ClientThread extends Thread {
         os.write((msg + '\n').getBytes(StandardCharsets.UTF_8));
     }
 
-    private void exec() throws InterruptedException, IOException {
+    private void exec() throws InterruptedException, IOException, SQLException {
         log("Connected");
 
         String cmd = readStream();
@@ -54,6 +54,39 @@ public class ClientThread extends Thread {
                 case "ping":
                     sendStream("pong");
                     break;
+                case "register":
+                    String nome = readStream();
+                    String cognome = readStream();
+                    String username = readStream();
+                    String password = readStream();
+                    String data_nascita = readStream();
+                    boolean is_ristoratore = readStream().equals("y");
+
+                    sendStream(User.registerUser(nome, cognome, username, password, data_nascita, is_ristoratore));
+                    break;
+                case "login":
+                    username = readStream();
+                    password = readStream();
+
+                    int logged_user_id = User.loginUser(username, password);
+                    if(logged_user_id > 0) {
+                        sendStream("ok");
+                        user_id = logged_user_id;
+                    }
+                    else if(logged_user_id == -1) //no user was found with given username
+                        sendStream("username");
+                    else if(logged_user_id == -2) //password mismatch
+                        sendStream("password");
+                    break;
+                case "getUserInfo":
+                    if(user_id < 1)
+                        sendStream("unauthorized");
+                    else {
+                        String[] user_info = DBHandler.getUserInfo(user_id);
+                        sendStream(user_info[0]);
+                        sendStream(user_info[1]);
+                        sendStream(user_info[2]);
+                    }
                 default:
                     sendStream("Unknown command");
                     break;

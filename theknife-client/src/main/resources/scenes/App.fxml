@@ -5,11 +5,12 @@
 <?import javafx.scene.layout.AnchorPane?>
 
 <AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/19" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.theknife.app.controllers.AppController">
+
    <children>
       <Button layoutX="241.0" layoutY="175.0" mnemonicParsing="false" text="Visualizza ristoranti" />
       <Button fx:id="register_btn" layoutX="267.0" layoutY="210.0" mnemonicParsing="false" onAction="#click_register" text="Registrati" />
       <Button fx:id="login_btn" layoutX="277.0" layoutY="245.0" mnemonicParsing="false" onAction="#click_login" text="Login" />
-      <Button fx:id="logout_btn" layoutX="14.0" layoutY="30.0" mnemonicParsing="false" onAction="#logout" text="Logout" visible="false" />
+      <Button fx:id="logout_btn" layoutX="14.0" layoutY="30.0" mnemonicParsing="false" text="Logout" visible="false" />
       <Label fx:id="user_info_label" layoutX="14.0" layoutY="14.0" text="Utente ospite" />
       <Label fx:id="notification_label" layoutX="36.0" layoutY="350.0" text="empty" visible="false" />
    </children>
