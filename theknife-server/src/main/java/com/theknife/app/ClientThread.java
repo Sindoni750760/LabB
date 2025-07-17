@@ -87,6 +87,10 @@ public class ClientThread extends Thread {
                         sendStream(user_info[1]);
                         sendStream(user_info[2]);
                     }
+                case "logout":
+                    user_id = -1;
+                    sendStream("ok");
+                    break;
                 default:
                     sendStream("Unknown command");
                     break;

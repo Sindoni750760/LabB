@@ -1,18 +1,33 @@
 package com.theknife.app;
 
+import java.io.IOException;
+
 public class User {
     private static String name, surname;
     private static boolean logged_in = false, is_restaurateur;
 
-    public static void login(String _name, String _surname, boolean _is_restaurateur) {
-        name = _name;
-        surname = _surname;
-        is_restaurateur = _is_restaurateur;
-        logged_in = true;
+    public static String login(String username, String password) throws IOException {        
+        Communicator.sendStream("login");
+        Communicator.sendStream(username);
+        Communicator.sendStream(password);
+
+        String response = Communicator.readStream();
+
+        if(response.equals("ok")) {
+            Communicator.sendStream("getUserInfo");
+            name = Communicator.readStream();
+            surname = Communicator.readStream();
+            is_restaurateur = Communicator.readStream().equals("y");
+            logged_in = true;
+        }
+
+        return response;
     }
 
-    public static void logout() {
-        logged_in = false;
+    public static void logout() throws IOException {
+        Communicator.sendStream("logout");
+        if(Communicator.readStream().equals("ok"))
+            logged_in = false;
     }
 
     public static String[] getInfo() {
