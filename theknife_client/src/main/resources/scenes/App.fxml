@@ -12,5 +12,6 @@
       <Button fx:id="logout_btn" layoutX="14.0" layoutY="30.0" mnemonicParsing="false" onAction="#logout" text="Logout" visible="false" />
       <Label fx:id="user_info_label" layoutX="14.0" layoutY="14.0" text="Utente ospite" />
       <Label fx:id="notification_label" layoutX="36.0" layoutY="350.0" text="empty" visible="false" />
+      <Button fx:id="reconnect_btn" layoutX="24.0" layoutY="315.0" mnemonicParsing="false" onAction="#reconnect" text="Riconnetti" visible="false" />
    </children>
 </AnchorPane>
