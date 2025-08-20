@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.layout.AnchorPane?>
+
+
+<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/19" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.theknife.app.controllers.WriteReview">
+   <children>
+      <Button layoutX="14.0" layoutY="14.0" mnemonicParsing="false" onAction="#goBack" text="Indietro" />
+      <TextArea fx:id="text_area" layoutX="50.0" layoutY="100.0" onKeyTyped="#checkTextBox" prefHeight="200.0" prefWidth="500.0" />
+      <Button fx:id="stars_1_btn" layoutX="50.0" layoutY="60.0" mnemonicParsing="false" onAction="#setStar1" text="1" />
+      <Button fx:id="stars_2_btn" layoutX="73.0" layoutY="60.0" mnemonicParsing="false" onAction="#setStar2" text="2" />
+      <Button fx:id="stars_3_btn" layoutX="96.0" layoutY="60.0" mnemonicParsing="false" onAction="#setStar3" text="3" />
+      <Button fx:id="stars_4_btn" layoutX="119.0" layoutY="60.0" mnemonicParsing="false" onAction="#setStar4" text="4" />
+      <Button fx:id="stars_5_btn" layoutX="142.0" layoutY="60.0" mnemonicParsing="false" onAction="#setStar5" text="5" />
+      <Label fx:id="stars_label" layoutX="175.0" layoutY="64.0" text="- stelle" />
+      <Label fx:id="max_chars_label" layoutX="48.0" layoutY="300.0" text="0/255" />
+      <Button fx:id="publish_btn" layoutX="47.0" layoutY="330.0" mnemonicParsing="false" onAction="#publish" text="Pubblica" />
+      <Button fx:id="delete_btn" layoutX="116.0" layoutY="330.0" mnemonicParsing="false" onAction="#delete" text="Elimina" visible="false" />
+      <Label fx:id="notification_label" layoutX="48.0" layoutY="365.0" text="empty" textFill="RED" visible="false" />
+   </children>
+</AnchorPane>
