@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.text.Font?>
+
+<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/19" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.theknife.app.controllers.ViewRestaurantInfo">
+   <children>
+      <Button layoutX="14.0" layoutY="14.0" mnemonicParsing="false" onAction="#goBack" text="Indietro" />
+      <Label fx:id="name_label" layoutX="29.0" layoutY="39.0" text="name">
+         <font>
+            <Font size="24.0" />
+         </font>
+      </Label>
+      <Label layoutX="29.0" layoutY="100.0" text="Dove si trova?" underline="true" />
+      <Label fx:id="reviews_label" layoutX="305.0" layoutY="247.0" text="reviews" />
+      <Label fx:id="city_label" layoutX="35.0" layoutY="134.0" text="city" />
+      <Label fx:id="address_label" layoutX="35.0" layoutY="151.0" text="address" />
+      <Label layoutX="29.0" layoutY="180.0" text="Coordinate" underline="true" />
+      <Label fx:id="coordinates_label" layoutX="35.0" layoutY="200.0" text="coordinates" />
+      <Label layoutX="29.0" layoutY="230.0" text="Prezzo medio per persona" underline="true" />
+      <Label fx:id="price_label" layoutX="35.0" layoutY="247.0" text="price" />
+      <Label layoutX="300.0" layoutY="230.0" text="Numero di recensioni" underline="true" />
+      <Label layoutX="300.0" layoutY="275.0" text="Stelle medie" underline="true" />
+      <Label fx:id="stars_label" layoutX="305.0" layoutY="292.0" text="stars" />
+      <Label layoutX="29.0" layoutY="275.0" text="Servizi disponibili" underline="true" />
+      <Label fx:id="services_label" layoutX="35.0" layoutY="292.0" text="services" />
+      <Label fx:id="nation_label" layoutX="35.0" layoutY="117.0" text="nation" />
+      <Button layoutX="26.0" layoutY="320.0" mnemonicParsing="false" onAction="#viewReviews" text="Vedi recensioni" />
+      <Button fx:id="fav_btn" layoutX="133.0" layoutY="320.0" mnemonicParsing="false" onAction="#addToFavourites" text="Aggiungi ai preferiti" />
+      <Label layoutX="300.0" layoutY="100.0" text="Tipo di cucina" underline="true" />
+      <Label fx:id="categories_label" layoutX="305.0" layoutY="117.0" prefWidth="250.0" text="categories" wrapText="true" />
+   </children>
+</AnchorPane>
