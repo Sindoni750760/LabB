@@ -1,12 +1,14 @@
 package com.theknife.app.controllers;
 
 import java.io.IOException;
+import java.time.LocalDate;
 
 import com.theknife.app.Communicator;
 import com.theknife.app.SceneManager;
 
 import javafx.fxml.FXML;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.DateCell;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
@@ -23,6 +25,16 @@ public class RegisterController {
     private CheckBox is_restaurateur;
     @FXML
     private Label notification_label;
+
+    @FXML
+    private void initialize() {
+        birth_date.setDayCellFactory(d ->
+           new DateCell() {
+               @Override public void updateItem(LocalDate item, boolean empty) {
+                   super.updateItem(item, empty);
+                   setDisable(item.isAfter(LocalDate.now()));
+               }});
+    }
 
     @FXML
     private void goBack() throws IOException {
