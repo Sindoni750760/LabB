@@ -3,8 +3,6 @@ package com.theknife.app;
 import java.sql.SQLException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.time.LocalDate;
-
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 public class User {

@@ -143,7 +143,7 @@ public class DBHandler {
         statement.setBoolean(8, has_delivery);
         statement.setBoolean(9, has_online);
         statement.setInt(10, user_id);
-        
+
         try {
             statement.executeUpdate();
         } catch(SQLException e) {
@@ -218,7 +218,12 @@ public class DBHandler {
 
         return null;
     }
-
+    /**
+     * @param user_id
+     * @param restaurant_id
+     * @return
+     * @throws SQLException
+     */
     public static boolean hasAccess(int user_id, int restaurant_id) throws SQLException {
         String sql = "SELECT 1 FROM \"RistorantiTheKnife\" r JOIN utenti u ON proprietario = u.id WHERE r.id = ? AND u.id = ?";
 
@@ -247,7 +252,7 @@ public class DBHandler {
         statement.setBoolean(8, has_delivery);
         statement.setBoolean(9, has_online);
         statement.setInt(10, restaurant_id);
-        
+
         try {
             statement.executeUpdate();
         } catch(SQLException e) {
@@ -275,5 +280,113 @@ public class DBHandler {
         }
 
         return true;
+    }
+
+    private static void setParameters(PreparedStatement statement, List<String> parameters, List<String> parameters_types) throws NumberFormatException, SQLException {
+        for(int i = 0; i < parameters.size(); i++) {
+            switch(parameters_types.get(i)) {
+                case "double":
+                    statement.setDouble(i + 1, Double.parseDouble(parameters.get(i)));
+                    break;
+                case "int":
+                    statement.setInt(i + 1, Integer.parseInt(parameters.get(i)));
+                    break;
+            }
+        }
+    }
+
+    public static String[][] getRestaurantsWithFilter(int page, double latitude, double longitude, double range_km, int price_min, int price_max, boolean has_delivery, boolean has_online, double stars_min, double stars_max, int favourite_id) throws SQLException {
+        int offset = page * 10;
+        String sql = " FROM \"RistorantiTheKnife\"";
+        List<String> parameters = new LinkedList<String>();
+        List<String> parameters_types = new LinkedList<String>();
+
+        if(favourite_id > 0) {
+            sql += " JOIN preferiti p ON id = id_ristorante WHERE id_utente = ?";
+            parameters.add(Integer.toString(favourite_id));
+            parameters_types.add("int");
+        } else
+            sql += " WHERE 1 = 1";
+
+        if(latitude >= 0) {
+            //converting km to degrees
+            range_km /= 111;
+
+            sql += " AND SQRT((latitudine - ?)*(latitudine - ?) + (longitudine - ?)*(longitudine - ?)) < ?";
+            parameters.add(Double.toString(latitude));
+            parameters.add(Double.toString(latitude));
+            parameters.add(Double.toString(longitude));
+            parameters.add(Double.toString(longitude));
+            parameters.add(Double.toString(range_km));
+
+            parameters_types.add("double");
+            parameters_types.add("double");
+            parameters_types.add("double");
+            parameters_types.add("double");
+            parameters_types.add("double");
+        }
+
+        if(price_min >= 0) {
+            sql += " AND fascia_prezzo >= ?";
+            parameters.add(Integer.toString(price_min));
+            parameters_types.add("int");
+        }
+
+        if(price_max >= 0) {
+            sql += " AND fascia_prezzo <= ?";
+            parameters.add(Integer.toString(price_max));
+            parameters_types.add("int");
+        }
+
+        if(has_delivery)
+            sql += " AND servizio_delivery = true";
+        
+        if(has_online)
+            sql += " AND prenotazione_online = true";
+        
+        /*if(stars_min >= 0) {
+            sql += " AND fascia_prezzo >= ?";
+            parameters.add(Integer.toString(stars_min));
+            parameters_types.add("int");
+        }
+
+        if(stars_max >= 0) {
+            sql += " AND fascia_prezzo <= ?";
+            parameters.add(Integer.toString(stars_max));
+            parameters_types.add("int");
+        }*/
+
+        //to obtain the number of pages
+        String sql_unlimited = "SELECT COUNT(*) AS num" + sql;
+
+        PreparedStatement statement = connection.prepareStatement(sql_unlimited);
+        setParameters(statement, parameters, parameters_types);
+
+        ResultSet result = statement.executeQuery();
+        result.next();
+        int results = result.getInt("num");
+        int pages = results > 0 ? (results - 1) / 10 + 1 : 0;
+
+        sql += " LIMIT 10 OFFSET ?";
+        parameters.add(Integer.toString(offset));
+        parameters_types.add("int");
+
+        statement = connection.prepareStatement("SELECT id, nome" + sql);
+
+        setParameters(statement, parameters, parameters_types);
+
+        result = statement.executeQuery();
+        List<String[]> restaurants = new LinkedList<String[]>();
+        restaurants.add(new String[]{"", ""});
+
+        while(result.next()) {
+            String id = result.getString("id");
+            String nome = result.getString("nome");
+            restaurants.add(new String[]{id, nome});
+        }
+
+        restaurants.set(0, new String[]{Integer.toString(pages), Integer.toString(restaurants.size() - 1)});
+        
+        return restaurants.toArray(new String[][]{});
     }
 }

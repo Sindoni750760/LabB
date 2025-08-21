@@ -2,7 +2,6 @@ package com.theknife.app.controllers;
 
 import java.io.IOException;
 
-import com.theknife.app.Communicator;
 import com.theknife.app.SceneManager;
 import com.theknife.app.User;
 
@@ -17,7 +16,7 @@ public class AppController {
     private Button register_btn, login_btn, logout_btn;
 
     @FXML
-    private void initialize() {
+    private void initialize() throws IOException {
         //loads the App message
         String[] app_message = SceneManager.getAppMessage();
         if(app_message != null) {
@@ -35,6 +34,11 @@ public class AppController {
             login_btn.setVisible(false);
             logout_btn.setVisible(true);
         }
+    }
+
+    @FXML
+    private void click_view_restaurants() throws IOException {
+        SceneManager.changeScene("ViewRestaurants");
     }
 
     @FXML
