@@ -4,8 +4,8 @@ import java.io.IOException;
 
 public class EditingRestaurant {
     //editing parameters
-    private static int editing_id = -1, review_id = -1;
-    private static String name, nation, city, address, latitude, longitude, avg_price, has_delivery, has_online, avg_stars, n_reviews, categories;
+    private static int editing_id = -1;
+    private static String name, nation, city, address, latitude, longitude, avg_price, has_delivery, has_online, avg_stars, n_reviews;
 
     public static void setEditing(int id) throws IOException {
         editing_id = id;
@@ -19,7 +19,6 @@ public class EditingRestaurant {
         latitude = Communicator.readStream();
         longitude = Communicator.readStream();
         avg_price = Communicator.readStream();
-        categories = Communicator.readStream();
         has_delivery = Communicator.readStream();
         has_online = Communicator.readStream();
         avg_stars = Communicator.readStream();
@@ -28,7 +27,6 @@ public class EditingRestaurant {
 
     public static void reset() {
         editing_id = -1;
-        review_id = -1;
     }
 
     public static int getId() {
@@ -36,10 +34,10 @@ public class EditingRestaurant {
     }
 
     public static String[] getInfo() {
-        return new String[]{name, nation, city, address, latitude, longitude, avg_price, has_delivery, has_online, avg_stars, n_reviews, categories};
+        return new String[]{name, nation, city, address, latitude, longitude, avg_price, has_delivery, has_online, avg_stars, n_reviews};
     }
 
-    public static String addRestaurant(String name, String nation, String city, String address, String latitude, String longitude, String avg_price, String categories, boolean has_delivery, boolean has_online) throws IOException {
+    public static String addRestaurant(String name, String nation, String city, String address, String latitude, String longitude, String avg_price, boolean has_delivery, boolean has_online) throws IOException {
         Communicator.sendStream("addRestaurant");
         Communicator.sendStream(name);
         Communicator.sendStream(nation);
@@ -48,14 +46,13 @@ public class EditingRestaurant {
         Communicator.sendStream(latitude);
         Communicator.sendStream(longitude);
         Communicator.sendStream(avg_price);
-        Communicator.sendStream(categories);
         Communicator.sendStream(has_delivery ? "y" : "n");
         Communicator.sendStream(has_online ? "y" : "n");
 
         return Communicator.readStream();
     }
 
-    public static String editRestaurant(int id, String name, String nation, String city, String address, String latitude, String longitude, String avg_price, String categories, boolean has_delivery, boolean has_online) throws IOException {
+    public static String editRestaurant(int id, String name, String nation, String city, String address, String latitude, String longitude, String avg_price, boolean has_delivery, boolean has_online) throws IOException {
         Communicator.sendStream("editRestaurant");
         Communicator.sendStream(Integer.toString(id));
         Communicator.sendStream(name);
@@ -65,18 +62,9 @@ public class EditingRestaurant {
         Communicator.sendStream(latitude);
         Communicator.sendStream(longitude);
         Communicator.sendStream(avg_price);
-        Communicator.sendStream(categories);
         Communicator.sendStream(has_delivery ? "y" : "n");
         Communicator.sendStream(has_online ? "y" : "n");
 
         return Communicator.readStream();
-    }
-
-    public static void setReviewId(int id) {
-        review_id = id;
-    }
-
-    public static int getReviewId() {
-        return review_id;
     }
 }

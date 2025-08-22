@@ -1,3 +1,4 @@
+//https://www.tembo.io/docs/getting-started/postgres_guides/connecting-to-postgres-with-java
 package com.theknife.app;
 
 import java.io.IOException;
@@ -213,17 +214,24 @@ public class DBHandler {
             String has_delivery = result.getBoolean("servizio_delivery") ? "y" : "n";
             String has_online = result.getBoolean("prenotazione_online") ? "y" : "n";
 
-            return new String[]{name, nation, city, address, latitude, longitude, avg_price, has_delivery, has_online};
+            //getting average stars and number of reviews
+            sql = "SELECT ROUND(AVG(stelle), 1) AS stars_avg, COUNT(*) AS n_reviews from recensioni WHERE id_ristorante = ? GROUP BY id_ristorante";
+            statement = connection.prepareStatement(sql);
+            statement.setInt(1, id);
+            result = statement.executeQuery();
+            
+            String avg_stars = "0", n_reviews = "0";
+            if(result.next()) {
+                avg_stars = result.getString("stars_avg");
+                n_reviews = result.getString("n_reviews");
+            }
+
+            return new String[]{name, nation, city, address, latitude, longitude, avg_price, has_delivery, has_online, avg_stars, n_reviews};
         }
 
         return null;
     }
-    /**
-     * @param user_id
-     * @param restaurant_id
-     * @return
-     * @throws SQLException
-     */
+
     public static boolean hasAccess(int user_id, int restaurant_id) throws SQLException {
         String sql = "SELECT 1 FROM \"RistorantiTheKnife\" r JOIN utenti u ON proprietario = u.id WHERE r.id = ? AND u.id = ?";
 
@@ -340,10 +348,10 @@ public class DBHandler {
 
         if(has_delivery)
             sql += " AND servizio_delivery = true";
-        
+
         if(has_online)
             sql += " AND prenotazione_online = true";
-        
+
         /*if(stars_min >= 0) {
             sql += " AND fascia_prezzo >= ?";
             parameters.add(Integer.toString(stars_min));
@@ -386,7 +394,7 @@ public class DBHandler {
         }
 
         restaurants.set(0, new String[]{Integer.toString(pages), Integer.toString(restaurants.size() - 1)});
-        
+
         return restaurants.toArray(new String[][]{});
     }
 }

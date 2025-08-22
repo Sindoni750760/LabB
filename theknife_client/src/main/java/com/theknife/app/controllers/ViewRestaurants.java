@@ -3,10 +3,12 @@ package com.theknife.app.controllers;
 import java.io.IOException;
 
 import com.theknife.app.Communicator;
+import com.theknife.app.EditingRestaurant;
 import com.theknife.app.SceneManager;
 import com.theknife.app.User;
 
 import javafx.fxml.FXML;
+import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
@@ -25,19 +27,24 @@ public class ViewRestaurants {
     has_online = "n",
     stars_min = "-",
     stars_max = "-",
-    only_favourites = "-";
+    only_favourites = "n";
 
     @FXML
     private Label notification_label, no_restaurants_label, pages_label;
     @FXML
     private TextField latitude_field, longitude_field, range_km_field, price_min_field, price_max_field, stars_min_field, stars_max_field;
     @FXML
-    private CheckBox delivery_check, online_check;
+    private CheckBox delivery_check, online_check, favourites_check;
     @FXML
     private ListView<String> restaurants_listview;
+    @FXML
+    private Button prev_btn, next_btn, view_info_btn;
 
     @FXML
     private void initialize() throws IOException {
+        EditingRestaurant.reset();
+        if(User.getInfo() != null)
+            favourites_check.setVisible(true);
         searchPage(0);
     }
 
@@ -58,11 +65,19 @@ public class ViewRestaurants {
         has_online = online_check.isSelected() ? "y" : "n";
         stars_min = filledOrDash(stars_min_field.getText());
         stars_max = filledOrDash(stars_max_field.getText());
+        only_favourites = favourites_check.isSelected() ? "y" : "n";
         searchPage(0);
     }
 
     private void searchPage(int page) throws IOException {
+        current_page = page;
         no_restaurants_label.setVisible(false);
+        prev_btn.setDisable(true);
+        next_btn.setDisable(true);
+        restaurants_listview.getItems().clear();
+        pages_label.setText("-/-");
+        
+
         Communicator.sendStream("getRestaurants");
         Communicator.sendStream(Integer.toString(page));
         Communicator.sendStream(latitude);
@@ -77,16 +92,22 @@ public class ViewRestaurants {
 
         if(User.getInfo() != null)
             Communicator.sendStream(only_favourites);
-        
+
         String response = Communicator.readStream();
         switch(response) {
             case "ok":
                 pages = Integer.parseInt(Communicator.readStream());
                 if(pages < 1) {
-                    pages_label.setText("-/-");
+
                     no_restaurants_label.setVisible(true);
+                    Communicator.readStream();
                     break;
                 }
+
+                if(page > 0)
+                    prev_btn.setDisable(false);
+                if(page + 1 < pages)
+                    next_btn.setDisable(false);
 
                 pages_label.setText(Integer.toString(page + 1) + '/' + pages);
                 int size = Integer.parseInt(Communicator.readStream());
@@ -110,6 +131,8 @@ public class ViewRestaurants {
                 setNotification("Il range di stelle non è stato inserito nel modo corretto");
                 break;
         }
+        
+        checkSelected();
     }
 
     private void setNotification(String msg) {
@@ -119,6 +142,31 @@ public class ViewRestaurants {
 
     private void hideNotification() {
         notification_label.setVisible(false);
+    }
+
+    @FXML
+    private void prevPage() throws IOException {
+        searchPage(--current_page);
+    }
+
+    @FXML
+    private void nextPage() throws IOException {
+        searchPage(++current_page);
+    }
+
+    @FXML
+    private void checkSelected() {
+        int index = restaurants_listview.getSelectionModel().getSelectedIndex();
+        boolean disable_buttons = index < 0;
+        
+        view_info_btn.setDisable(disable_buttons);
+    }
+
+    @FXML
+    private void viewRestaurantInfo() throws IOException {
+        int restaurant_id = Integer.parseInt(restaurants_ids[restaurants_listview.getSelectionModel().getSelectedIndex()]);
+        EditingRestaurant.setEditing(restaurant_id);
+        SceneManager.changeScene("ViewRestaurantInfo");
     }
 
     @FXML
