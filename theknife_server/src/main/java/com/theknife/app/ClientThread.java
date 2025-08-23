@@ -1,4 +1,3 @@
-
 package com.theknife.app;
 
 import java.io.BufferedReader;
@@ -315,6 +314,105 @@ public class ClientThread extends Thread {
                     id = Integer.parseInt(readStream());
                     sendStream(DBHandler.isFavourite(user_id, id) ? "y" : "n");
 
+                    break;
+                case "addReview":
+                    //if the user isn't a customer, he cannot review a restaurant
+                    if(user_id < 1 || DBHandler.getUserInfo(user_id)[2].equals("y")) {
+                        sendStream("unauthorized");
+                        break;
+                    }
+
+                    id = Integer.parseInt(readStream());
+                    int stars = Integer.parseInt(readStream());
+                    String text = readStream();
+
+                    if(stars < 1 || stars > 5) {
+                        sendStream("stars");
+                        break;
+                    }
+
+                    if(text.length() > 255) {
+                        sendStream("text length");
+                        break;
+                    }
+
+                    //if the restaurant isn't found
+                    if(DBHandler.getRestaurantInfo(id) == null) {
+                        sendStream("not found");
+                        break;
+                    }
+
+                    sendStream(DBHandler.addReview(user_id, id, stars, text) ? "ok" : "error");
+
+                    break;
+                case "getMyReview":
+                    if(user_id < 1 || DBHandler.getUserInfo(user_id)[2].equals("y")) {
+                        sendStream("unauthorized");
+                        break;
+                    }
+
+                    id = Integer.parseInt(readStream());
+
+                    for(String s : DBHandler.getUserReview(user_id, id))
+                        sendStream(s);
+
+                    break;
+                case "editReview":
+                    if(user_id < 1 || DBHandler.getUserInfo(user_id)[2].equals("y")) {
+                        sendStream("unauthorized");
+                        break;
+                    }
+
+                    id = Integer.parseInt(readStream());
+                    stars = Integer.parseInt(readStream());
+                    text = readStream();
+
+                    if(stars < 1 || stars > 5) {
+                        sendStream("stars");
+                        break;
+                    }
+
+                    if(text.length() > 255) {
+                        sendStream("text length");
+                        break;
+                    }
+
+                    sendStream(DBHandler.editReview(user_id, id, stars, text) ? "ok" : "error");
+                    break;
+                case "removeReview":
+                    if(user_id < 1 || DBHandler.getUserInfo(user_id)[2].equals("y")) {
+                        sendStream("unauthorized");
+                        break;
+                    }
+
+                    id = Integer.parseInt(readStream());
+
+                    sendStream(DBHandler.removeReview(user_id, id) ? "ok" : "error");
+                    break;
+                case "getReviewsPages":
+                    id = Integer.parseInt(readStream());
+                    sendStream(Integer.toString(DBHandler.getReviewsPages(id)));
+                    break;
+                case "getReviews":
+                    id = Integer.parseInt(readStream());
+                    page = Integer.parseInt(readStream());
+
+                    String[][] reviews = DBHandler.getReviews(id, page);
+
+                    sendStream(Integer.toString(reviews.length));
+
+                    for(String[] review : reviews) {
+                        sendStream(review[0]);
+                        sendStream(review[1]);
+                        sendStream(review[2]);
+                        if(review[3] == null)
+                            sendStream("n");
+                        else {
+                            sendStream("y");
+                            sendStream(review[3]);
+                        }
+                    }
+                    
                     break;
                 case "logout":
                     user_id = -1;

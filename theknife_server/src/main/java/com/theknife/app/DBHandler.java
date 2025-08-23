@@ -429,4 +429,121 @@ public class DBHandler {
 
         return result.next();
     }
+
+    public static boolean addReview(int user_id, int rest_id, int rating, String text) throws SQLException {
+        String sql = "INSERT INTO recensioni(id_utente, id_ristorante, stelle, testo) VALUES(?, ?, ?, ?)";
+
+        PreparedStatement statement = connection.prepareStatement(sql);
+
+        statement.setInt(1, user_id);
+        statement.setInt(2, rest_id);
+        statement.setInt(3, rating);
+        statement.setString(4, text);
+
+        try {
+            statement.executeUpdate();
+        } catch(SQLException e) {
+            //shouldn't happen
+            return false;
+        }
+
+        return true;
+    }
+
+    public static boolean removeReview(int user_id, int rest_id) throws SQLException {
+        String sql = "DELETE FROM recensioni WHERE id_utente = ? AND id_ristorante = ?";
+
+        PreparedStatement statement = connection.prepareStatement(sql);
+
+        statement.setInt(1, user_id);
+        statement.setInt(2, rest_id);
+
+        try {
+            statement.executeUpdate();
+        } catch(SQLException e) {
+            //shouldn't happen
+            return false;
+        }
+
+        return true;
+    }
+
+    public static String[] getUserReview(int user_id, int rest_id) throws SQLException {
+        String sql = "SELECT * FROM recensioni WHERE id_utente = ? AND id_ristorante = ?";
+
+        PreparedStatement statement = connection.prepareStatement(sql);
+
+        statement.setInt(1, user_id);
+        statement.setInt(2, rest_id);
+
+        ResultSet result = statement.executeQuery();
+
+        if(result.next()) {
+            String stars = result.getString("stelle");
+            String text = result.getString("testo");
+            return new String[]{stars, text};
+        }
+
+        //no review was found
+        return new String[]{"0", ""};
+    }
+
+    public static boolean editReview(int user_id, int rest_id, int rating, String text) throws SQLException {
+        String sql = "UPDATE recensioni SET stelle = ?, testo = ? WHERE id_utente = ? AND id_ristorante = ?";
+
+        PreparedStatement statement = connection.prepareStatement(sql);
+
+        statement.setInt(1, rating);
+        statement.setString(2, text);
+        statement.setInt(3, user_id);
+        statement.setInt(4, rest_id);
+
+        try {
+            statement.executeUpdate();
+        } catch(SQLException e) {
+            //shouldn't happen
+            return false;
+        }
+
+        return true;
+    }
+
+    public static int getReviewsPages(int id) throws SQLException {
+        String sql = "SELECT COUNT(*) AS num FROM recensioni WHERE id_ristorante = ?";
+
+        PreparedStatement statement = connection.prepareStatement(sql);
+
+        statement.setInt(1, id);
+
+        ResultSet result = statement.executeQuery();
+        result.next();
+        
+        int num = result.getInt("num");
+
+        return num > 0 ? (num - 1) / 10 + 1 : 0;
+    }
+
+    public static String[][] getReviews(int id, int page) throws SQLException {
+        int offset = page * 1;
+        String sql = "SELECT *, (SELECT testo FROM risposte WHERE id_recensione = r.id) AS risposta FROM recensioni r WHERE id_ristorante = ? LIMIT 10 OFFSET ?";
+
+        PreparedStatement statement = connection.prepareStatement(sql);
+
+        statement.setInt(1, id);
+        statement.setInt(2, offset);
+
+        ResultSet result = statement.executeQuery();
+
+        List<String[]> reviews = new LinkedList<String[]>();
+
+        while(result.next()) {
+            String review_id = result.getString("id"),
+            stars = result.getString("stelle"),
+            testo = result.getString("testo"),
+            risposta = result.getString("risposta");
+            reviews.add(new String[]{review_id, stars, testo, risposta});
+        }
+
+        return reviews.toArray(new String[][]{});
+    }
 }
