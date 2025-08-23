@@ -1,3 +1,4 @@
+
 package com.theknife.app;
 
 import java.io.BufferedReader;
@@ -267,7 +268,7 @@ public class ClientThread extends Thread {
                     boolean favourites = false;
                     if(user_id > 0)
                         favourites = readStream().equals("y");
-                    
+
                     String[][] restaurants = Restaurant.getRestaurantsWithFilter(page, latitude_string, longitude_string, range_km, price_min, price_max, has_delivery, has_online, stars_min, stars_max, favourites ? user_id : -1);
 
                     if(restaurants[0][0].equals("error")) {
@@ -281,6 +282,39 @@ public class ClientThread extends Thread {
                         sendStream(restaurant[0]);
                         sendStream(restaurant[1]);
                     }
+                    break;
+                case "addFavourite":
+                    //if the user isn't a customer, he cannot add favourites
+                    if(user_id < 1 || DBHandler.getUserInfo(user_id)[2].equals("y")) {
+                        sendStream("unauthorized");
+                        break;
+                    }
+
+                    id = Integer.parseInt(readStream());
+                    sendStream(DBHandler.setFavourite(user_id, id, true) ? "ok" : "error");
+
+                    break;
+                case "removeFavourite":
+                    //if the user isn't a customer, he cannot remove favourites
+                    if(user_id < 1 || DBHandler.getUserInfo(user_id)[2].equals("y")) {
+                        sendStream("unauthorized");
+                        break;
+                    }
+
+                    id = Integer.parseInt(readStream());
+                    sendStream(DBHandler.setFavourite(user_id, id, false) ? "ok" : "error");
+
+                    break;
+                case "isFavourite":
+                    //if the user isn't a customer, he look out if a restaurant is in his favourites
+                    if(user_id < 1 || DBHandler.getUserInfo(user_id)[2].equals("y")) {
+                        sendStream("unauthorized");
+                        break;
+                    }
+
+                    id = Integer.parseInt(readStream());
+                    sendStream(DBHandler.isFavourite(user_id, id) ? "y" : "n");
+
                     break;
                 case "logout":
                     user_id = -1;

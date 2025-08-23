@@ -2,18 +2,36 @@ package com.theknife.app.controllers;
 
 import java.io.IOException;
 
+import com.theknife.app.Communicator;
 import com.theknife.app.EditingRestaurant;
 import com.theknife.app.SceneManager;
+import com.theknife.app.User;
 
 import javafx.fxml.FXML;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 
 public class ViewRestaurantInfo {
+    private boolean is_favourite;
     @FXML
     private Label name_label, nation_label, city_label, address_label, coordinates_label, reviews_label, price_label, stars_label, services_label;
+    @FXML
+    private Button fav_btn;
 
     @FXML
-    private void initialize() {
+    private void initialize() throws IOException {
+        if(User.getInfo() == null)
+            fav_btn.setVisible(false);
+        else {
+            //checks if the restaurant is favourite
+            Communicator.sendStream("isFavourite");
+            Communicator.sendStream(Integer.toString(EditingRestaurant.getId()));
+            is_favourite = Communicator.readStream().equals("y");
+
+            if(is_favourite)
+                fav_btn.setText("Rimuovi dai preferiti");
+        }
+
         String[] restaurant_info = EditingRestaurant.getInfo();
 
         name_label.setText(restaurant_info[0]);
@@ -39,5 +57,29 @@ public class ViewRestaurantInfo {
     @FXML
     private void goBack() throws IOException {
         SceneManager.changeScene("ViewRestaurants");
+    }
+
+    @FXML
+    private void viewReviews() {
+        int restaurant_id = EditingRestaurant.getId();
+        System.out.println("review this: " + restaurant_id);
+    }
+
+    @FXML
+    private void addToFavourites() throws IOException {
+        String restaurant_id = Integer.toString(EditingRestaurant.getId());
+        if(is_favourite) {
+            fav_btn.setText("Aggiungi ai preferiti");
+            Communicator.sendStream("removeFavourite");
+            Communicator.sendStream(restaurant_id);
+            Communicator.readStream();
+        } else {
+            fav_btn.setText("Rimuovi dai preferiti");
+            Communicator.sendStream("addFavourite");
+            Communicator.sendStream(restaurant_id);
+            Communicator.readStream();
+        }
+
+        is_favourite = !is_favourite;
     }
 }
