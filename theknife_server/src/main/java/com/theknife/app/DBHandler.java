@@ -305,12 +305,12 @@ public class DBHandler {
 
     public static String[][] getRestaurantsWithFilter(int page, double latitude, double longitude, double range_km, int price_min, int price_max, boolean has_delivery, boolean has_online, double stars_min, double stars_max, int favourite_id) throws SQLException {
         int offset = page * 10;
-        String sql = " FROM \"RistorantiTheKnife\"";
+        String sql = " FROM \"RistorantiTheKnife\" r";
         List<String> parameters = new LinkedList<String>();
         List<String> parameters_types = new LinkedList<String>();
 
         if(favourite_id > 0) {
-            sql += " JOIN preferiti p ON id = id_ristorante WHERE id_utente = ?";
+            sql += " JOIN preferiti ON id = id_ristorante WHERE id_utente = ?";
             parameters.add(Integer.toString(favourite_id));
             parameters_types.add("int");
         } else
@@ -352,17 +352,18 @@ public class DBHandler {
         if(has_online)
             sql += " AND prenotazione_online = true";
 
-        /*if(stars_min >= 0) {
-            sql += " AND fascia_prezzo >= ?";
-            parameters.add(Integer.toString(stars_min));
-            parameters_types.add("int");
+      String stars_query = "(SELECT AVG(stelle) FROM recensioni WHERE id_ristorante = r.id GROUP BY id_ristorante)";
+        if(stars_min >= 0) {
+            sql += " AND " + stars_query + " >= ?";
+            parameters.add(Double.toString(stars_min));
+            parameters_types.add("double");
         }
 
         if(stars_max >= 0) {
-            sql += " AND fascia_prezzo <= ?";
-            parameters.add(Integer.toString(stars_max));
-            parameters_types.add("int");
-        }*/
+            sql += " AND " + stars_query + " <= ?";
+            parameters.add(Double.toString(stars_max));
+            parameters_types.add("double");
+        }
 
         //to obtain the number of pages
         String sql_unlimited = "SELECT COUNT(*) AS num" + sql;
