@@ -26,6 +26,8 @@ public class RestaurantReviews {
 
     @FXML
     private void initialize() throws IOException {
+        prev_btn.setDisable(true);
+        next_btn.setDisable(true);
         no_reviews_label.setVisible(false);
         current_page = 0;
         String[] user_info = User.getInfo();
