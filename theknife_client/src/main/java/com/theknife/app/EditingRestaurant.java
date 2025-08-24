@@ -4,7 +4,7 @@ import java.io.IOException;
 
 public class EditingRestaurant {
     //editing parameters
-    private static int editing_id = -1;
+    private static int editing_id = -1, review_id = -1;
     private static String name, nation, city, address, latitude, longitude, avg_price, has_delivery, has_online, avg_stars, n_reviews;
 
     public static void setEditing(int id) throws IOException {
@@ -27,6 +27,7 @@ public class EditingRestaurant {
 
     public static void reset() {
         editing_id = -1;
+        review_id = -1;
     }
 
     public static int getId() {
@@ -66,5 +67,13 @@ public class EditingRestaurant {
         Communicator.sendStream(has_online ? "y" : "n");
 
         return Communicator.readStream();
+    }
+
+    public static void setReviewId(int id) {
+        review_id = id;
+    }
+
+    public static int getReviewId() {
+        return review_id;
     }
 }

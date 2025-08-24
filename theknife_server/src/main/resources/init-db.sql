@@ -27,17 +27,18 @@ CREATE TABLE "RistorantiTheKnife" (
 CREATE TABLE recensioni (
     id SERIAL PRIMARY KEY,
     id_utente INTEGER REFERENCES utenti(id),
-    id_ristorante INTEGER REFERENCES "RistorantiTheKnife"(id),
+    id_ristorante INTEGER REFERENCES "RistorantiTheKnife"(id) ON DELETE CASCADE,
     stelle INTEGER NOT NULL,
     testo VARCHAR(255) NOT NULL
 );
 
 CREATE TABLE risposte (
-    id_recensione INTEGER REFERENCES recensioni(id) PRIMARY KEY,
+    id_recensione INTEGER REFERENCES recensioni(id) ON DELETE CASCADE PRIMARY KEY,
     testo VARCHAR(255) NOT NULL
 );
 
 CREATE TABLE preferiti (
     id_utente INTEGER REFERENCES utenti(id),
-    id_ristorante INTEGER REFERENCES "RistorantiTheKnife"(id)
-)
+    id_ristorante INTEGER REFERENCES "RistorantiTheKnife"(id) ON DELETE CASCADE,
+    PRIMARY KEY(id_utente, id_ristorante)
+);

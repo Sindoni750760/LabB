@@ -412,7 +412,63 @@ public class ClientThread extends Thread {
                             sendStream(review[3]);
                         }
                     }
-                    
+
+                    break;
+                case "addResponse":
+                    id = Integer.parseInt(readStream());
+                    if(user_id < 1 || !DBHandler.canRespond(user_id, id)) {
+                        sendStream("unauthorized");
+                        break;
+                    }
+
+                    text = readStream();
+
+                    if(text.length() > 255) {
+                        sendStream("text length");
+                        break;
+                    }
+
+                    sendStream(DBHandler.addResponse(id, text) ? "ok" : "error");
+                    break;
+                case "getResponse":
+                    id = Integer.parseInt(readStream());
+                    if(user_id < 1 || !DBHandler.canRespond(user_id, id)) {
+                        sendStream("unauthorized");
+                        break;
+                    }
+
+                    String response_text = DBHandler.getResponse(id);
+                    if(response_text == null)
+                        sendStream("empty");
+                    else {
+                        sendStream("ok");
+                        sendStream(response_text);
+                    }
+                    break;
+                case "editResponse":
+                    id = Integer.parseInt(readStream());
+                    if(user_id < 1 || !DBHandler.canRespond(user_id, id)) {
+                        sendStream("unauthorized");
+                        break;
+                    }
+
+                    text = readStream();
+
+                    if(text.length() > 255) {
+                        sendStream("text length");
+                        break;
+                    }
+
+                    sendStream(DBHandler.editResponse(id, text) ? "ok" : "error");
+                    break;
+                case "removeResponse":
+                    id = Integer.parseInt(readStream());
+                    if(user_id < 1 || !DBHandler.canRespond(user_id, id)) {
+                        sendStream("unauthorized");
+                        break;
+                    }
+
+                    sendStream(DBHandler.removeResponse(id) ? "ok" : "error");
                     break;
                 case "logout":
                     user_id = -1;

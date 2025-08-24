@@ -29,7 +29,7 @@ public class RestaurantReviews {
         no_reviews_label.setVisible(false);
         current_page = 0;
         String[] user_info = User.getInfo();
-        
+
         is_logged = user_info != null;
 
         if(is_logged) {
@@ -87,7 +87,7 @@ public class RestaurantReviews {
         prev_btn.setDisable(page < 1);
         next_btn.setDisable(page + 1 >= total_pages);
 
-        
+
         Communicator.sendStream("getReviews");
         Communicator.sendStream(Integer.toString(EditingRestaurant.getId()));
         Communicator.sendStream(Integer.toString(page));
@@ -112,7 +112,7 @@ public class RestaurantReviews {
         String[] review_compact = new String[size];
         for(int i = 0; i < size; i++)
             review_compact[i] = reviews_stars[i] + "/5 " + reviews_texts[i] + (reviews_reply[i] == null ? "" : "\nRisposta del ristoratore: " + reviews_reply[i]);
-        
+
         reviews_listview.getItems().setAll(review_compact);
     }
 
@@ -128,7 +128,16 @@ public class RestaurantReviews {
 
     @FXML
     private void addReview() throws IOException {
+        if(is_restaurateur) {
+            int review_id = Integer.parseInt(reviews_ids[reviews_listview.getSelectionModel().getSelectedIndex()]);
+            EditingRestaurant.setReviewId(review_id);
+        }
         SceneManager.changeScene("WriteReview");
+    }
+
+    @FXML
+    private void checkSelected() {
+        add_review_btn.setDisable(reviews_listview.getSelectionModel().getSelectedIndex() < 0);
     }
 
     @FXML

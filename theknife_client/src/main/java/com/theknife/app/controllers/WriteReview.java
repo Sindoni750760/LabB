@@ -27,6 +27,7 @@ public class WriteReview {
 
     @FXML
     private void initialize() throws IOException {
+        is_editing = false;
         stars = 0;
         is_restaurateur = User.getInfo()[2].equals("y");
 
@@ -38,7 +39,16 @@ public class WriteReview {
             stars_5_btn.setVisible(false);
             stars_label.setVisible(false);
 
-            //TODOse è già stata pubblicata una risposta, mostra il delete_btn e scrivi "modifica" nell'altro btn
+            Communicator.sendStream("getResponse");
+            Communicator.sendStream(Integer.toString(EditingRestaurant.getReviewId()));
+            
+            if(Communicator.readStream().equals("ok")) {
+                text_area.setText(Communicator.readStream());
+                checkTextBox();
+                publish_btn.setText("Modifica");
+                delete_btn.setVisible(true);
+                is_editing = true;
+            }
         } else {
             Communicator.sendStream("getMyReview");
             Communicator.sendStream(Integer.toString(EditingRestaurant.getId()));
@@ -70,7 +80,11 @@ public class WriteReview {
     @FXML
     private void publish() throws IOException {
         if(is_restaurateur) {
-            //TODO
+            Communicator.sendStream(is_editing ? "editResponse" : "addResponse");
+            Communicator.sendStream(Integer.toString(EditingRestaurant.getReviewId()));
+            Communicator.sendStream(text_area.getText());
+            Communicator.readStream();
+            goBack();
         } else {
             if(is_editing) {
                 //editing the review
@@ -101,8 +115,13 @@ public class WriteReview {
         alert.showAndWait();
 
         if (alert.getResult() == ButtonType.YES) {
-            Communicator.sendStream("removeReview");
-            Communicator.sendStream(Integer.toString(EditingRestaurant.getId()));
+            if(is_restaurateur) {
+                Communicator.sendStream("removeResponse");
+                Communicator.sendStream(Integer.toString(EditingRestaurant.getReviewId()));
+            } else {
+                Communicator.sendStream("removeReview");
+                Communicator.sendStream(Integer.toString(EditingRestaurant.getId()));
+            }
             Communicator.readStream();
             goBack();
         }
