@@ -42,4 +42,9 @@ public class SceneManager {
         appMessage = text;
         appMessageColor = "green";
     }
+
+    public static void setAppWarning(String text) {
+        appMessage = text;
+        appMessageColor = "red";
+    }
 }

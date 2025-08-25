@@ -42,4 +42,4 @@ CREATE TABLE preferiti (
     id_utente INTEGER REFERENCES utenti(id),
     id_ristorante INTEGER REFERENCES "RistorantiTheKnife"(id) ON DELETE CASCADE,
     PRIMARY KEY(id_utente, id_ristorante)
-);
+)
