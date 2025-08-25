@@ -27,14 +27,16 @@ public class ViewRestaurants {
     has_online = "n",
     stars_min = "-",
     stars_max = "-",
-    only_favourites = "n";
+    only_favourites = "n",
+    near_me = "n",
+    category = null;
 
     @FXML
     private Label notification_label, no_restaurants_label, pages_label;
     @FXML
-    private TextField latitude_field, longitude_field, range_km_field, price_min_field, price_max_field, stars_min_field, stars_max_field;
+    private TextField latitude_field, longitude_field, range_km_field, price_min_field, price_max_field, stars_min_field, stars_max_field, category_field;
     @FXML
-    private CheckBox delivery_check, online_check, favourites_check;
+    private CheckBox delivery_check, online_check, favourites_check, near_me_check;
     @FXML
     private ListView<String> restaurants_listview;
     @FXML
@@ -43,8 +45,10 @@ public class ViewRestaurants {
     @FXML
     private void initialize() throws IOException {
         EditingRestaurant.reset();
-        if(User.getInfo() != null)
+        if(User.getInfo() != null) {
             favourites_check.setVisible(true);
+            near_me_check.setVisible(true);
+        }
         searchPage(0);
     }
 
@@ -66,6 +70,10 @@ public class ViewRestaurants {
         stars_min = filledOrDash(stars_min_field.getText());
         stars_max = filledOrDash(stars_max_field.getText());
         only_favourites = favourites_check.isSelected() ? "y" : "n";
+        category = filledOrDash(category_field.getText());
+        if(category.equals(""))
+            category = null;
+        near_me = near_me_check.isSelected() ? "y" : "n";
         searchPage(0);
     }
 
@@ -89,7 +97,15 @@ public class ViewRestaurants {
         Communicator.sendStream(has_online);
         Communicator.sendStream(stars_min);
         Communicator.sendStream(stars_max);
+        if(category == null)
+            Communicator.sendStream("n");
+        else {
+            Communicator.sendStream("y");
+            Communicator.sendStream(category);
+        }
+        Communicator.sendStream(near_me);
 
+      
         if(User.getInfo() != null)
             Communicator.sendStream(only_favourites);
 
@@ -134,6 +150,13 @@ public class ViewRestaurants {
         
         checkSelected();
     }
+    
+     @FXML
+    private void handleCoordinates() {
+        latitude_field.setDisable(near_me_check.isSelected());
+        longitude_field.setDisable(near_me_check.isSelected());
+    }
+
 
     private void setNotification(String msg) {
         notification_label.setText(msg);

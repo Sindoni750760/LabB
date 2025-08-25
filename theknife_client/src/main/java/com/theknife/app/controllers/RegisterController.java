@@ -16,7 +16,7 @@ import javafx.scene.control.TextField;
 
 public class RegisterController {
     @FXML
-    private TextField name, surname, username;
+    private TextField name, surname, username, latitude, longitude;
     @FXML
     private PasswordField password, confirm_password;
     @FXML
@@ -54,6 +54,8 @@ public class RegisterController {
         Communicator.sendStream(username.getText());
         Communicator.sendStream(password.getText());
         Communicator.sendStream(birth_date.getValue() == null ? "-" : birth_date.getValue().toString());
+        Communicator.sendStream(latitude.getText());
+        Communicator.sendStream(longitude.getText());
         Communicator.sendStream(is_restaurateur.isSelected() ? "y" : "n");
 
         switch(Communicator.readStream()) {
@@ -70,6 +72,9 @@ public class RegisterController {
             case "date":
                 //shouldn't happen with this client
                 setNotification("Errore nel client");
+                break;
+            case "coordinates":
+                setNotification("Le coordinate inserite non sono nel formato corretto");
                 break;
             case "username":
                 setNotification("Esiste già un utente con questo username");

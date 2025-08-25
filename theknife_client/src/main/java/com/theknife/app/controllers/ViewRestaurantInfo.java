@@ -14,7 +14,7 @@ import javafx.scene.control.Label;
 public class ViewRestaurantInfo {
     private boolean is_favourite;
     @FXML
-    private Label name_label, nation_label, city_label, address_label, coordinates_label, reviews_label, price_label, stars_label, services_label;
+    private Label name_label, nation_label, city_label, address_label, coordinates_label, reviews_label, price_label, stars_label, services_label, categories_label;
     @FXML
     private Button fav_btn;
 
@@ -42,6 +42,7 @@ public class ViewRestaurantInfo {
         reviews_label.setText(restaurant_info[10]);
         price_label.setText(restaurant_info[6] + " €");
         stars_label.setText(restaurant_info[9].equals("0") ? "Non disponibile" : restaurant_info[9] + "/5");
+        categories_label.setText(restaurant_info[11]);
 
         boolean has_delivery = restaurant_info[7].equals("y"), has_online = restaurant_info[8].equals("y");
         if(has_delivery && has_online)

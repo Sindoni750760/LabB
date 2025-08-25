@@ -45,7 +45,7 @@ public class User {
         return lalph && ualph && num && spec;
     }
 
-    public static String registerUser(String nome, String cognome, String username, String password, String data_nascita, boolean is_ristoratore) throws SQLException {
+   public static String registerUser(String nome, String cognome, String username, String password, String data_nascita, String latitude, String longitude, boolean is_ristoratore) throws SQLException {
         //checks missing parameters
         if(nome.trim().isEmpty() || cognome.trim().isEmpty() || username.trim().isEmpty())
             return "missing";
@@ -66,7 +66,16 @@ public class User {
         if(time > new java.util.Date().getTime())
             return "date";
 
-        return DBHandler.addUser(nome, cognome, username, hashPassword(password), time, is_ristoratore) ? "ok" : "username";
+         double latitude_double, longitude_double;
+        try {
+            latitude_double = Double.parseDouble(latitude);
+            longitude_double = Double.parseDouble(longitude);
+        } catch(NumberFormatException e) {
+            return "coordinates";
+        }
+
+        return DBHandler.addUser(nome, cognome, username, hashPassword(password), time, latitude_double, longitude_double, is_ristoratore) ? "ok" : "username";
+
     }
 
     public static int loginUser(String username, String password) throws SQLException {

@@ -62,9 +62,11 @@ public class ClientThread extends Thread {
                     String username = readStream();
                     String password = readStream();
                     String data_nascita = readStream();
+                    String latitude_string = readStream();
+                    String longitude_string = readStream();
                     boolean is_ristoratore = readStream().equals("y");
 
-                    sendStream(User.registerUser(nome, cognome, username, password, data_nascita, is_ristoratore));
+                    sendStream(User.registerUser(nome, cognome, username, password, data_nascita, latitude_string, longitude_string, is_ristoratore));
                     break;
                 case "login":
                     username = readStream();
@@ -100,13 +102,13 @@ public class ClientThread extends Thread {
                     String name = readStream(),
                     nation = readStream(),
                     city = readStream(),
-                    address = readStream(),
-                    latitude_string = readStream(),
-                    longitude_string = readStream(),
-                    avg_price_string = readStream();
+                    address = readStream();
+                    latitude_string = readStream();
+                    longitude_string = readStream();
+                    String avg_price_string = readStream(), categories = readStream();
                     boolean has_delivery = readStream().equals("y"), has_online = readStream().equals("y");
 
-                    if(name.trim().isEmpty() || nation.trim().isEmpty() || city.trim().isEmpty() || address.trim().isEmpty()) {
+                    if(name.trim().isEmpty() || nation.trim().isEmpty() || city.trim().isEmpty() || address.trim().isEmpty() || categories.trim().isEmpty()) {
                         sendStream("missing");
                         break;
                     }
@@ -133,7 +135,7 @@ public class ClientThread extends Thread {
                         break;
                     }
 
-                    if(DBHandler.addRestaurant(user_id, name, nation, city, address, latitude, longitude, price, has_delivery, has_online))
+                    if(DBHandler.addRestaurant(user_id, name, nation, city, address, latitude, longitude, price, categories, has_delivery, has_online))
                         sendStream("ok");
                     else
                         sendStream("error");
@@ -157,10 +159,11 @@ public class ClientThread extends Thread {
                         latitude_string = readStream();
                         longitude_string = readStream();
                         avg_price_string = readStream();
+                        categories = readStream();
                         has_delivery = readStream().equals("y");
                         has_online = readStream().equals("y");
 
-                        if(name.trim().isEmpty() || nation.trim().isEmpty() || city.trim().isEmpty() || address.trim().isEmpty()) {
+                        if(name.trim().isEmpty() || nation.trim().isEmpty() || city.trim().isEmpty() || address.trim().isEmpty() || categories.trim().isEmpty()) {
                             sendStream("missing");
                             break;
                         }
@@ -185,7 +188,7 @@ public class ClientThread extends Thread {
                             break;
                         }
 
-                        if(DBHandler.editRestaurant(id, name, nation, city, address, latitude, longitude, price, has_delivery, has_online))
+                         if(DBHandler.editRestaurant(id, name, nation, city, address, latitude, longitude, price, categories, has_delivery, has_online))
                             sendStream("ok");
                         else
                             sendStream("error");
@@ -263,12 +266,16 @@ public class ClientThread extends Thread {
                     has_online = readStream().equals("y");
                     String stars_min = readStream();
                     String stars_max = readStream();
+                    String category = null;
+                    if(readStream().equals("y"))
+                        category = readStream();
+                    boolean near_me = readStream().equals("y");
 
                     boolean favourites = false;
                     if(user_id > 0)
                         favourites = readStream().equals("y");
 
-                    String[][] restaurants = Restaurant.getRestaurantsWithFilter(page, latitude_string, longitude_string, range_km, price_min, price_max, has_delivery, has_online, stars_min, stars_max, favourites ? user_id : -1);
+                    String[][] restaurants = Restaurant.getRestaurantsWithFilter(page, latitude_string, longitude_string, range_km, price_min, price_max, has_delivery, has_online, stars_min, stars_max, favourites ? user_id : -1, category, near_me ? user_id : -1);
 
                     if(restaurants[0][0].equals("error")) {
                         sendStream(restaurants[0][1]);

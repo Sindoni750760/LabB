@@ -13,6 +13,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 
 public class EditRestaurant {
@@ -21,6 +22,8 @@ public class EditRestaurant {
     private Button edit_btn, delete_btn;
     @FXML
     private TextField name_field, nation_field, city_field, address_field, latitude_field, longitude_field, price_field;
+    @FXML
+    private TextArea categories_textarea;
     @FXML
     private CheckBox delivery_check, online_check;
     @FXML
@@ -34,7 +37,7 @@ public class EditRestaurant {
         //if it's editing a restaurant, sets the info
         if(editing_id > 0) {
             String[] restaurant_info = EditingRestaurant.getInfo();
-            //return new String[]{name, nation, city, address, latitude, longitude, avg_price, has_delivery, has_online};
+            //return new String[]{name, nation, city, address, latitude, longitude, avg_price, has_delivery, has_online, avg_stars, n_reviews, categories};
             name_field.setText(restaurant_info[0]);
             nation_field.setText(restaurant_info[1]);
             city_field.setText(restaurant_info[2]);
@@ -44,6 +47,7 @@ public class EditRestaurant {
             price_field.setText(restaurant_info[6]);
             delivery_check.setSelected(restaurant_info[7].equals("y"));
             online_check.setSelected(restaurant_info[8].equals("y"));
+            categories_textarea.setText(restaurant_info[11]);
         } else { //if not editing, changes buttons displays
             edit_btn.setText("Aggiungi ristorante");
             delete_btn.setVisible(false);
@@ -63,15 +67,16 @@ public class EditRestaurant {
         address = address_field.getText(),
         latitude = latitude_field.getText(),
         longitude = longitude_field.getText(),
-        price = price_field.getText();
+        price = price_field.getText(),
+        categories = categories_textarea.getText();
         boolean has_delivery = delivery_check.isSelected(), has_online = online_check.isSelected();
 
         String response;
         //editing a restaurant
         if(editing_id > 0)
-            response = EditingRestaurant.editRestaurant(editing_id, name, nation, city, address, latitude, longitude, price, has_delivery, has_online);
+           response = EditingRestaurant.editRestaurant(editing_id, name, nation, city, address, latitude, longitude, price, categories, has_delivery, has_online);
         else //not editing a restaurant
-            response = EditingRestaurant.addRestaurant(name, nation, city, address, latitude, longitude, price, has_delivery, has_online);
+            response = EditingRestaurant.addRestaurant(name, nation, city, address, latitude, longitude, price, categories, has_delivery, has_online);
         
         switch(response) {
             case "ok":
@@ -90,6 +95,13 @@ public class EditRestaurant {
                 setNotification("Il prezzo deve essere positivo");
                 break;
         }
+    }
+
+@FXML
+    private void checkTextBox() {
+        String text = categories_textarea.getText();
+        if(text.length() > 255)
+            categories_textarea.setText(text.substring(0, 255));
     }
 
     private void setNotification(String msg) {

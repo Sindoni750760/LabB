@@ -60,11 +60,11 @@ public class DBHandler {
         return 0;
     }
 
-    public static boolean addUser(String nome, String cognome, String username, String hash, long data_nascita_time, boolean is_ristoratore) throws SQLException {
+    public static boolean addUser(String nome, String cognome, String username, String hash, long data_nascita_time, double latitude, double longitude, boolean is_ristoratore) throws SQLException {
         //checks if birth date is present
         String sql = data_nascita_time < 0 ?
-            "INSERT INTO utenti(nome, cognome, username, password, is_ristoratore) VALUES (?, ?, ?, ?, ?)" :
-            "INSERT INTO utenti(nome, cognome, username, password, is_ristoratore, data_nascita) VALUES (?, ?, ?, ?, ?, ?)";
+            "INSERT INTO utenti(nome, cognome, username, password, latitudine_domicilio, longitudine_domicilio, is_ristoratore) VALUES (?, ?, ?, ?, ?, ?, ?)" :
+            "INSERT INTO utenti(nome, cognome, username, password, latitudine_domicilio, longitudine_domicilio, is_ristoratore, data_nascita) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
         PreparedStatement statement = connection.prepareStatement(sql);
 
@@ -72,10 +72,12 @@ public class DBHandler {
         statement.setString(2, cognome);
         statement.setString(3, username);
         statement.setString(4, hash);
-        statement.setBoolean(5, is_ristoratore);
+        statement.setDouble(5, latitude);
+        statement.setDouble(6, longitude);
+        statement.setBoolean(7, is_ristoratore);
 
         if(data_nascita_time >= 0)
-            statement.setDate(6, new Date(data_nascita_time));
+           statement.setDate(8, new Date(data_nascita_time));
 
         try {
             statement.executeUpdate();
@@ -129,8 +131,8 @@ public class DBHandler {
         return null;
     }
 
-    public static boolean addRestaurant(int user_id, String name, String nation, String city, String address, double latitude, double longitude, int price, boolean has_delivery, boolean has_online) throws SQLException {
-        String sql = "INSERT INTO \"RistorantiTheKnife\"(nome, nazione, citta, indirizzo, latitudine, longitudine, fascia_prezzo, servizio_delivery, prenotazione_online, proprietario) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    public static boolean addRestaurant(int user_id, String name, String nation, String city, String address, double latitude, double longitude, int price, String categories, boolean has_delivery, boolean has_online) throws SQLException {
+        String sql = "INSERT INTO \"RistorantiTheKnife\"(nome, nazione, citta, indirizzo, latitudine, longitudine, fascia_prezzo, servizio_delivery, prenotazione_online, proprietario, tipo_cucina) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         PreparedStatement statement = connection.prepareStatement(sql);
 
@@ -144,6 +146,7 @@ public class DBHandler {
         statement.setBoolean(8, has_delivery);
         statement.setBoolean(9, has_online);
         statement.setInt(10, user_id);
+        statement.setString(11, categories);
 
         try {
             statement.executeUpdate();
@@ -211,6 +214,7 @@ public class DBHandler {
             String latitude = result.getString("latitudine");
             String longitude = result.getString("longitudine");
             String avg_price = result.getString("fascia_prezzo");
+            String categories = result.getString("tipo_cucina");
             String has_delivery = result.getBoolean("servizio_delivery") ? "y" : "n";
             String has_online = result.getBoolean("prenotazione_online") ? "y" : "n";
 
@@ -226,7 +230,7 @@ public class DBHandler {
                 n_reviews = result.getString("n_reviews");
             }
 
-            return new String[]{name, nation, city, address, latitude, longitude, avg_price, has_delivery, has_online, avg_stars, n_reviews};
+            return new String[]{name, nation, city, address, latitude, longitude, avg_price, categories, has_delivery, has_online, avg_stars, n_reviews};
         }
 
         return null;
@@ -245,8 +249,8 @@ public class DBHandler {
         return result.next();
     }
 
-    public static boolean editRestaurant(int restaurant_id, String name, String nation, String city, String address, double latitude, double longitude, int price, boolean has_delivery, boolean has_online) throws SQLException {
-        String sql = "UPDATE \"RistorantiTheKnife\" SET nome = ?, nazione = ?, citta = ?, indirizzo = ?, latitudine = ?, longitudine = ?, fascia_prezzo = ?, servizio_delivery = ?, prenotazione_online = ? WHERE id = ?";
+    public static boolean editRestaurant(int restaurant_id, String name, String nation, String city, String address, double latitude, double longitude, int price, String categories, boolean has_delivery, boolean has_online) throws SQLException {
+        String sql = "UPDATE \"RistorantiTheKnife\" SET nome = ?, nazione = ?, citta = ?, indirizzo = ?, latitudine = ?, longitudine = ?, fascia_prezzo = ?, servizio_delivery = ?, prenotazione_online = ?, tipo_cucina = ? WHERE id = ?";
 
         PreparedStatement statement = connection.prepareStatement(sql);
 
@@ -259,7 +263,8 @@ public class DBHandler {
         statement.setInt(7, price);
         statement.setBoolean(8, has_delivery);
         statement.setBoolean(9, has_online);
-        statement.setInt(10, restaurant_id);
+        statement.setString(10, categories);
+        statement.setInt(11, restaurant_id);
 
         try {
             statement.executeUpdate();
@@ -299,11 +304,14 @@ public class DBHandler {
                 case "int":
                     statement.setInt(i + 1, Integer.parseInt(parameters.get(i)));
                     break;
+                case "string":
+                    statement.setString(i + 1, parameters.get(i));
+                    break;
             }
         }
     }
 
-    public static String[][] getRestaurantsWithFilter(int page, double latitude, double longitude, double range_km, int price_min, int price_max, boolean has_delivery, boolean has_online, double stars_min, double stars_max, int favourite_id) throws SQLException {
+    public static String[][] getRestaurantsWithFilter(int page, double latitude, double longitude, double range_km, int price_min, int price_max, boolean has_delivery, boolean has_online, double stars_min, double stars_max, int favourite_id, String category) throws SQLException {
         int offset = page * 10;
         String sql = " FROM \"RistorantiTheKnife\" r"; // VS
         List<String> parameters = new LinkedList<String>();
@@ -365,6 +373,12 @@ public class DBHandler {
             parameters_types.add("double");
         }
 
+        if(category != null) {
+            sql += " AND LOWER(tipo_cucina) LIKE LOWER(?)";
+            parameters.add('%' + category + '%');
+            parameters_types.add("string");
+        }
+
         //to obtain the number of pages
         String sql_unlimited = "SELECT COUNT(*) AS num" + sql;
 
@@ -397,6 +411,21 @@ public class DBHandler {
         restaurants.set(0, new String[]{Integer.toString(pages), Integer.toString(restaurants.size() - 1)});
 
         return restaurants.toArray(new String[][]{});
+    }
+
+    public static double[] getUserPosition(int user_id) throws SQLException {
+        String sql = "SELECT latitudine_domicilio AS la, longitudine_domicilio AS lo FROM utenti WHERE id = ?";
+
+        PreparedStatement statement = connection.prepareStatement(sql);
+
+        statement.setInt(1, user_id);
+
+        ResultSet result = statement.executeQuery();
+
+        if(result.next())
+            return new double[]{result.getDouble("la"), result.getDouble("lo")};
+        
+        return null;
     }
 
     public static boolean setFavourite(int user_id, int id_restaurant, boolean set_favourite) throws SQLException {
