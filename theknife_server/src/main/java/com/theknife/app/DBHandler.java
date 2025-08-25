@@ -305,7 +305,7 @@ public class DBHandler {
 
     public static String[][] getRestaurantsWithFilter(int page, double latitude, double longitude, double range_km, int price_min, int price_max, boolean has_delivery, boolean has_online, double stars_min, double stars_max, int favourite_id) throws SQLException {
         int offset = page * 10;
-        String sql = " FROM \"RistorantiTheKnife\" r";
+        String sql = " FROM \"RistorantiTheKnife\" r"; // VS
         List<String> parameters = new LinkedList<String>();
         List<String> parameters_types = new LinkedList<String>();
 
