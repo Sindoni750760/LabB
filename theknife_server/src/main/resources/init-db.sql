@@ -5,7 +5,8 @@ CREATE TABLE utenti (
     username VARCHAR(100) UNIQUE NOT NULL,
     password CHAR(60) NOT NULL,
     data_nascita DATE,
-    --luogo_domicilio,
+    latitudine_domicilio DOUBLE PRECISION NOT NULL,
+    longitudine_domicilio DOUBLE PRECISION NOT NULL,
     is_ristoratore BOOLEAN NOT NULL
 );
 
@@ -20,7 +21,7 @@ CREATE TABLE "RistorantiTheKnife" (
     fascia_prezzo INTEGER NOT NULL,
     servizio_delivery BOOLEAN NOT NULL,
     prenotazione_online BOOLEAN NOT NULL,
-    --tipo_cucina,
+    tipo_cucina VARCHAR(255) NOT NULL,
     proprietario INTEGER REFERENCES utenti(id)
 );
 
