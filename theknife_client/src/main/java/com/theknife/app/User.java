@@ -6,6 +6,7 @@ public class User {
     private static String name, surname;
     private static boolean logged_in = false, is_restaurateur;
 
+    //function used to login the user on the client and the server
     public static String login(String username, String password) throws IOException {        
         Communicator.sendStream("login");
         Communicator.sendStream(username);
@@ -35,6 +36,7 @@ public class User {
         logged_in = false;
     }
 
+    //function used to get the current user info
     public static String[] getInfo() {
         if(!logged_in)
             return null;
