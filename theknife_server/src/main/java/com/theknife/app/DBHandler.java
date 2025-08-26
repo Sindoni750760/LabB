@@ -16,6 +16,7 @@ import java.util.List;
 public class DBHandler {
     private static Connection connection = null;
 
+    //handles the connection to the database
     public static boolean connect(String jdbcUrl, String username, String password) {
         try {
             Class.forName("org.postgresql.Driver");
@@ -77,7 +78,7 @@ public class DBHandler {
         statement.setBoolean(7, is_ristoratore);
 
         if(data_nascita_time >= 0)
-           statement.setDate(8, new Date(data_nascita_time));
+            statement.setDate(8, new Date(data_nascita_time));
 
         try {
             statement.executeUpdate();
@@ -236,6 +237,7 @@ public class DBHandler {
         return null;
     }
 
+    //checks if user is owner of a restaurant
     public static boolean hasAccess(int user_id, int restaurant_id) throws SQLException {
         String sql = "SELECT 1 FROM \"RistorantiTheKnife\" r JOIN utenti u ON proprietario = u.id WHERE r.id = ? AND u.id = ?";
 
@@ -295,6 +297,7 @@ public class DBHandler {
         return true;
     }
 
+    //function used to set variable length and type parameters in a prepared statement
     private static void setParameters(PreparedStatement statement, List<String> parameters, List<String> parameters_types) throws NumberFormatException, SQLException {
         for(int i = 0; i < parameters.size(); i++) {
             switch(parameters_types.get(i)) {
@@ -313,7 +316,7 @@ public class DBHandler {
 
     public static String[][] getRestaurantsWithFilter(int page, double latitude, double longitude, double range_km, int price_min, int price_max, boolean has_delivery, boolean has_online, double stars_min, double stars_max, int favourite_id, String category) throws SQLException {
         int offset = page * 10;
-        String sql = " FROM \"RistorantiTheKnife\" r"; // VS
+        String sql = " FROM \"RistorantiTheKnife\" r";
         List<String> parameters = new LinkedList<String>();
         List<String> parameters_types = new LinkedList<String>();
 
@@ -360,7 +363,7 @@ public class DBHandler {
         if(has_online)
             sql += " AND prenotazione_online = true";
 
-      String stars_query = "(SELECT AVG(stelle) FROM recensioni WHERE id_ristorante = r.id GROUP BY id_ristorante)";
+        String stars_query = "(SELECT AVG(stelle) FROM recensioni WHERE id_ristorante = r.id GROUP BY id_ristorante)";
         if(stars_min >= 0) {
             sql += " AND " + stars_query + " >= ?";
             parameters.add(Double.toString(stars_min));
@@ -424,7 +427,7 @@ public class DBHandler {
 
         if(result.next())
             return new double[]{result.getDouble("la"), result.getDouble("lo")};
-        
+
         return null;
     }
 
@@ -577,6 +580,7 @@ public class DBHandler {
         return reviews.toArray(new String[][]{});
     }
 
+    //checks if the restaurator is owner of the reviewd restaurant
     public static boolean canRespond(int user_id, int review_id) throws SQLException {
         String sql = "SELECT 1 FROM recensioni re JOIN \"RistorantiTheKnife\" ri ON id_ristorante = ri.id WHERE re.id = ? AND proprietario = ?";
 
@@ -619,7 +623,7 @@ public class DBHandler {
 
         if(result.next())
             return result.getString("testo");
-        
+
         return null;
     }
 
@@ -656,5 +660,46 @@ public class DBHandler {
         }
 
         return true;
+    }
+
+    public static int getUserReviewsPages(int user_id) throws SQLException {
+        String sql = "SELECT COUNT(*) AS num FROM recensioni WHERE id_utente = ?";
+
+        PreparedStatement statement = connection.prepareStatement(sql);
+
+        statement.setInt(1, user_id);
+
+        ResultSet result = statement.executeQuery();
+
+        if(result.next()) {
+            int num_pages = result.getInt("num");
+            return num_pages > 0 ? (num_pages - 1) / 10 + 1 : 0;
+        }
+
+        //shouldn't reach this part of the code
+        return -1;
+    }
+
+    public static String[][] getUserReviews(int user_id, int page) throws SQLException {
+        int offset = page * 10;
+        String sql = "SELECT nome, stelle, testo FROM \"RistorantiTheKnife\" ri JOIN recensioni re ON ri.id = id_ristorante WHERE id_utente = ? LIMIT 10 OFFSET ?";
+
+        PreparedStatement statement = connection.prepareStatement(sql);
+
+        statement.setInt(1, user_id);
+        statement.setInt(2, offset);
+
+        ResultSet result = statement.executeQuery();
+
+        List<String[]> reviews = new LinkedList<String[]>();
+
+        while(result.next()) {
+            String restaurant_name = result.getString("nome");
+            String stars = result.getString("stelle");
+            String text = result.getString("testo");
+            reviews.add(new String[]{restaurant_name, stars, text});
+        }
+
+        return reviews.toArray(new String[][]{});
     }
 }

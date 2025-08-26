@@ -2,7 +2,6 @@ package com.theknife.app.controllers;
 
 import java.io.IOException;
 
-
 import com.theknife.app.SceneManager;
 import com.theknife.app.User;
 
@@ -18,7 +17,7 @@ public class LoginController {
     private PasswordField password;
     @FXML
     private Label notification_label;
-
+    
     @FXML
     private void goBack() throws IOException {
         SceneManager.changeScene("App");
@@ -27,17 +26,12 @@ public class LoginController {
     @FXML
     private void login() throws IOException {
         switch(User.login(username.getText(), password.getText())) {
-
-
-
-
-
             case "ok":
-
-
-
-
-
+                //if the user is a restaurateur, changes the scene to MyRestaurants
+                if(User.getInfo()[2].equals("y")) {
+                    SceneManager.changeScene("MyRestaurants");
+                    break;
+                }
                 SceneManager.setAppAlert("Login effettuato con successo");
                 SceneManager.changeScene("App");
                 break;

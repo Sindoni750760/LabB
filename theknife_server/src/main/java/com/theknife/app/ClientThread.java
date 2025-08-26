@@ -15,6 +15,7 @@ public class ClientThread extends Thread {
     private int user_id = -1;
 
     public ClientThread(Socket socket) throws IOException {
+        //sets up the input/output streams
         ip = socket.getInetAddress().toString();
         reader = new BufferedReader(new InputStreamReader(socket.getInputStream(),  StandardCharsets.UTF_8));
         os = socket.getOutputStream();
@@ -36,12 +37,14 @@ public class ClientThread extends Thread {
         System.out.println("[" + ip + "]" + msg);
     }
 
+    //function used to read a string from the client
     private String readStream() throws IOException {
         String msg = reader.readLine();
         log("[In<--]" + msg);
         return msg;
     }
 
+    //function used to send a string to the client
     private void sendStream(String msg) throws IOException {
         log("[Out->]" + msg);
         os.write((msg + '\n').getBytes(StandardCharsets.UTF_8));
@@ -51,12 +54,14 @@ public class ClientThread extends Thread {
         log("Connected");
 
         String cmd = readStream();
+        //keeps reading the user command until it's "disconnect"
         while(!cmd.equals("disconnect")) {
+            //operates based on the received command
             switch (cmd) {
                 case "ping":
                     sendStream("pong");
                     break;
-                case "register":
+                case "register": //to register a user
                     String nome = readStream();
                     String cognome = readStream();
                     String username = readStream();
@@ -68,7 +73,7 @@ public class ClientThread extends Thread {
 
                     sendStream(User.registerUser(nome, cognome, username, password, data_nascita, latitude_string, longitude_string, is_ristoratore));
                     break;
-                case "login":
+                case "login": //to authenticate the socket
                     username = readStream();
                     password = readStream();
 
@@ -82,7 +87,7 @@ public class ClientThread extends Thread {
                     else if(logged_user_id == -2) //password mismatch
                         sendStream("password");
                     break;
-                case "getUserInfo":
+                case "getUserInfo": //send current logged in user info to the client
                     if(user_id < 1)
                         sendStream("unauthorized");
                     else {
@@ -108,6 +113,7 @@ public class ClientThread extends Thread {
                     String avg_price_string = readStream(), categories = readStream();
                     boolean has_delivery = readStream().equals("y"), has_online = readStream().equals("y");
 
+                    //if some data is empty, replies with the "missing" error code
                     if(name.trim().isEmpty() || nation.trim().isEmpty() || city.trim().isEmpty() || address.trim().isEmpty() || categories.trim().isEmpty()) {
                         sendStream("missing");
                         break;
@@ -118,6 +124,7 @@ public class ClientThread extends Thread {
                         latitude = Double.parseDouble(latitude_string);
                         longitude = Double.parseDouble(longitude_string);
                     } catch (NumberFormatException e) {
+                        //if the format of the coordinates is incorrect, replies with the "coordinates" error code
                         sendStream("coordinates");
                         break;
                     }
@@ -126,21 +133,24 @@ public class ClientThread extends Thread {
                     try {
                         price = Integer.parseInt(avg_price_string);
                     } catch (NumberFormatException e) {
+                        //if the format of the price is incorrect, replies with the "price_format" error code
                         sendStream("price_format");
                         break;
                     }
 
                     if(price < 0) {
+                        //if the price is negative, replies with the "price_negative" error code
                         sendStream("price_negative");
                         break;
                     }
 
+                    //tries to add a restaurant, replies with the "error" error code if something goes wrong
                     if(DBHandler.addRestaurant(user_id, name, nation, city, address, latitude, longitude, price, categories, has_delivery, has_online))
                         sendStream("ok");
                     else
                         sendStream("error");
                     break;
-                case "editRestaurant":
+                case "editRestaurant": //same input control and error codes from "addRestaurant"
                     //if the user isn't a restaurator, he cannot edit a restaurant
                     if(user_id < 1 || !DBHandler.getUserInfo(user_id)[2].equals("y")) {
                         sendStream("unauthorized");
@@ -188,7 +198,7 @@ public class ClientThread extends Thread {
                             break;
                         }
 
-                         if(DBHandler.editRestaurant(id, name, nation, city, address, latitude, longitude, price, categories, has_delivery, has_online))
+                        if(DBHandler.editRestaurant(id, name, nation, city, address, latitude, longitude, price, categories, has_delivery, has_online))
                             sendStream("ok");
                         else
                             sendStream("error");
@@ -203,6 +213,7 @@ public class ClientThread extends Thread {
 
                     id = Integer.parseInt(readStream());
 
+                    //deletes the selected restaurant if the restaurator is the owner
                     if(!DBHandler.hasAccess(user_id, id))
                         sendStream("no access");
                     else {
@@ -231,7 +242,7 @@ public class ClientThread extends Thread {
                     }
 
                     break;
-                case "getMyRestaurantsPages":
+                case "getMyRestaurantsPages": //send the number of MyRestaurants pages to the client
                     //if the user isn't a restaurator, he cannot get his restaurants
                     if(user_id < 1 || !DBHandler.getUserInfo(user_id)[2].equals("y")) {
                         sendStream("unauthorized");
@@ -240,7 +251,7 @@ public class ClientThread extends Thread {
 
                     sendStream(Integer.toString(DBHandler.getUserRestaurantsPages(user_id)));
                     break;
-                case "getRestaurantInfo":
+                case "getRestaurantInfo": //sends single restaurant info to the client
                     id = Integer.parseInt(readStream());
 
                     String[] restaurant_info = DBHandler.getRestaurantInfo(id);
@@ -256,6 +267,8 @@ public class ClientThread extends Thread {
                         sendStream("unauthorized");
                         break;
                     }
+
+                    //reads the search filters and uses it to get the restaurants with those filters
                     page = Integer.parseInt(readStream());
                     latitude_string = readStream();
                     longitude_string = readStream();
@@ -312,7 +325,7 @@ public class ClientThread extends Thread {
 
                     break;
                 case "isFavourite":
-                    //if the user isn't a customer, he look out if a restaurant is in his favourites
+                    //if the user isn't a customer, he cannot look out if a restaurant is in his favourites
                     if(user_id < 1 || DBHandler.getUserInfo(user_id)[2].equals("y")) {
                         sendStream("unauthorized");
                         break;
@@ -352,7 +365,7 @@ public class ClientThread extends Thread {
                     sendStream(DBHandler.addReview(user_id, id, stars, text) ? "ok" : "error");
 
                     break;
-                case "getMyReview":
+                case "getMyReview": //send review info of the indicated restaurant to the client
                     if(user_id < 1 || DBHandler.getUserInfo(user_id)[2].equals("y")) {
                         sendStream("unauthorized");
                         break;
@@ -364,7 +377,7 @@ public class ClientThread extends Thread {
                         sendStream(s);
 
                     break;
-                case "editReview":
+                case "editReview": //edits the review of the indicated review
                     if(user_id < 1 || DBHandler.getUserInfo(user_id)[2].equals("y")) {
                         sendStream("unauthorized");
                         break;
@@ -386,7 +399,7 @@ public class ClientThread extends Thread {
 
                     sendStream(DBHandler.editReview(user_id, id, stars, text) ? "ok" : "error");
                     break;
-                case "removeReview":
+                case "removeReview": //deletes the indicated review
                     if(user_id < 1 || DBHandler.getUserInfo(user_id)[2].equals("y")) {
                         sendStream("unauthorized");
                         break;
@@ -400,7 +413,7 @@ public class ClientThread extends Thread {
                     id = Integer.parseInt(readStream());
                     sendStream(Integer.toString(DBHandler.getReviewsPages(id)));
                     break;
-                case "getReviews":
+                case "getReviews": //send the reviews of the indicated restaurant to the client
                     id = Integer.parseInt(readStream());
                     page = Integer.parseInt(readStream());
 
@@ -421,7 +434,7 @@ public class ClientThread extends Thread {
                     }
 
                     break;
-                case "addResponse":
+                case "addResponse": //adds a response to a review (restaurator)
                     id = Integer.parseInt(readStream());
                     if(user_id < 1 || !DBHandler.canRespond(user_id, id)) {
                         sendStream("unauthorized");
@@ -437,7 +450,7 @@ public class ClientThread extends Thread {
 
                     sendStream(DBHandler.addResponse(id, text) ? "ok" : "error");
                     break;
-                case "getResponse":
+                case "getResponse": //sends indicated response info to the client (restaurator)
                     id = Integer.parseInt(readStream());
                     if(user_id < 1 || !DBHandler.canRespond(user_id, id)) {
                         sendStream("unauthorized");
@@ -452,7 +465,7 @@ public class ClientThread extends Thread {
                         sendStream(response_text);
                     }
                     break;
-                case "editResponse":
+                case "editResponse": //edits the indicated response (restaurator)
                     id = Integer.parseInt(readStream());
                     if(user_id < 1 || !DBHandler.canRespond(user_id, id)) {
                         sendStream("unauthorized");
@@ -468,7 +481,7 @@ public class ClientThread extends Thread {
 
                     sendStream(DBHandler.editResponse(id, text) ? "ok" : "error");
                     break;
-                case "removeResponse":
+                case "removeResponse": //deletes the response (restaurator)
                     id = Integer.parseInt(readStream());
                     if(user_id < 1 || !DBHandler.canRespond(user_id, id)) {
                         sendStream("unauthorized");
@@ -477,7 +490,45 @@ public class ClientThread extends Thread {
 
                     sendStream(DBHandler.removeResponse(id) ? "ok" : "error");
                     break;
-                case "logout":
+                case "getMyReviewsPages": //send the number of pages of the reviews written by the user to the client
+                    //if the user isn't a customer, he cannot get his reviews
+                    if(user_id < 1 || DBHandler.getUserInfo(user_id)[2].equals("y")) {
+                        sendStream("unauthorized");
+                        break;
+                    }
+
+                    int num_pages = DBHandler.getUserReviewsPages(user_id);
+
+                    if(num_pages < 0)
+                        sendStream("error");
+                    else {
+                        sendStream("ok");
+                        sendStream(Integer.toString(num_pages));
+                    }
+
+                    break;
+                case "getMyReviews": //sends the info of the reviews written by the user to the client
+                    //if the user isn't a customer, he cannot get his reviews
+                    if(user_id < 1 || DBHandler.getUserInfo(user_id)[2].equals("y")) {
+                        sendStream("unauthorized");
+                        break;
+                    }
+
+                    page = Integer.parseInt(readStream());
+
+                    //review_format: {"restaurant name", "given stars", "review text"}
+                    String[][] my_reviews = DBHandler.getUserReviews(user_id, page);
+
+                    sendStream(Integer.toString(my_reviews.length));
+
+                    for(String[] review : my_reviews) {
+                        sendStream(review[0]);
+                        sendStream(review[1]);
+                        sendStream(review[2]);
+                    }
+
+                    break;
+                case "logout": //deauthenticates the socket
                     user_id = -1;
                     sendStream("ok");
                     break;

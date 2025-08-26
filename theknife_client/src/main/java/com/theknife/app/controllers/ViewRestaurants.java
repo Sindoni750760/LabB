@@ -59,6 +59,7 @@ public class ViewRestaurants {
 
     @FXML
     private void updateFilters() throws IOException {
+        //updates the filters to be used in the search
         hideNotification();
         latitude = filledOrDash(latitude_field.getText());
         longitude = filledOrDash(longitude_field.getText());
@@ -70,13 +71,15 @@ public class ViewRestaurants {
         stars_min = filledOrDash(stars_min_field.getText());
         stars_max = filledOrDash(stars_max_field.getText());
         only_favourites = favourites_check.isSelected() ? "y" : "n";
-        category = filledOrDash(category_field.getText());
-        if(category.equals(""))
+        if(category_field.getText().isEmpty())
             category = null;
+        else
+            category = category_field.getText();
         near_me = near_me_check.isSelected() ? "y" : "n";
         searchPage(0);
     }
 
+    //function used to update the displayed restaurants in the listview
     private void searchPage(int page) throws IOException {
         current_page = page;
         no_restaurants_label.setVisible(false);
@@ -105,16 +108,15 @@ public class ViewRestaurants {
         }
         Communicator.sendStream(near_me);
 
-      
+
         if(User.getInfo() != null)
             Communicator.sendStream(only_favourites);
-
+        
         String response = Communicator.readStream();
         switch(response) {
             case "ok":
                 pages = Integer.parseInt(Communicator.readStream());
                 if(pages < 1) {
-
                     no_restaurants_label.setVisible(true);
                     Communicator.readStream();
                     break;
@@ -150,13 +152,13 @@ public class ViewRestaurants {
         
         checkSelected();
     }
-    
-     @FXML
+
+    @FXML
     private void handleCoordinates() {
+        //enables/disables the coordinates input box based on the "near me" check box value
         latitude_field.setDisable(near_me_check.isSelected());
         longitude_field.setDisable(near_me_check.isSelected());
     }
-
 
     private void setNotification(String msg) {
         notification_label.setText(msg);

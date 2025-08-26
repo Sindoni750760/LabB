@@ -40,7 +40,7 @@ public class SceneManager {
         return new String[]{appMessage, appMessageColor};
     }
 
-    //function used to set an alert displayed in the App scen
+    //function used to set an alert displayed in the App scene
     public static void setAppAlert(String text) {
         appMessage = text;
         appMessageColor = "green";

@@ -37,7 +37,6 @@ public class EditRestaurant {
         //if it's editing a restaurant, sets the info
         if(editing_id > 0) {
             String[] restaurant_info = EditingRestaurant.getInfo();
-            //return new String[]{name, nation, city, address, latitude, longitude, avg_price, has_delivery, has_online, avg_stars, n_reviews, categories};
             name_field.setText(restaurant_info[0]);
             nation_field.setText(restaurant_info[1]);
             city_field.setText(restaurant_info[2]);
@@ -61,6 +60,7 @@ public class EditRestaurant {
 
     @FXML
     private void updateRestaurant() throws IOException {
+        //loads the values from the fields
         String name = name_field.getText(),
         nation = nation_field.getText(),
         city = city_field.getText(),
@@ -74,7 +74,7 @@ public class EditRestaurant {
         String response;
         //editing a restaurant
         if(editing_id > 0)
-           response = EditingRestaurant.editRestaurant(editing_id, name, nation, city, address, latitude, longitude, price, categories, has_delivery, has_online);
+            response = EditingRestaurant.editRestaurant(editing_id, name, nation, city, address, latitude, longitude, price, categories, has_delivery, has_online);
         else //not editing a restaurant
             response = EditingRestaurant.addRestaurant(name, nation, city, address, latitude, longitude, price, categories, has_delivery, has_online);
         
@@ -97,13 +97,15 @@ public class EditRestaurant {
         }
     }
 
-@FXML
+    @FXML
     private void checkTextBox() {
         String text = categories_textarea.getText();
+        //truncates the text in the textbox if it exceedes the max length
         if(text.length() > 255)
             categories_textarea.setText(text.substring(0, 255));
     }
 
+    //function used to set a notification in the current scene
     private void setNotification(String msg) {
         notification_label.setVisible(true);
         notification_label.setText(msg);
@@ -111,6 +113,7 @@ public class EditRestaurant {
 
     @FXML
     private void deleteRestaurant() throws IOException {
+        //prompts the user if he is sure to delete the current restaurant
         Alert alert = new Alert(AlertType.CONFIRMATION, "Sei sicuro di voler eliminare questo ristorante?", ButtonType.YES, ButtonType.NO);
         alert.showAndWait();
 

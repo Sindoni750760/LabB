@@ -69,6 +69,7 @@ public class WriteReview {
 
     @FXML
     private void checkTextBox() {
+        //to limitate the review text to max 255 chars
         String text = text_area.getText();
         if(text.length() > 255) {
             text = text.substring(0, 255);
@@ -79,6 +80,7 @@ public class WriteReview {
 
     @FXML
     private void publish() throws IOException {
+        //edits/adds a review/response
         if(is_restaurateur) {
             Communicator.sendStream(is_editing ? "editResponse" : "addResponse");
             Communicator.sendStream(Integer.toString(EditingRestaurant.getReviewId()));

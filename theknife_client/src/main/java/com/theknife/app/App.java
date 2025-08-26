@@ -43,14 +43,14 @@ public class App extends Application {
                     integrity_check = false;
                 fs.close();
             }
-            
+
             //if the file is corrupted/absent, recreate it
             if(!integrity_check) {
                 FileWriter fw = new FileWriter("config.ini");
                 fw.write("ip=" + ip + ':' + port);
                 fw.close();
             }
-                
+
 
             //initiate the communicator and the scene manager
             Communicator.init(ip, port);

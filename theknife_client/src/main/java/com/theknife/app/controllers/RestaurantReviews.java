@@ -18,7 +18,7 @@ public class RestaurantReviews {
     private static String[] reviews_ids;
     private static int total_pages, current_page;
     @FXML
-    private Label no_reviews_label, page_label;
+    private Label no_reviews_label, page_label, reviews_label, stars_label;
     @FXML
     private Button prev_btn, next_btn, add_review_btn;
     @FXML
@@ -26,12 +26,12 @@ public class RestaurantReviews {
 
     @FXML
     private void initialize() throws IOException {
-        prev_btn.setDisable(true); // VS
+        prev_btn.setDisable(true);
         next_btn.setDisable(true);
         no_reviews_label.setVisible(false);
         current_page = 0;
         String[] user_info = User.getInfo();
-
+        
         is_logged = user_info != null;
 
         if(is_logged) {
@@ -54,6 +54,11 @@ public class RestaurantReviews {
             }
         }
 
+        String[] restaurant_info = EditingRestaurant.getInfo();
+        reviews_label.setText("Recensioni ricevute: " + restaurant_info[10]);
+        String stars_text = restaurant_info[9];
+        stars_label.setText("Valutazione media (stelle): " + (stars_text.equals("0") ? "-" : stars_text));
+
         Communicator.sendStream("getReviewsPages");
         Communicator.sendStream(Integer.toString(EditingRestaurant.getId()));
         total_pages = Integer.parseInt(Communicator.readStream());
@@ -64,6 +69,7 @@ public class RestaurantReviews {
             no_reviews_label.setVisible(true);
 
         //https://stackoverflow.com/questions/53493111/javafx-wrapping-text-in-listview
+        //function used to wrap the text for every cell of the listview
         reviews_listview.setCellFactory(lv -> new ListCell<String>() {
             {
                 setPrefWidth(0); // forces the cell to size itself based on the ListView
@@ -84,12 +90,13 @@ public class RestaurantReviews {
         });
     }
 
+    //changes the page of the current restaurant reviews
     private void changePage(int page) throws IOException {
         page_label.setText(Integer.toString(page + 1) + '/' + total_pages);
         prev_btn.setDisable(page < 1);
         next_btn.setDisable(page + 1 >= total_pages);
 
-
+        
         Communicator.sendStream("getReviews");
         Communicator.sendStream(Integer.toString(EditingRestaurant.getId()));
         Communicator.sendStream(Integer.toString(page));
@@ -114,7 +121,7 @@ public class RestaurantReviews {
         String[] review_compact = new String[size];
         for(int i = 0; i < size; i++)
             review_compact[i] = reviews_stars[i] + "/5 " + reviews_texts[i] + (reviews_reply[i] == null ? "" : "\nRisposta del ristoratore: " + reviews_reply[i]);
-
+        
         reviews_listview.getItems().setAll(review_compact);
     }
 
@@ -131,6 +138,7 @@ public class RestaurantReviews {
     @FXML
     private void addReview() throws IOException {
         if(is_restaurateur) {
+            //sets the id of the review to reply to (restaurator)
             int review_id = Integer.parseInt(reviews_ids[reviews_listview.getSelectionModel().getSelectedIndex()]);
             EditingRestaurant.setReviewId(review_id);
         }
@@ -144,6 +152,7 @@ public class RestaurantReviews {
 
     @FXML
     private void goBack() throws IOException {
+        //changes page based on the role
         if(is_restaurateur)
             SceneManager.changeScene("MyRestaurants");
         else

@@ -28,6 +28,7 @@ public class RegisterController {
 
     @FXML
     private void initialize() {
+        //to disable the days after today in the birth date selection
         birth_date.setDayCellFactory(d ->
            new DateCell() {
                @Override public void updateItem(LocalDate item, boolean empty) {
@@ -43,6 +44,7 @@ public class RegisterController {
 
     @FXML
     private void register() throws IOException {
+        //checks if the two passwords inserted correspond
         if(!password.getText().equals(confirm_password.getText())) {
             setNotification("Le password inserite non corrispondono");
             return;
@@ -58,6 +60,7 @@ public class RegisterController {
         Communicator.sendStream(longitude.getText());
         Communicator.sendStream(is_restaurateur.isSelected() ? "y" : "n");
 
+        //switches the response code received by the server
         switch(Communicator.readStream()) {
             case "ok":
                 SceneManager.setAppAlert("Registrazione avvenuta con successo");

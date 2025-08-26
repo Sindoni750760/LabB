@@ -36,7 +36,8 @@ public class AppController {
             if(user_info != null) {
                 user_info_label.setText("Login effettuato come " + user_info[0] + " " + user_info[1]);
                 //shows/hides button if the user is logged in
-                register_btn.setVisible(false);
+                register_btn.setText("Vedi recensioni");
+                register_btn.setLayoutX(252);
                 login_btn.setVisible(false);
                 logout_btn.setVisible(true);
             }
@@ -51,7 +52,11 @@ public class AppController {
 
     @FXML
     private void click_register() throws IOException {
-        SceneManager.changeScene("Register");
+        //if the user is logged in, go to MyReviews page, else go to the registration page
+        if(User.getInfo() == null)
+            SceneManager.changeScene("Register");
+        else
+            SceneManager.changeScene("MyReviews");
     }
 
     @FXML
@@ -61,13 +66,8 @@ public class AppController {
 
     @FXML
     private void logout() throws Exception {
-        register_btn.setVisible(true);
-        login_btn.setVisible(true);
-        logout_btn.setVisible(false);
-
-        user_info_label.setText("Utente ospite");
-
         User.logout();
+        SceneManager.changeScene("App");
     }
 
     //used to disable/enable buttons after a disconnection/reconnection
@@ -81,6 +81,7 @@ public class AppController {
 
     @FXML
     private void reconnect() throws UnknownHostException, IOException {
+        //used to handle the reconnection messages
         if(Communicator.connect()) {
             reconnection_tries = 1;
             notification_label.setVisible(true);

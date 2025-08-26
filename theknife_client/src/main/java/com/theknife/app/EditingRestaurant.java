@@ -39,7 +39,7 @@ public class EditingRestaurant {
     public static String[] getInfo() {
         return new String[]{name, nation, city, address, latitude, longitude, avg_price, has_delivery, has_online, avg_stars, n_reviews, categories};
     }
-    
+
     //function used to communicate to the server the info of the restaurant to be added
     public static String addRestaurant(String name, String nation, String city, String address, String latitude, String longitude, String avg_price, String categories, boolean has_delivery, boolean has_online) throws IOException {
         Communicator.sendStream("addRestaurant");
@@ -56,7 +56,7 @@ public class EditingRestaurant {
 
         return Communicator.readStream();
     }
-    
+
     //function used to communicate to the server the info of the restaurant to be edited
     public static String editRestaurant(int id, String name, String nation, String city, String address, String latitude, String longitude, String avg_price, String categories, boolean has_delivery, boolean has_online) throws IOException {
         Communicator.sendStream("editRestaurant");

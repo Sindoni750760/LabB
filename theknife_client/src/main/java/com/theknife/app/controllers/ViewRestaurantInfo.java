@@ -63,11 +63,11 @@ public class ViewRestaurantInfo {
     @FXML
     private void viewReviews() throws IOException {
         SceneManager.changeScene("RestaurantReviews");
-
     }
 
     @FXML
     private void addToFavourites() throws IOException {
+        //sets/unsets current restaurant as favourite
         String restaurant_id = Integer.toString(EditingRestaurant.getId());
         if(is_favourite) {
             fav_btn.setText("Aggiungi ai preferiti");

@@ -37,6 +37,7 @@ public class MyRestaurants {
             no_restaurants_label.setVisible(true);
     }
 
+    //function used to change the page of the viewed user restaurants
     private void changePage(int page) throws IOException {
         page_label.setText(Integer.toString(page + 1) + "/" + Integer.toString(total_pages));
         prev_btn.setDisable(page < 1);
@@ -68,6 +69,7 @@ public class MyRestaurants {
         changePage(++current_page);
     }
 
+    //function used to enable/disable the edit and reviews buttons
     @FXML
     private void checkSelected() {
         int index = restaurants_container.getSelectionModel().getSelectedIndex();
@@ -75,6 +77,7 @@ public class MyRestaurants {
         reviews_btn.setDisable(index < 0);
     }
 
+    //function used to start editing the selected restaurant
     @FXML
     private void editSelected() throws IOException {
         int restaurant_id = restaurants_ids[restaurants_container.getSelectionModel().getSelectedIndex()];
@@ -82,6 +85,7 @@ public class MyRestaurants {
         SceneManager.changeScene("EditRestaurant");
     }
 
+    //function used to view the reviews of the selected restaurant
     @FXML
     private void viewReviews() throws IOException {
         int restaurant_id = restaurants_ids[restaurants_container.getSelectionModel().getSelectedIndex()];
@@ -95,6 +99,7 @@ public class MyRestaurants {
         SceneManager.changeScene("App");
     }
 
+    //function used to go to scene to add a new restaurant
     @FXML
     private void addRestaurant() throws IOException {
         SceneManager.changeScene("EditRestaurant");
