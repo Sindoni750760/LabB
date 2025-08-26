@@ -38,6 +38,7 @@ public class Communicator {
 
     public static boolean connect() throws UnknownHostException, IOException {
         try {
+            //creates a new socket and configures the input/output streams
             socket = new Socket(ip, port);
             reader = new BufferedReader(new InputStreamReader(socket.getInputStream(),  StandardCharsets.UTF_8));
             os = socket.getOutputStream();
@@ -48,6 +49,7 @@ public class Communicator {
         }
     }
 
+    //function used to read a string from the server
     public static String readStream() throws IOException {
         try {
             if(socket.isClosed())
@@ -59,6 +61,7 @@ public class Communicator {
         }
     }
 
+    //function used to send a string to the server
     public static void sendStream(String msg) throws IOException {
         try {
             if(socket.isClosed())
