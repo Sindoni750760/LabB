@@ -15,6 +15,7 @@ public class App extends Application {
             String ip = "127.0.0.1";
             int port = 12345;
 
+            //loads config file if exists, else creates it
             File config_file = new File("config.ini");
             boolean integrity_check = config_file.exists();
             if(config_file.exists()) {
@@ -51,6 +52,7 @@ public class App extends Application {
             }
                 
 
+            //initiate the communicator and the scene manager
             Communicator.init(ip, port);
 
             SceneManager.init(stage);
