@@ -4,10 +4,10 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.theknife.app</groupId>
-  <artifactId>theknife-server</artifactId>
+  <artifactId>theknife_server</artifactId>
   <version>dev</version>
 
-  <name>theknife-server</name>
+  <name>theknife_server</name>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -23,7 +23,7 @@
     <dependency>
       <groupId>org.springframework.security</groupId>
       <artifactId>spring-security-crypto</artifactId>
-      <version>5.8.5</version>
+      <version>6.5.1</version>
     </dependency>
     <dependency>
       <groupId>commons-logging</groupId>
@@ -100,3 +100,4 @@
     </plugins>
   </build>
 </project>
+

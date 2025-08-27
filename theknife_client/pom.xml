@@ -4,26 +4,26 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.theknife.app</groupId>
-  <artifactId>theknife-client</artifactId>
+  <artifactId>theknife_client</artifactId>
   <version>dev</version>
 
-  <name>theknife-client</name>
+  <name>theknife_client</name>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.release>24</maven.compiler.release>
+    <maven.compiler.release>17</maven.compiler.release>
   </properties>
 
   <dependencies>
 	  <dependency>
 		<groupId>org.openjfx</groupId>
 		<artifactId>javafx-controls</artifactId>
-		<version>24.0.2</version>
+		<version>17.0.1</version>
 	  </dependency>
 	  <dependency>
 		<groupId>org.openjfx</groupId>
 		<artifactId>javafx-fxml</artifactId>
-		<version>24.0.2</version>
+		<version>17.0.1</version>
 	  </dependency>
   </dependencies>
 

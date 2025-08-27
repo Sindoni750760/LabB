@@ -16,21 +16,25 @@
       <TextField fx:id="latitude_field" layoutX="14.0" layoutY="65.0" promptText="45.7981484" />
       <TextField fx:id="longitude_field" layoutX="14.0" layoutY="115.0" promptText="8.8482614" />
       <TextField fx:id="range_km_field" layoutX="14.0" layoutY="165.0" promptText="10.0" />
-      <TextField fx:id="price_min_field" layoutX="14.0" layoutY="215.0" prefHeight="25.0" prefWidth="50.0" promptText="Min" />
+      <CheckBox fx:id="near_me_check" layoutX="85.0" layoutY="145.0" mnemonicParsing="false" onAction="#handleCoordinates" text="Vicino a me" visible="false" />
       <Label layoutX="14.0" layoutY="195.0" text="Prezzo medio (in €)" />
+      <TextField fx:id="price_min_field" layoutX="14.0" layoutY="215.0" prefHeight="25.0" prefWidth="50.0" promptText="Min" />
       <TextField fx:id="price_max_field" layoutX="74.0" layoutY="215.0" prefHeight="25.0" prefWidth="50.0" promptText="Max" />
       <CheckBox fx:id="delivery_check" layoutX="14.0" layoutY="245.0" mnemonicParsing="false" text="Servizio delivery" />
       <CheckBox fx:id="online_check" layoutX="14.0" layoutY="265.0" mnemonicParsing="false" text="Prenotazione online" />
-      <Label layoutX="14.0" layoutY="285.0" text="Stelle" />
-      <TextField fx:id="stars_min_field" layoutX="14.0" layoutY="305.0" prefHeight="25.0" prefWidth="50.0" promptText="Min" />
-      <TextField fx:id="stars_max_field" layoutX="74.0" layoutY="305.0" prefHeight="25.0" prefWidth="50.0" promptText="Max" />
-      <ListView fx:id="restaurants_listview" layoutX="180.0" layoutY="12.0" prefHeight="250.0" prefWidth="400.0" />
-      <Button layoutX="13.0" layoutY="361.0" mnemonicParsing="false" onAction="#updateFilters" text="Filtra" />
-      <Label fx:id="notification_label" layoutX="13.0" layoutY="330.0" text="empty" textFill="RED" visible="false" />
+      <Label layoutX="14.0" layoutY="290.0" text="Stelle" />
+      <TextField fx:id="stars_min_field" layoutX="53.0" layoutY="285.0" prefHeight="25.0" prefWidth="50.0" promptText="Min" />
+      <TextField fx:id="stars_max_field" layoutX="113.0" layoutY="285.0" prefHeight="25.0" prefWidth="50.0" promptText="Max" />
+      <TextField fx:id="category_field" layoutX="14.0" layoutY="335.0" promptText="Messicano" />
+      <CheckBox fx:id="favourites_check" layoutX="14.0" layoutY="365.0" mnemonicParsing="false" text="Solo ristoranti preferiti" visible="false" />
+      <ListView fx:id="restaurants_listview" layoutX="180.0" layoutY="40.0" onKeyPressed="#checkSelected" onMouseClicked="#checkSelected" prefHeight="250.0" prefWidth="400.0" />
+      <Button layoutX="78.0" layoutY="14.0" mnemonicParsing="false" onAction="#updateFilters" text="Filtra" />
+      <Label fx:id="notification_label" layoutX="178.0" layoutY="18.0" text="empty" textFill="RED" visible="false" />
       <Label fx:id="no_restaurants_label" alignment="CENTER" layoutX="180.0" layoutY="132.0" prefHeight="17.0" prefWidth="400.0" text="Non è stato trovato nessun ristorante con questi filtri" visible="false" />
-      <Label fx:id="pages_label" layoutX="180.0" layoutY="274.0" text="-/-" />
-      <Button layoutX="180.0" layoutY="293.0" mnemonicParsing="false" text="Indietro" />
-      <Button layoutX="248.0" layoutY="293.0" mnemonicParsing="false" text="Avanti" />
-      <Button layoutX="528.0" layoutY="293.0" mnemonicParsing="false" text="Vedi info" />
+      <Label fx:id="pages_label" layoutX="236.0" layoutY="304.0" text="-/-" />
+      <Button fx:id="prev_btn" layoutX="182.0" layoutY="300.0" mnemonicParsing="false" onAction="#prevPage" text="←" />
+      <Button fx:id="next_btn" layoutX="209.0" layoutY="300.0" mnemonicParsing="false" onAction="#nextPage" text="→" />
+      <Button fx:id="view_info_btn" layoutX="522.0" layoutY="300.0" mnemonicParsing="false" onAction="#viewRestaurantInfo" text="Vedi info" />
+      <Label layoutX="15.0" layoutY="315.0" text="Tipo di cucina" />
    </children>
 </AnchorPane>
