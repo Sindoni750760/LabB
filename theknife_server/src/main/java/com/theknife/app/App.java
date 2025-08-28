@@ -1,83 +1,99 @@
 package com.theknife.app;
 
+import javax.swing.*;
+import java.awt.*;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.sql.SQLException;
-import java.util.Scanner;
 
 public class App {
-    private static int port = 12345;
-    private static boolean serve = true;
-    public static void main(String[] args) throws IOException, SQLException {
-        String jdbcUrl = "jdbc:postgresql://localhost:5432/theknife";
-        String username = "postgres";
-        String password = "postgres";
-        Scanner myScanner = new Scanner(System.in);
-        String line;
+    private static ServerSocket serverSocket;
+    private static Thread serverThread;
+    private static volatile boolean running = false;
 
-        //requests db configuration to the user
-        System.out.println("Database configuration (leave empty for default values)");
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(App::createAndShowGUI);
+    }
 
-        System.out.print("jdbc url: ");
-        line = myScanner.nextLine().trim();
-        if(!line.isEmpty())
-            jdbcUrl = line;
+    private static void createAndShowGUI() {
+        JFrame frame = new JFrame("TheKnife Server");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setSize(400, 200);
+        frame.setLocationRelativeTo(null);
 
-        System.out.print("db username: ");
-        line = myScanner.nextLine().trim();
-        if(!line.isEmpty())
-            username = line;
+        JLabel statusLabel = new JLabel("Server non avviato", SwingConstants.CENTER);
+        statusLabel.setFont(new Font("SansSerif", Font.BOLD, 16));
 
-        System.out.print("db password: ");
-        line = myScanner.nextLine().trim();
-        if(!line.isEmpty())
-            password = line;
-        
-        System.out.print("server port: ");
-        line = myScanner.nextLine().trim();
-        if(!line.isEmpty())
+        JButton startButton = new JButton("Avvia Server");
+        JButton stopButton = new JButton("Spegni Server");
+        stopButton.setEnabled(false);
+
+        startButton.addActionListener(e -> {
             try {
-                port = Integer.parseInt(line);
-            } catch(NumberFormatException e) {}
+                startServer(statusLabel, startButton, stopButton);
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(frame, "Errore: " + ex.getMessage(), "Errore", JOptionPane.ERROR_MESSAGE);
+            }
+        });
 
-        //initializes db handler object
-        if(!DBHandler.connect(jdbcUrl, username, password)) {
-            System.out.println("Error in the connection with the database, press enter to exit");
-            myScanner.nextLine();
-            myScanner.close();
-            return;
+        stopButton.addActionListener(e -> stopServer(statusLabel, startButton, stopButton));
+
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.add(startButton);
+        buttonPanel.add(stopButton);
+
+        frame.setLayout(new BorderLayout());
+        frame.add(statusLabel, BorderLayout.CENTER);
+        frame.add(buttonPanel, BorderLayout.SOUTH);
+        frame.setVisible(true);
+    }
+
+    private static void startServer(JLabel statusLabel, JButton startButton, JButton stopButton) throws IOException, SQLException {
+        // Parametri di default
+        String jdbcUrl = JOptionPane.showInputDialog("JDBC URL:", "jdbc:postgresql://localhost:5432/theknife");
+        String username = JOptionPane.showInputDialog("DB Username:", "postgres");
+        String password = JOptionPane.showInputDialog("DB Password:", "postgres");
+        String portStr = JOptionPane.showInputDialog("Porta Server:", "12345");
+
+        int port = 12345;
+        try {
+            port = Integer.parseInt(portStr.trim());
+        } catch (NumberFormatException ignored) {}
+
+        if (!DBHandler.connect(jdbcUrl, username, password)) {
+            throw new IOException("Connessione al DB fallita");
         }
 
-        //initializes the db and handles response code
-        switch(DBHandler.initDB()) {
-            case 0:
-                System.out.println("Database initialized successfully");
-                break;
-            case 1:
-                System.out.println("Database initialization failed, press enter to exit");
-                myScanner.nextLine();
-                myScanner.close();
-                return;
-            case 2:
-                System.out.println("Database already initialized");
-                break;
-            default:
-                System.err.println("Unhandled database initialization result, press enter to exit");
-                myScanner.nextLine();
-                myScanner.close();
-                return;
-        }
+        int initCode = DBHandler.initDB();
+        if (initCode == 1) throw new IOException("Inizializzazione DB fallita");
 
-        myScanner.close();
+        serverSocket = new ServerSocket(port);
+        running = true;
 
-        //initializes server socket
-        final ServerSocket serverSocket = new ServerSocket(port);
-        System.out.println("Server listening on port " + port);
+        serverThread = new Thread(() -> {
+            try {
+                while (running) {
+                    new ClientThread(serverSocket.accept()).start();
+                }
+            } catch (IOException ignored) {}
+        });
+        serverThread.start();
 
-        //listens for clients to connect
-        while(serve)
-            new ClientThread(serverSocket.accept());
+        statusLabel.setText("Server attivo sulla porta " + port);
+        startButton.setEnabled(false);
+        stopButton.setEnabled(true);
+    }
 
-        serverSocket.close();
+    private static void stopServer(JLabel statusLabel, JButton startButton, JButton stopButton) {
+        running = false;
+        try {
+            if (serverSocket != null && !serverSocket.isClosed()) {
+                serverSocket.close();
+            }
+        } catch (IOException ignored) {}
+
+        statusLabel.setText("Server spento");
+        startButton.setEnabled(true);
+        stopButton.setEnabled(false);
     }
 }
