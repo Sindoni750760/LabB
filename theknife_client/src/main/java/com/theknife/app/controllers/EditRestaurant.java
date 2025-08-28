@@ -16,19 +16,48 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 
+/**
+ * Controller per la schermata di modifica o aggiunta di un ristorante.
+ * Gestisce il caricamento dei dati, l'aggiornamento, l'eliminazione e la validazione dei campi.
+ */
 public class EditRestaurant {
+    /** ID del ristorante attualmente in fase di modifica. */
     private int editing_id;
+    /** Pulsante per confermare la modifica o aggiunta del ristorante. */
     @FXML
-    private Button edit_btn, delete_btn;
+    private Button edit_btn, 
+    /** Pulsante per eliminare il ristorante selezionato. */
+    delete_btn;
+    /** Campo di testo per il nome del ristorante. */
     @FXML
-    private TextField name_field, nation_field, city_field, address_field, latitude_field, longitude_field, price_field;
+    private TextField name_field, 
+    /** Campo di testo per la nazione del ristorante. */
+    nation_field, 
+    /** Campo di testo per la città del ristorante. */
+    city_field, 
+    /** Campo di testo per l'indirizzo del ristorante. */
+    address_field, 
+    /** Campo di testo per la latitudine del ristorante. */
+    latitude_field, 
+    /** Campo di testo per la longitudine del ristorante. */
+    longitude_field, 
+    /** Campo di testo per il prezzo medio del ristorante. */
+    price_field;
+    /** Area di testo per le categorie associate al ristorante. */
     @FXML
     private TextArea categories_textarea;
+    /** Checkbox per indicare se il ristorante offre consegna a domicilio. */
     @FXML
-    private CheckBox delivery_check, online_check;
+    private CheckBox delivery_check,
+    /** Checkbox per indicare se il ristorante è disponibile online. */
+    online_check;
+    /** Etichetta per mostrare notifiche o messaggi di errore all'utente. */
     @FXML
     private Label notification_label;
-
+    /**
+     * Inizializza la schermata caricando i dati del ristorante da modificare,
+     * oppure imposta la modalità di aggiunta se non è presente un ID.
+     */
     @FXML
     private void initialize() {
         //gets the id of the restaurant being edited
@@ -53,11 +82,22 @@ public class EditRestaurant {
         }
     }
 
+    /**
+     * Torna alla schermata "MyRestaurants" senza salvare modifiche.
+     *
+     * @throws IOException se la scena non può essere caricata
+     */
     @FXML
     private void goBack() throws IOException {
         SceneManager.changeScene("MyRestaurants");
     }
 
+    /**
+     * Aggiorna o aggiunge un ristorante in base alla modalità corrente.
+     * Valida i campi e mostra notifiche in caso di errore.
+     *
+     * @throws IOException se si verifica un errore durante il cambio scena
+     */
     @FXML
     private void updateRestaurant() throws IOException {
         //loads the values from the fields
@@ -97,6 +137,9 @@ public class EditRestaurant {
         }
     }
 
+    /**
+     * Controlla la lunghezza del testo nelle categorie e lo tronca se supera i 255 caratteri.
+     */
     @FXML
     private void checkTextBox() {
         String text = categories_textarea.getText();
@@ -105,12 +148,22 @@ public class EditRestaurant {
             categories_textarea.setText(text.substring(0, 255));
     }
 
-    //function used to set a notification in the current scene
+    /**
+     * Imposta un messaggio di notifica visibile nella schermata corrente.
+     *
+     * @param msg il messaggio da visualizzare
+     */
     private void setNotification(String msg) {
         notification_label.setVisible(true);
         notification_label.setText(msg);
     }
 
+    /**
+     * Elimina il ristorante corrente dopo conferma da parte dell'utente.
+     * Mostra una notifica in caso di errore.
+     *
+     * @throws IOException se si verifica un errore durante la comunicazione o il cambio scena
+     */
     @FXML
     private void deleteRestaurant() throws IOException {
         //prompts the user if he is sure to delete the current restaurant

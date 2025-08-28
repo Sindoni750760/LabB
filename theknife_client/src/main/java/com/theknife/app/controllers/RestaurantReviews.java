@@ -13,17 +13,58 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 
+/**
+ * Controller per la schermata delle recensioni di un ristorante.
+ * Gestisce la visualizzazione delle recensioni, la paginazione,
+ * e consente agli utenti di aggiungere o modificare la propria recensione.
+ * I ristoratori possono rispondere alle recensioni ricevute.
+ */
 public class RestaurantReviews {
-    private static boolean is_logged, is_restaurateur;
-    private static String[] reviews_ids;
-    private static int total_pages, current_page;
-    @FXML
-    private Label no_reviews_label, page_label, reviews_label, stars_label;
-    @FXML
-    private Button prev_btn, next_btn, add_review_btn;
-    @FXML
-    private ListView<String> reviews_listview;
+    /** Indica se l'utente è loggato. */
+    private static boolean is_logged;
 
+    /** Indica se l'utente loggato è un ristoratore. */
+    private static boolean is_restaurateur;
+
+    /** Array contenente gli ID delle recensioni visualizzate. */
+    private static String[] reviews_ids;
+
+    /** Numero totale di pagine disponibili per le recensioni. */
+    private static int total_pages;
+
+    /** Pagina attualmente visualizzata. */
+    private static int current_page;
+    /** Etichetta mostrata se non ci sono recensioni disponibili. */
+    @FXML private Label no_reviews_label;
+
+    /** Etichetta che mostra la pagina corrente e il totale delle pagine. */
+    @FXML private Label page_label;
+
+    /** Etichetta che mostra il numero totale di recensioni ricevute. */
+    @FXML private Label reviews_label;
+
+    /** Etichetta che mostra la valutazione media in stelle. */
+    @FXML private Label stars_label;
+
+    /** Pulsante per passare alla pagina precedente. */
+    @FXML private Button prev_btn;
+
+    /** Pulsante per passare alla pagina successiva. */
+    @FXML private Button next_btn;
+
+    /** Pulsante per aggiungere o modificare una recensione. */
+    @FXML private Button add_review_btn;
+
+    /** ListView che mostra le recensioni in formato compatto. */
+    @FXML private ListView<String> reviews_listview;
+
+    /**
+     * Inizializza la schermata delle recensioni.
+     * Determina il ruolo dell'utente, imposta il comportamento del pulsante di recensione,
+     * e carica le recensioni del ristorante selezionato.
+     *
+     * @throws IOException se si verifica un errore nella comunicazione con il server
+     */
     @FXML
     private void initialize() throws IOException {
         prev_btn.setDisable(true);
@@ -68,7 +109,6 @@ public class RestaurantReviews {
         else
             no_reviews_label.setVisible(true);
 
-        //https://stackoverflow.com/questions/53493111/javafx-wrapping-text-in-listview
         //function used to wrap the text for every cell of the listview
         reviews_listview.setCellFactory(lv -> new ListCell<String>() {
             {
@@ -90,7 +130,13 @@ public class RestaurantReviews {
         });
     }
 
-    //changes the page of the current restaurant reviews
+    /**
+     * Cambia la pagina visualizzata delle recensioni.
+     * Aggiorna la lista e lo stato dei pulsanti di navigazione.
+     *
+     * @param page numero della pagina da visualizzare
+     * @throws IOException se si verifica un errore nella comunicazione con il server
+     */    
     private void changePage(int page) throws IOException {
         page_label.setText(Integer.toString(page + 1) + '/' + total_pages);
         prev_btn.setDisable(page < 1);
@@ -125,16 +171,32 @@ public class RestaurantReviews {
         reviews_listview.getItems().setAll(review_compact);
     }
 
+    /**
+     * Passa alla pagina precedente delle recensioni.
+     *
+     * @throws IOException se si verifica un errore nella comunicazione
+     */
     @FXML
     private void prevPage() throws IOException {
         changePage(--current_page);
     }
 
+    /**
+     * Passa alla pagina successiva delle recensioni.
+     *
+     * @throws IOException se si verifica un errore nella comunicazione
+     */
     @FXML
     private void nextPage() throws IOException {
         changePage(++current_page);
     }
 
+    /**
+     * Apre la schermata per scrivere o modificare una recensione.
+     * Se l'utente è un ristoratore, imposta l'ID della recensione da gestire.
+     *
+     * @throws IOException se si verifica un errore nel cambio scena
+     */
     @FXML
     private void addReview() throws IOException {
         if(is_restaurateur) {
@@ -145,11 +207,19 @@ public class RestaurantReviews {
         SceneManager.changeScene("WriteReview");
     }
 
+    /**
+     * Abilita o disabilita il pulsante di recensione in base alla selezione corrente.
+     */
     @FXML
     private void checkSelected() {
         add_review_btn.setDisable(reviews_listview.getSelectionModel().getSelectedIndex() < 0);
     }
 
+    /**
+     * Torna alla schermata precedente in base al ruolo dell'utente.
+     *
+     * @throws IOException se la scena non può essere caricata
+     */
     @FXML
     private void goBack() throws IOException {
         //changes page based on the role

@@ -14,10 +14,25 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
 
+/**
+ * Controller per la schermata di visualizzazione dei ristoranti.
+ * Permette agli utenti di cercare ristoranti applicando vari filtri,
+ * navigare tra le pagine dei risultati e visualizzare informazioni dettagliate.
+ */
 public class ViewRestaurants {
+    /** ID dei ristoranti visualizzati nella pagina corrente. */
     private String[] restaurants_ids;
+
+    /** Nomi dei ristoranti visualizzati nella pagina corrente. */
     private String[] restaurants_names;
-    private int pages, current_page;
+
+    /** Numero totale di pagine disponibili. */
+    private int pages;
+
+    /** Pagina attualmente visualizzata. */
+    private int current_page;
+
+    /** Coordinate geografiche e parametri di filtro. */
     private String latitude = "-",
     longitude = "-",
     range_km = "-",
@@ -31,17 +46,32 @@ public class ViewRestaurants {
     near_me = "n",
     category = null;
 
-    @FXML
-    private Label notification_label, no_restaurants_label, pages_label;
+    /** Etichetta per notifiche di errore o messaggi informativi. */
+    @FXML private Label notification_label;
+
+    /** Etichetta mostrata se non ci sono ristoranti da visualizzare. */
+    @FXML private Label no_restaurants_label;
+
+    /** Etichetta che mostra la pagina corrente e il totale. */
+    @FXML private Label pages_label;
+    /** Campi di input per i filtri di ricerca. */
     @FXML
     private TextField latitude_field, longitude_field, range_km_field, price_min_field, price_max_field, stars_min_field, stars_max_field, category_field;
+    /** Checkbox per filtri booleani. */
     @FXML
     private CheckBox delivery_check, online_check, favourites_check, near_me_check;
+    /** Lista dei ristoranti trovati. */
     @FXML
     private ListView<String> restaurants_listview;
+    /** Pulsanti per navigazione e visualizzazione dettagli. */
     @FXML
     private Button prev_btn, next_btn, view_info_btn;
-
+    /**
+     * Inizializza la schermata, resetta lo stato del ristorante in modifica
+     * e avvia la ricerca iniziale.
+     *
+     * @throws IOException se si verifica un errore nella comunicazione
+     */
     @FXML
     private void initialize() throws IOException {
         EditingRestaurant.reset();
@@ -52,11 +82,22 @@ public class ViewRestaurants {
         searchPage(0);
     }
 
-    //returns "-" if the string is empty, or the string if it's not empty
+    /**
+     * Restituisce "-" se la stringa è vuota, altrimenti la stringa stessa.
+     *
+     * @param s stringa da verificare
+     * @return "-" oppure la stringa originale
+     */    
     private String filledOrDash(String s) {
         return s.isEmpty() ? "-" : s;
     }
 
+    /**
+     * Aggiorna i filtri di ricerca in base ai valori inseriti dall'utente
+     * e avvia una nuova ricerca.
+     *
+     * @throws IOException se si verifica un errore nella comunicazione
+     */
     @FXML
     private void updateFilters() throws IOException {
         //updates the filters to be used in the search
@@ -79,7 +120,13 @@ public class ViewRestaurants {
         searchPage(0);
     }
 
-    //function used to update the displayed restaurants in the listview
+    /**
+     * Esegue la ricerca dei ristoranti per la pagina specificata,
+     * applicando i filtri correnti.
+     *
+     * @param page numero della pagina da visualizzare
+     * @throws IOException se si verifica un errore nella comunicazione
+     */
     private void searchPage(int page) throws IOException {
         current_page = page;
         no_restaurants_label.setVisible(false);
@@ -153,6 +200,10 @@ public class ViewRestaurants {
         checkSelected();
     }
 
+    /**
+     * Abilita o disabilita i campi delle coordinate
+     * in base allo stato del checkbox "vicino a me".
+     */
     @FXML
     private void handleCoordinates() {
         //enables/disables the coordinates input box based on the "near me" check box value
@@ -160,25 +211,43 @@ public class ViewRestaurants {
         longitude_field.setDisable(near_me_check.isSelected());
     }
 
+    /**
+     * Mostra un messaggio di notifica all'utente.
+     *
+     * @param msg messaggio da visualizzare
+     */
     private void setNotification(String msg) {
         notification_label.setText(msg);
         notification_label.setVisible(true);
     }
 
+    /** Nasconde la notifica attualmente visibile. */
     private void hideNotification() {
         notification_label.setVisible(false);
     }
 
+    /**
+     * Passa alla pagina precedente dei risultati.
+     *
+     * @throws IOException se si verifica un errore nella comunicazione
+     */
     @FXML
     private void prevPage() throws IOException {
         searchPage(--current_page);
     }
-
+    /**
+     * Passa alla pagina successiva dei risultati.
+     *
+     * @throws IOException se si verifica un errore nella comunicazione
+     */
     @FXML
     private void nextPage() throws IOException {
         searchPage(++current_page);
     }
-
+    /**
+     * Controlla se un ristorante è selezionato nella lista
+     * e abilita/disabilita il pulsante di visualizzazione.
+     */
     @FXML
     private void checkSelected() {
         int index = restaurants_listview.getSelectionModel().getSelectedIndex();
@@ -186,14 +255,22 @@ public class ViewRestaurants {
         
         view_info_btn.setDisable(disable_buttons);
     }
-
+    /**
+     * Apre la schermata con le informazioni dettagliate del ristorante selezionato.
+     *
+     * @throws IOException se si verifica un errore nel cambio scena
+     */
     @FXML
     private void viewRestaurantInfo() throws IOException {
         int restaurant_id = Integer.parseInt(restaurants_ids[restaurants_listview.getSelectionModel().getSelectedIndex()]);
         EditingRestaurant.setEditing(restaurant_id);
         SceneManager.changeScene("ViewRestaurantInfo");
     }
-
+    /**
+     * Torna alla schermata principale dell'applicazione.
+     *
+     * @throws IOException se si verifica un errore nel cambio scena
+     */
     @FXML
     private void goBack() throws IOException {
         SceneManager.changeScene("App");

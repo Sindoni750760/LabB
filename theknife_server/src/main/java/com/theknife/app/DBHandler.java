@@ -13,10 +13,20 @@ import java.sql.SQLException;
 import java.util.LinkedList;
 import java.util.List;
 
+/**
+ * Classe di utilità per la gestione della connessione e delle operazioni sul database PostgreSQL.
+ */
 public class DBHandler {
     private static Connection connection = null;
 
-    //handles the connection to the database
+    /**
+     * Stabilisce la connessione al database PostgreSQL.
+     *
+     * @param jdbcUrl URL JDBC del database
+     * @param username nome utente per la connessione
+     * @param password password per la connessione
+     * @return {@code true} se la connessione ha successo, {@code false} altrimenti
+     */
     public static boolean connect(String jdbcUrl, String username, String password) {
         try {
             Class.forName("org.postgresql.Driver");
@@ -34,6 +44,17 @@ public class DBHandler {
         }
     }
 
+    /**
+     * Inizializza il database se non è già stato configurato.
+     * Verifica la presenza della tabella "utenti" e, se assente, esegue lo script SQL.
+     *
+     * @return codice di stato:
+     *         {@code 0} inizializzazione completata,
+     *         {@code 1} file SQL non trovato,
+     *         {@code 2} database già inizializzato
+     * @throws SQLException se si verifica un errore SQL
+     * @throws IOException se si verifica un errore nella lettura del file
+     */
     public static int initDB() throws SQLException, IOException {
         //checks if the db is initialized
         boolean initialized = true;
@@ -61,6 +82,20 @@ public class DBHandler {
         return 0;
     }
 
+    /**
+     * Aggiunge un nuovo utente al database.
+     *
+     * @param nome nome dell'utente
+     * @param cognome cognome dell'utente
+     * @param username nome utente scelto
+     * @param hash password hashata
+     * @param data_nascita_time timestamp della data di nascita, oppure valore negativo se assente
+     * @param latitude latitudine del domicilio
+     * @param longitude longitudine del domicilio
+     * @param is_ristoratore {@code true} se l'utente è un ristoratore
+     * @return {@code true} se l'inserimento ha successo, {@code false} se lo username è già in uso
+     * @throws SQLException se si verifica un errore SQL
+     */
     public static boolean addUser(String nome, String cognome, String username, String hash, long data_nascita_time, double latitude, double longitude, boolean is_ristoratore) throws SQLException {
         //checks if birth date is present
         String sql = data_nascita_time < 0 ?
@@ -91,6 +126,13 @@ public class DBHandler {
         return true;
     }
 
+    /**
+     * Recupera le informazioni necessarie per il login di un utente.
+     *
+     * @param username nome utente
+     * @return array contenente [id utente, password hashata], oppure {@code null} se l'utente non esiste
+     * @throws SQLException se si verifica un errore SQL
+     */
     public static String[] getUserLoginInfo(String username) throws SQLException {
         String sql = "SELECT id, password FROM utenti WHERE username = ?";
 
@@ -111,6 +153,13 @@ public class DBHandler {
         return null;
     }
 
+    /**
+     * Recupera le informazioni di base di un utente.
+     *
+     * @param id identificativo dell'utente
+     * @return array contenente [nome, cognome, "y"/"n" se ristoratore], oppure {@code null} se l'utente non esiste
+     * @throws SQLException se si verifica un errore SQL
+     */
     public static String[] getUserInfo(int id) throws SQLException {
         String sql = "SELECT nome, cognome, is_ristoratore FROM utenti WHERE id = ?";
 
@@ -132,6 +181,23 @@ public class DBHandler {
         return null;
     }
 
+    /**
+     * Aggiunge un nuovo ristorante al database.
+     *
+     * @param user_id ID del proprietario (ristoratore)
+     * @param name nome del ristorante
+     * @param nation nazione
+     * @param city città
+     * @param address indirizzo
+     * @param latitude latitudine geografica
+     * @param longitude longitudine geografica
+     * @param price fascia di prezzo (intero positivo)
+     * @param categories tipo di cucina (es. "italiana, giapponese")
+     * @param has_delivery {@code true} se offre consegna a domicilio
+     * @param has_online {@code true} se accetta prenotazioni online
+     * @return {@code true} se l'inserimento ha successo, {@code false} in caso di errore SQL
+     * @throws SQLException se si verifica un errore nella comunicazione col database
+     */
     public static boolean addRestaurant(int user_id, String name, String nation, String city, String address, double latitude, double longitude, int price, String categories, boolean has_delivery, boolean has_online) throws SQLException {
         String sql = "INSERT INTO \"RistorantiTheKnife\"(nome, nazione, citta, indirizzo, latitudine, longitudine, fascia_prezzo, servizio_delivery, prenotazione_online, proprietario, tipo_cucina) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
@@ -159,7 +225,14 @@ public class DBHandler {
 
         return true;
     }
-
+    /**
+     * Calcola il numero di pagine necessarie per visualizzare tutti i ristoranti
+     * di un utente, considerando 10 ristoranti per pagina.
+     *
+     * @param user_id ID del proprietario
+     * @return numero di pagine (0 se nessun ristorante)
+     * @throws SQLException se si verifica un errore SQL
+     */
     public static int getUserRestaurantsPages(int user_id) throws SQLException {
         String sql = "SELECT COUNT(*) AS num_restaurants FROM \"RistorantiTheKnife\" WHERE proprietario = ?";
 
@@ -175,7 +248,14 @@ public class DBHandler {
 
         return n_restaurants > 0 ? (n_restaurants - 1) / 10 + 1: 0;
     }
-
+    /**
+     * Recupera una pagina di ristoranti appartenenti all'utente.
+     *
+     * @param user_id ID del proprietario
+     * @param page numero della pagina (0-based)
+     * @return array bidimensionale con ID e nome dei ristoranti
+     * @throws SQLException se si verifica un errore SQL
+     */
     public static String[][] getUserRestaurants(int user_id, int page) throws SQLException {
         int offset = page * 10;
         String sql = "SELECT id, nome FROM \"RistorantiTheKnife\" WHERE proprietario = ? LIMIT 10 OFFSET ?";
@@ -197,7 +277,17 @@ public class DBHandler {
 
         return restaurants.toArray(new String[][]{});
     }
-
+    /**
+     * Recupera tutte le informazioni di un ristorante, inclusi media recensioni e numero di recensioni.
+     *
+     * @param id ID del ristorante
+     * @return array contenente:
+     *         [nome, nazione, città, indirizzo, latitudine, longitudine, fascia prezzo,
+     *         tipo cucina, delivery ("y"/"n"), prenotazione online ("y"/"n"),
+     *         media stelle, numero recensioni]
+     *         oppure {@code null} se il ristorante non esiste
+     * @throws SQLException se si verifica un errore SQL
+     */
     public static String[] getRestaurantInfo(int id) throws SQLException {
         String sql = "SELECT * FROM \"RistorantiTheKnife\" WHERE id = ?";
 
@@ -237,7 +327,14 @@ public class DBHandler {
         return null;
     }
 
-    //checks if user is owner of a restaurant
+    /**
+     * Verifica se un utente è il proprietario di un ristorante.
+     *
+     * @param user_id ID dell'utente
+     * @param restaurant_id ID del ristorante
+     * @return {@code true} se l'utente è il proprietario, {@code false} altrimenti
+     * @throws SQLException se si verifica un errore SQL
+     */
     public static boolean hasAccess(int user_id, int restaurant_id) throws SQLException {
         String sql = "SELECT 1 FROM \"RistorantiTheKnife\" r JOIN utenti u ON proprietario = u.id WHERE r.id = ? AND u.id = ?";
 
@@ -251,6 +348,23 @@ public class DBHandler {
         return result.next();
     }
 
+    /**
+     * Modifica le informazioni di un ristorante esistente.
+     *
+     * @param restaurant_id ID del ristorante da modificare
+     * @param name nuovo nome
+     * @param nation nuova nazione
+     * @param city nuova città
+     * @param address nuovo indirizzo
+     * @param latitude nuova latitudine
+     * @param longitude nuova longitudine
+     * @param price nuova fascia di prezzo
+     * @param categories nuove categorie di cucina
+     * @param has_delivery {@code true} se offre delivery
+     * @param has_online {@code true} se accetta prenotazioni online
+     * @return {@code true} se l'aggiornamento ha successo, {@code false} altrimenti
+     * @throws SQLException se si verifica un errore SQL
+     */
     public static boolean editRestaurant(int restaurant_id, String name, String nation, String city, String address, double latitude, double longitude, int price, String categories, boolean has_delivery, boolean has_online) throws SQLException {
         String sql = "UPDATE \"RistorantiTheKnife\" SET nome = ?, nazione = ?, citta = ?, indirizzo = ?, latitudine = ?, longitudine = ?, fascia_prezzo = ?, servizio_delivery = ?, prenotazione_online = ?, tipo_cucina = ? WHERE id = ?";
 
@@ -279,6 +393,13 @@ public class DBHandler {
         return true;
     }
 
+    /**
+     * Elimina un ristorante dal database.
+     *
+     * @param restaurant_id ID del ristorante da eliminare
+     * @return {@code true} se l'eliminazione ha successo, {@code false} altrimenti
+     * @throws SQLException se si verifica un errore SQL
+     */
     public static boolean deleteRestaurant(int restaurant_id) throws SQLException {
         String sql = "DELETE FROM \"RistorantiTheKnife\" WHERE id = ?";
 
@@ -297,7 +418,15 @@ public class DBHandler {
         return true;
     }
 
-    //function used to set variable length and type parameters in a prepared statement
+    /**
+     * Imposta i parametri dinamici in una {@code PreparedStatement}, convertendo i tipi da stringa.
+     *
+     * @param statement la query preparata
+     * @param parameters lista dei valori come stringhe
+     * @param parameters_types lista dei tipi corrispondenti ("int", "double", "string")
+     * @throws NumberFormatException se un valore non è convertibile
+     * @throws SQLException se si verifica un errore SQL
+     */
     private static void setParameters(PreparedStatement statement, List<String> parameters, List<String> parameters_types) throws NumberFormatException, SQLException {
         for(int i = 0; i < parameters.size(); i++) {
             switch(parameters_types.get(i)) {
@@ -314,6 +443,28 @@ public class DBHandler {
         }
     }
 
+    /**
+     * Recupera una lista di ristoranti filtrata secondo vari criteri.
+     * Supporta paginazione, geolocalizzazione, fascia di prezzo, delivery, prenotazioni online,
+     * recensioni min/max, preferiti e tipo di cucina.
+     *
+     * @param page numero della pagina (0-based)
+     * @param latitude latitudine dell'utente (negativa se non usata)
+     * @param longitude longitudine dell'utente
+     * @param range_km raggio di ricerca in km
+     * @param price_min prezzo minimo (-1 se non usato)
+     * @param price_max prezzo massimo (-1 se non usato)
+     * @param has_delivery {@code true} se si richiede delivery
+     * @param has_online {@code true} se si richiede prenotazione online
+     * @param stars_min valutazione minima (-1 se non usata)
+     * @param stars_max valutazione massima (-1 se non usata)
+     * @param favourite_id ID utente per filtrare solo i preferiti (0 se non usato)
+     * @param category filtro per tipo di cucina (null se non usato)
+     * @return array bidimensionale con:
+     *         - prima riga: [numero pagine, numero risultati]
+     *         - righe successive: [id, nome] dei ristoranti
+     * @throws SQLException se si verifica un errore SQL
+     */
     public static String[][] getRestaurantsWithFilter(int page, double latitude, double longitude, double range_km, int price_min, int price_max, boolean has_delivery, boolean has_online, double stars_min, double stars_max, int favourite_id, String category) throws SQLException {
         int offset = page * 10;
         String sql = " FROM \"RistorantiTheKnife\" r";
@@ -415,7 +566,13 @@ public class DBHandler {
 
         return restaurants.toArray(new String[][]{});
     }
-
+    /**
+     * Recupera la posizione geografica (latitudine e longitudine) dell'utente.
+     *
+     * @param user_id ID dell'utente
+     * @return array {@code [latitudine, longitudine]}, oppure {@code null} se l'utente non esiste
+     * @throws SQLException se si verifica un errore SQL
+     */
     public static double[] getUserPosition(int user_id) throws SQLException {
         String sql = "SELECT latitudine_domicilio AS la, longitudine_domicilio AS lo FROM utenti WHERE id = ?";
 
@@ -431,6 +588,15 @@ public class DBHandler {
         return null;
     }
 
+    /**
+     * Aggiunge o rimuove un ristorante dai preferiti dell'utente.
+     *
+     * @param user_id ID dell'utente
+     * @param id_restaurant ID del ristorante
+     * @param set_favourite {@code true} per aggiungere, {@code false} per rimuovere
+     * @return {@code true} se l'operazione ha successo, {@code false} altrimenti
+     * @throws SQLException se si verifica un errore SQL
+     */
     public static boolean setFavourite(int user_id, int id_restaurant, boolean set_favourite) throws SQLException {
         //adds or removes the favourite based on the passed parameter value
         String sql = set_favourite ? "INSERT INTO preferiti(id_utente, id_ristorante) VALUES(?, ?)" : "DELETE FROM preferiti WHERE id_utente = ? AND id_ristorante = ?";
@@ -450,6 +616,14 @@ public class DBHandler {
         return true;
     }
 
+    /**
+     * Verifica se un ristorante è tra i preferiti dell'utente.
+     *
+     * @param user_id ID dell'utente
+     * @param id_restaurant ID del ristorante
+     * @return {@code true} se è tra i preferiti, {@code false} altrimenti
+     * @throws SQLException se si verifica un errore SQL
+     */
     public static boolean isFavourite(int user_id, int id_restaurant) throws SQLException {
         String sql = "SELECT 1 FROM preferiti WHERE id_utente = ? AND id_ristorante = ?";
 
@@ -463,6 +637,16 @@ public class DBHandler {
         return result.next();
     }
 
+    /**
+     * Aggiunge una recensione per un ristorante da parte dell'utente.
+     *
+     * @param user_id ID dell'utente
+     * @param rest_id ID del ristorante
+     * @param rating numero di stelle (1–5)
+     * @param text testo della recensione
+     * @return {@code true} se l'inserimento ha successo, {@code false} altrimenti
+     * @throws SQLException se si verifica un errore SQL
+     */
     public static boolean addReview(int user_id, int rest_id, int rating, String text) throws SQLException {
         String sql = "INSERT INTO recensioni(id_utente, id_ristorante, stelle, testo) VALUES(?, ?, ?, ?)";
 
@@ -483,6 +667,14 @@ public class DBHandler {
         return true;
     }
 
+    /**
+     * Rimuove la recensione dell'utente per un ristorante.
+     *
+     * @param user_id ID dell'utente
+     * @param rest_id ID del ristorante
+     * @return {@code true} se la rimozione ha successo, {@code false} altrimenti
+     * @throws SQLException se si verifica un errore SQL
+     */
     public static boolean removeReview(int user_id, int rest_id) throws SQLException {
         String sql = "DELETE FROM recensioni WHERE id_utente = ? AND id_ristorante = ?";
 
@@ -501,6 +693,14 @@ public class DBHandler {
         return true;
     }
 
+    /**
+     * Recupera la recensione dell'utente per un ristorante.
+     *
+     * @param user_id ID dell'utente
+     * @param rest_id ID del ristorante
+     * @return array {@code [stelle, testo]} oppure {@code ["0", ""]} se non esiste
+     * @throws SQLException se si verifica un errore SQL
+     */
     public static String[] getUserReview(int user_id, int rest_id) throws SQLException {
         String sql = "SELECT * FROM recensioni WHERE id_utente = ? AND id_ristorante = ?";
 
@@ -521,6 +721,16 @@ public class DBHandler {
         return new String[]{"0", ""};
     }
 
+    /**
+     * Modifica la recensione esistente dell'utente per un ristorante.
+     *
+     * @param user_id ID dell'utente
+     * @param rest_id ID del ristorante
+     * @param rating nuovo numero di stelle
+     * @param text nuovo testo della recensione
+     * @return {@code true} se l'aggiornamento ha successo, {@code false} altrimenti
+     * @throws SQLException se si verifica un errore SQL
+     */
     public static boolean editReview(int user_id, int rest_id, int rating, String text) throws SQLException {
         String sql = "UPDATE recensioni SET stelle = ?, testo = ? WHERE id_utente = ? AND id_ristorante = ?";
 
@@ -541,6 +751,14 @@ public class DBHandler {
         return true;
     }
 
+    /**
+     * Calcola il numero di pagine di recensioni per un ristorante.
+     * Ogni pagina contiene al massimo 10 recensioni.
+     *
+     * @param id ID del ristorante
+     * @return numero di pagine (0 se nessuna recensione)
+     * @throws SQLException se si verifica un errore SQL
+     */
     public static int getReviewsPages(int id) throws SQLException {
         String sql = "SELECT COUNT(*) AS num FROM recensioni WHERE id_ristorante = ?";
 
@@ -556,6 +774,14 @@ public class DBHandler {
         return num > 0 ? (num - 1) / 10 + 1 : 0;
     }
 
+    /**
+     * Recupera una pagina di recensioni per un ristorante, includendo eventuali risposte.
+     *
+     * @param id ID del ristorante
+     * @param page numero della pagina (0-based)
+     * @return array bidimensionale con [id recensione, stelle, testo, risposta]
+     * @throws SQLException se si verifica un errore SQL
+     */
     public static String[][] getReviews(int id, int page) throws SQLException {
         int offset = page * 1;
         String sql = "SELECT *, (SELECT testo FROM risposte WHERE id_recensione = r.id) AS risposta FROM recensioni r WHERE id_ristorante = ? LIMIT 10 OFFSET ?";
@@ -580,7 +806,14 @@ public class DBHandler {
         return reviews.toArray(new String[][]{});
     }
 
-    //checks if the restaurator is owner of the reviewd restaurant
+    /**
+     * Verifica se un utente è il proprietario del ristorante associato alla recensione.
+     *
+     * @param user_id ID dell'utente
+     * @param review_id ID della recensione
+     * @return {@code true} se può rispondere, {@code false} altrimenti
+     * @throws SQLException se si verifica un errore SQL
+     */
     public static boolean canRespond(int user_id, int review_id) throws SQLException {
         String sql = "SELECT 1 FROM recensioni re JOIN \"RistorantiTheKnife\" ri ON id_ristorante = ri.id WHERE re.id = ? AND proprietario = ?";
 
@@ -594,6 +827,14 @@ public class DBHandler {
         return result.next();
     }
 
+    /**
+     * Aggiunge una risposta del ristoratore a una recensione.
+     *
+     * @param review_id ID della recensione
+     * @param text testo della risposta
+     * @return {@code true} se l'inserimento ha successo, {@code false} altrimenti
+     * @throws SQLException se si verifica un errore SQL
+     */
     public static boolean addResponse(int review_id, String text) throws SQLException {
         String sql = "INSERT INTO risposte(id_recensione, testo) VALUES(?, ?)";
 
@@ -612,6 +853,13 @@ public class DBHandler {
         return true;
     }
 
+    /**
+     * Recupera la risposta associata a una recensione.
+     *
+     * @param review_id ID della recensione
+     * @return testo della risposta, oppure {@code null} se non esiste
+     * @throws SQLException se si verifica un errore SQL
+     */
     public static String getResponse(int review_id) throws SQLException {
         String sql = "SELECT testo FROM risposte WHERE id_recensione = ?";
 
@@ -627,6 +875,14 @@ public class DBHandler {
         return null;
     }
 
+    /**
+     * Modifica la risposta associata a una recensione.
+     *
+     * @param review_id ID della recensione
+     * @param text nuovo testo della risposta
+     * @return {@code true} se l'aggiornamento ha successo, {@code false} altrimenti
+     * @throws SQLException se si verifica un errore SQL
+     */
     public static boolean editResponse(int review_id, String text) throws SQLException {
         String sql = "UPDATE risposte SET testo = ? WHERE id_recensione = ?";
 
@@ -645,6 +901,13 @@ public class DBHandler {
         return true;
     }
 
+    /**
+     * Rimuove la risposta associata a una recensione.
+     *
+     * @param review_id ID della recensione
+     * @return {@code true} se la rimozione ha successo, {@code false} altrimenti
+     * @throws SQLException se si verifica un errore SQL
+     */
     public static boolean removeResponse(int review_id) throws SQLException {
         String sql = "DELETE FROM risposte WHERE id_recensione = ?";
 
@@ -662,6 +925,13 @@ public class DBHandler {
         return true;
     }
 
+    /**
+     * Calcola il numero di pagine di recensioni scritte da un utente.
+     *
+     * @param user_id ID dell'utente
+     * @return numero di pagine (0 se nessuna recensione), {@code -1} se errore
+     * @throws SQLException se si verifica un errore SQL
+     */
     public static int getUserReviewsPages(int user_id) throws SQLException {
         String sql = "SELECT COUNT(*) AS num FROM recensioni WHERE id_utente = ?";
 
@@ -680,6 +950,14 @@ public class DBHandler {
         return -1;
     }
 
+    /**
+     * Recupera una pagina di recensioni scritte da un utente.
+     *
+     * @param user_id ID dell'utente
+     * @param page numero della pagina (0-based)
+     * @return array bidimensionale con [nome ristorante, stelle, testo recensione]
+     * @throws SQLException se si verifica un errore SQL
+     */
     public static String[][] getUserReviews(int user_id, int page) throws SQLException {
         int offset = page * 10;
         String sql = "SELECT nome, stelle, testo FROM \"RistorantiTheKnife\" ri JOIN recensioni re ON ri.id = id_ristorante WHERE id_utente = ? LIMIT 10 OFFSET ?";
@@ -712,5 +990,4 @@ public class DBHandler {
             System.err.println("Errore durante la disconnessione dal DB: " + e.getMessage());
         }
     }
-
 }

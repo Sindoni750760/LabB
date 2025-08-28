@@ -11,15 +11,37 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 
+/**
+ * Controller per la schermata "MyReviews".
+ * Gestisce la visualizzazione delle recensioni lasciate dall'utente,
+ * con supporto alla paginazione e formattazione del testo.
+ */
 public class MyReviews {
-    private static int current_page, total_pages;
+    /** Pagina attualmente visualizzata. */
+    private static int current_page, 
+    /** Numero totale di pagine disponibili. */
+    total_pages;
+    /** ListView che mostra le recensioni dell'utente. */
     @FXML
     private ListView<String> reviews_listview;
+    /** Etichetta mostrata se non ci sono recensioni o in caso di errore. */
     @FXML
-    private Label no_reviews_label, pages_label;
+    private Label no_reviews_label, 
+    /** Etichetta che mostra la pagina corrente e il totale delle pagine. */
+    pages_label;
+    /** Pulsante per passare alla pagina precedente. */
     @FXML
-    private Button prev_btn, next_btn;
+    private Button prev_btn, 
+    /** Pulsante per passare alla pagina successiva. */
+    next_btn;
 
+    /**
+     * Inizializza la schermata delle recensioni.
+     * Recupera il numero di pagine disponibili e imposta la visualizzazione iniziale.
+     * Applica il wrapping del testo alle celle della ListView.
+     *
+     * @throws IOException se si verifica un errore nella comunicazione con il server
+     */
     @FXML
     private void initialize() throws IOException {
         current_page = total_pages = 0;
@@ -34,7 +56,6 @@ public class MyReviews {
             no_reviews_label.setText("Errore nel server");
         }
 
-        //https://stackoverflow.com/questions/53493111/javafx-wrapping-text-in-listview
         //function used to wrap the text for every cell of the listview
         reviews_listview.setCellFactory(lv -> new ListCell<String>() {
             {
@@ -56,12 +77,23 @@ public class MyReviews {
         });
     }
 
+    /**
+     * Torna alla schermata principale dell'applicazione.
+     *
+     * @throws IOException se la scena non può essere caricata
+     */
     @FXML
     private void goBack() throws IOException {
         SceneManager.changeScene("App");
     }
 
-    //function used to change the page of the reviews
+    /**
+     * Cambia la pagina visualizzata delle recensioni.
+     * Aggiorna la lista e lo stato dei pulsanti di navigazione.
+     *
+     * @param page numero della pagina da visualizzare
+     * @throws IOException se si verifica un errore nella comunicazione con il server
+     */
     private void changePage(int page) throws IOException {
         pages_label.setText(Integer.toString(page + 1) + "/" + Integer.toString(total_pages));
         prev_btn.setDisable(page < 1);
@@ -83,11 +115,21 @@ public class MyReviews {
         reviews_listview.getItems().setAll(reviews_compact);
     }
 
+    /**
+     * Passa alla pagina precedente delle recensioni.
+     *
+     * @throws IOException se si verifica un errore nella comunicazione
+     */
     @FXML
     private void prevPage() throws IOException {
         changePage(--current_page);
     }
 
+    /**
+     * Passa alla pagina successiva delle recensioni.
+     *
+     * @throws IOException se si verifica un errore nella comunicazione
+     */
     @FXML
     private void nextPage() throws IOException {
         changePage(++current_page);

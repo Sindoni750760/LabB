@@ -7,8 +7,19 @@ import java.util.Scanner;
 import javafx.application.Application;
 import javafx.stage.Stage;
 
-
+/**
+ * Classe principale dell'applicazione JavaFX.
+ * Inizializza la configurazione di rete, verifica l'integrità del file di configurazione,
+ * e avvia i moduli principali: {@code Communicator} e {@code SceneManager}.
+ */
 public class App extends Application {
+    /**
+     * Metodo di avvio dell'applicazione JavaFX.
+     * Carica o crea il file di configurazione {@code config.ini}, estrae l'indirizzo IP e la porta,
+     * inizializza il modulo di comunicazione e il gestore delle scene.
+     *
+     * @param stage lo {@code Stage} principale dell'applicazione
+     */
     public void start(Stage stage) {
         try {
             //default configuration
@@ -60,7 +71,12 @@ public class App extends Application {
             e.printStackTrace();
         }
     }
-
+    /**
+     * Metodo main dell'applicazione.
+     * Avvia il ciclo di vita JavaFX.
+     *
+     * @param args argomenti da riga di comando (non utilizzati)
+     */
     public static void main(String[] args) {
         launch(args);
     }

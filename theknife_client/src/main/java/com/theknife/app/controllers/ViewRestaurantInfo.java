@@ -11,13 +11,54 @@ import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 
+/**
+ * Controller per la schermata di visualizzazione delle informazioni di un ristorante.
+ * Mostra i dettagli del ristorante selezionato, consente di visualizzare le recensioni
+ * e di aggiungere/rimuovere il ristorante dai preferiti.
+ */
 public class ViewRestaurantInfo {
+    /** Indica se il ristorante è attualmente tra i preferiti dell'utente. */
     private boolean is_favourite;
-    @FXML
-    private Label name_label, nation_label, city_label, address_label, coordinates_label, reviews_label, price_label, stars_label, services_label, categories_label;
-    @FXML
-    private Button fav_btn;
+        /** Etichetta per il nome del ristorante. */
+    @FXML private Label name_label;
 
+    /** Etichetta per la nazione del ristorante. */
+    @FXML private Label nation_label;
+
+    /** Etichetta per la città del ristorante. */
+    @FXML private Label city_label;
+
+    /** Etichetta per l'indirizzo del ristorante. */
+    @FXML private Label address_label;
+
+    /** Etichetta per le coordinate geografiche del ristorante. */
+    @FXML private Label coordinates_label;
+
+    /** Etichetta per il numero di recensioni ricevute. */
+    @FXML private Label reviews_label;
+
+    /** Etichetta per il prezzo medio del ristorante. */
+    @FXML private Label price_label;
+
+    /** Etichetta per la valutazione media in stelle. */
+    @FXML private Label stars_label;
+
+    /** Etichetta per i servizi offerti (delivery, prenotazione online). */
+    @FXML private Label services_label;
+
+    /** Etichetta per le categorie associate al ristorante. */
+    @FXML private Label categories_label;
+
+    /** Pulsante per aggiungere o rimuovere il ristorante dai preferiti. */
+    @FXML private Button fav_btn;
+
+
+    /**
+     * Inizializza la schermata caricando le informazioni del ristorante selezionato.
+     * Verifica se il ristorante è tra i preferiti e aggiorna l'interfaccia di conseguenza.
+     *
+     * @throws IOException se si verifica un errore nella comunicazione con il server
+     */
     @FXML
     private void initialize() throws IOException {
         if(User.getInfo() == null)
@@ -55,16 +96,32 @@ public class ViewRestaurantInfo {
             services_label.setText("Nessuno");
     }
 
+    /**
+     * Torna alla schermata di visualizzazione dell'elenco dei ristoranti.
+     *
+     * @throws IOException se la scena non può essere caricata
+     */
     @FXML
     private void goBack() throws IOException {
         SceneManager.changeScene("ViewRestaurants");
     }
 
+    /**
+     * Passa alla schermata delle recensioni del ristorante selezionato.
+     *
+     * @throws IOException se la scena non può essere caricata
+     */
     @FXML
     private void viewReviews() throws IOException {
         SceneManager.changeScene("RestaurantReviews");
     }
 
+    /**
+     * Aggiunge o rimuove il ristorante dai preferiti dell'utente.
+     * Aggiorna il testo del pulsante e lo stato interno.
+     *
+     * @throws IOException se si verifica un errore nella comunicazione con il server
+     */
     @FXML
     private void addToFavourites() throws IOException {
         //sets/unsets current restaurant as favourite

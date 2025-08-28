@@ -14,18 +14,40 @@ import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 
+/**
+ * Controller per la schermata di registrazione.
+ * Gestisce l'inserimento dei dati utente, la validazione e la comunicazione con il server.
+ */
 public class RegisterController {
+    /** Campo di testo per il nome dell'utente. */
     @FXML
-    private TextField name, surname, username, latitude, longitude;
+    private TextField name, 
+    /** Campo di testo per il cognome dell'utente. */
+    surname, 
+    /** Campo di testo per lo username scelto dall'utente. */
+    username, 
+    /** Campo di testo per la latitudine della posizione dell'utente. */
+    latitude, 
+    /** Campo di testo per la longitudine della posizione dell'utente. */
+    longitude;
+    /** Campo password per l'inserimento della password. */
     @FXML
-    private PasswordField password, confirm_password;
+    private PasswordField password, 
+    /** Campo password per confermare la password inserita. */
+    confirm_password;
+    /** Selettore per la data di nascita dell'utente. */
     @FXML
     private DatePicker birth_date;
+    /** Checkbox per indicare se l'utente è un ristoratore. */
     @FXML
     private CheckBox is_restaurateur;
+    /** Etichetta per mostrare notifiche o messaggi di errore. */
     @FXML
     private Label notification_label;
 
+    /**
+     * Inizializza la schermata disabilitando la selezione di date future nel DatePicker.
+     */
     @FXML
     private void initialize() {
         //to disable the days after today in the birth date selection
@@ -37,11 +59,23 @@ public class RegisterController {
                }});
     }
 
+    /**
+     * Torna alla schermata principale dell'applicazione.
+     *
+     * @throws IOException se la scena non può essere caricata
+     */
     @FXML
     private void goBack() throws IOException {
         SceneManager.changeScene("App");
     }
 
+    /**
+     * Esegue la registrazione dell'utente.
+     * Valida i campi, invia i dati al server e gestisce la risposta.
+     * Mostra notifiche in caso di errore o conferma in caso di successo.
+     *
+     * @throws IOException se si verifica un errore nella comunicazione o nel cambio scena
+     */
     @FXML
     private void register() throws IOException {
         //checks if the two passwords inserted correspond
@@ -88,6 +122,11 @@ public class RegisterController {
         }
     }
 
+    /**
+     * Mostra un messaggio di notifica nella schermata corrente.
+     *
+     * @param text il messaggio da visualizzare
+     */
     private void setNotification(String text) {
         notification_label.setVisible(true);
         notification_label.setText(text);

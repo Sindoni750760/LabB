@@ -2,8 +2,33 @@ package com.theknife.app;
 
 import java.sql.SQLException;
 
+/**
+ * Classe utility per la gestione delle operazioni relative ai ristoranti.
+ * Contiene metodi per recuperare informazioni filtrate sui ristoranti,
+ * validando i parametri ricevuti prima di interrogare il database.
+ */
 public class Restaurant {
-    //function used to get restaurants info using filters
+        /**
+     * Recupera un elenco di ristoranti filtrati in base ai parametri specificati.
+     * Valida i dati ricevuti (coordinate, prezzo, stelle, ecc.) e delega la query al {@link DBHandler}.
+     * Restituisce un array bidimensionale di stringhe con i risultati o eventuali codici di errore.
+     *
+     * @param page numero della pagina da visualizzare
+     * @param latitude_string latitudine come stringa, oppure "-" se non definita
+     * @param longitude_string longitudine come stringa, oppure "-" se non definita
+     * @param range_km_string raggio di ricerca in km come stringa, oppure "-"
+     * @param price_min_string prezzo minimo come stringa, oppure "-"
+     * @param price_max_string prezzo massimo come stringa, oppure "-"
+     * @param has_delivery {@code true} se si desidera filtrare per ristoranti con consegna
+     * @param has_online {@code true} se si desidera filtrare per ristoranti con prenotazione online
+     * @param stars_min_string valutazione minima in stelle come stringa, oppure "-"
+     * @param stars_max_string valutazione massima in stelle come stringa, oppure "-"
+     * @param favourite_id ID dell'utente per filtrare i preferiti, oppure 0 se non applicabile
+     * @param category categoria da filtrare, oppure {@code null} se non definita
+     * @param near_who ID utente per usare la sua posizione come centro di ricerca, oppure 0
+     * @return array bidimensionale di stringhe con i risultati, oppure array con errore formattato
+     * @throws SQLException se si verifica un errore durante la query al database
+     */
     public static String[][] getRestaurantsWithFilter(int page, String latitude_string, String longitude_string, String range_km_string, String price_min_string, String price_max_string, boolean has_delivery, boolean has_online, String stars_min_string, String stars_max_string, int favourite_id, String category, int near_who) throws SQLException {
         double latitude, longitude, range_km;
         if(latitude_string.equals("-") && longitude_string.equals("-"))

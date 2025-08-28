@@ -7,15 +7,35 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.sql.SQLException;
 
+/**
+ * Classe principale del server per l'applicazione TheKnife.
+ * Fornisce un'interfaccia grafica Swing per avviare e arrestare il server TCP,
+ * gestisce la connessione al database PostgreSQL e accetta connessioni client.
+ */
 public class App {
+    /** Socket del server TCP. */
     private static ServerSocket serverSocket;
+
+    /** Thread che gestisce le connessioni client. */
     private static Thread serverThread;
+
+    /** Flag che indica se il server è attivo. */
     private static volatile boolean running = false;
 
+    /**
+     * Metodo principale. Avvia l'interfaccia grafica Swing.
+     *
+     * @param args argomenti da riga di comando (non utilizzati)
+     */
     public static void main(String[] args) {
         SwingUtilities.invokeLater(App::createAndShowGUI);
     }
 
+    /**
+     * Crea e mostra la finestra principale del server.
+     * Contiene pulsanti per avviare e arrestare il server,
+     * e una label per lo stato corrente.
+     */
     private static void createAndShowGUI() {
         JFrame frame = new JFrame("TheKnife Server");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -49,6 +69,17 @@ public class App {
         frame.setVisible(true);
     }
 
+    /**
+     * Avvia il server TCP sulla porta specificata.
+     * Richiede le credenziali e l'URL JDBC per connettersi al database.
+     * Inizializza il database e avvia il thread per gestire le connessioni client.
+     *
+     * @param statusLabel etichetta per aggiornare lo stato del server
+     * @param startButton pulsante per avviare il server
+     * @param stopButton pulsante per arrestare il server
+     * @throws IOException se si verifica un errore di I/O
+     * @throws SQLException se si verifica un errore SQL
+     */
     private static void startServer(JLabel statusLabel, JButton startButton, JButton stopButton) throws IOException, SQLException {
         String jdbcUrl = JOptionPane.showInputDialog("JDBC URL:", "jdbc:postgresql://localhost:5432/theknife");
         String username = JOptionPane.showInputDialog("DB Username:", "postgres");
@@ -94,6 +125,14 @@ public class App {
         stopButton.setEnabled(true);
     }
 
+    /**
+     * Arresta il server TCP e chiude il socket.
+     * Ferma il thread del server e disconnette dal database.
+     *
+     * @param statusLabel etichetta per aggiornare lo stato del server
+     * @param startButton pulsante per riavviare il server
+     * @param stopButton pulsante per disabilitare l'arresto
+     */
     private static void stopServer(JLabel statusLabel, JButton startButton, JButton stopButton) {
         running = false;
 

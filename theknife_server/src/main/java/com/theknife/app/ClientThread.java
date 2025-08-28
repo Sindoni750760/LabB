@@ -8,12 +8,24 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 
+/**
+ * Gestisce la comunicazione tra il server e un singolo client tramite socket.
+ * Ogni istanza di {@code ClientThread} rappresenta una connessione attiva.
+ * Supporta comandi come login, registrazione, gestione ristoranti e ping.
+ */
 public class ClientThread extends Thread {
     private String ip;
     private BufferedReader reader;
     private OutputStream os;
     private int user_id = -1;
 
+    /**
+     * Inizializza il thread client con il socket fornito.
+     * Imposta gli stream di input/output e avvia il thread.
+     *
+     * @param socket il socket connesso al client
+     * @throws IOException se si verifica un errore durante la creazione degli stream
+     */
     public ClientThread(Socket socket) throws IOException {
         //sets up the input/output streams
         ip = socket.getInetAddress().toString();
@@ -21,7 +33,10 @@ public class ClientThread extends Thread {
         os = socket.getOutputStream();
         start();
     }
-
+    /**
+     * Metodo principale del thread. Esegue la logica di comunicazione con il client.
+     * Gestisce eccezioni come disconnessioni e errori di I/O o SQL.
+     */
     public void run() {
         try {
             exec();
@@ -33,23 +48,44 @@ public class ClientThread extends Thread {
         }
     }
 
+    /**
+     * Registra un messaggio nel log della console, associato all'indirizzo IP del client.
+     *
+     * @param msg il messaggio da loggare
+     */
     private void log(String msg) {
         System.out.println("[" + ip + "]" + msg);
     }
 
-    //function used to read a string from the client
+    /**
+     * Legge una stringa dal client tramite lo stream di input.
+     *
+     * @return la stringa ricevuta
+     * @throws IOException se si verifica un errore di lettura
+     */
     private String readStream() throws IOException {
         String msg = reader.readLine();
         log("[In<--]" + msg);
         return msg;
     }
 
-    //function used to send a string to the client
+    /**
+     * Invia una stringa al client tramite lo stream di output.
+     *
+     * @param msg il messaggio da inviare
+     * @throws IOException se si verifica un errore di scrittura
+     */
     private void sendStream(String msg) throws IOException {
         log("[Out->]" + msg);
         os.write((msg + '\n').getBytes(StandardCharsets.UTF_8));
     }
 
+    /**
+    * Esegue la logica principale del thread, gestendo i comandi del client.
+    * @throws InterruptedException se il thread viene interrotto
+    * @throws IOException se si verifica un errore di I/O
+    * @throws SQLException se si verifica un errore SQL
+    */
     private void exec() throws InterruptedException, IOException, SQLException {
         log("Connected");
 

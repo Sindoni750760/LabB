@@ -5,24 +5,46 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
+/**
+ * Classe utility per la gestione lato server degli utenti.
+ * Fornisce metodi per la registrazione e il login, con validazione dei dati
+ * e protezione delle password tramite hashing BCrypt.
+ */
 public class User {
+    /**
+     * Applica l'hashing alla password usando l'algoritmo BCrypt.
+     *
+     * @param password la password in chiaro da proteggere
+     * @return la password hashata
+     */
     //https://dzone.com/articles/secure-password-hashing-in-java
     private static String hashPassword(String password) {
         BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
         return passwordEncoder.encode(password);
     }
 
+    /**
+     * Verifica se una password in chiaro corrisponde all'hash memorizzato.
+     *
+     * @param inputPassword la password inserita dall'utente
+     * @param storedHash l'hash memorizzato nel database
+     * @return {@code true} se la password è corretta, {@code false} altrimenti
+     */
     private static boolean verifyPassword(String inputPassword, String storedHash) {
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
         return encoder.matches(inputPassword, storedHash);
     }
 
-    /*requirements:
-     * length between 8 and 32 characters
-     * at least one lowercase alphabetical character
-     * at least one uppercase alphabetical character
-     * at least one numerical character
-     * at least one special character
+    /**
+     * Verifica che la password rispetti i requisiti di sicurezza:
+     * - lunghezza tra 8 e 32 caratteri
+     * - almeno una lettera minuscola
+     * - almeno una lettera maiuscola
+     * - almeno un numero
+     * - almeno un carattere speciale
+     *
+     * @param password la password da validare
+     * @return {@code true} se la password è valida, {@code false} altrimenti
      */
     private static boolean checkPassword(String password) {
         if(password.length() < 8 || password.length() > 32)
@@ -45,7 +67,24 @@ public class User {
         return lalph && ualph && num && spec;
     }
 
-   public static String registerUser(String nome, String cognome, String username, String password, String data_nascita, String latitude, String longitude, boolean is_ristoratore) throws SQLException {
+    /**
+     * Registra un nuovo utente nel sistema.
+     * Valida i parametri, verifica la password, controlla la data di nascita e le coordinate,
+     * e invia i dati al database.
+     *
+     * @param nome nome dell'utente
+     * @param cognome cognome dell'utente
+     * @param username nome utente scelto
+     * @param password password in chiaro
+     * @param data_nascita data di nascita in formato "yyyy-MM-dd" oppure "-"
+     * @param latitude latitudine come stringa
+     * @param longitude longitudine come stringa
+     * @param is_ristoratore {@code true} se l'utente è un ristoratore
+     * @return "ok" se la registrazione ha successo, altrimenti un codice di errore:
+     *         "missing", "password", "date", "coordinates", "username"
+     * @throws SQLException se si verifica un errore nella comunicazione col database
+     */
+    public static String registerUser(String nome, String cognome, String username, String password, String data_nascita, String latitude, String longitude, boolean is_ristoratore) throws SQLException {
         //checks missing parameters
         if(nome.trim().isEmpty() || cognome.trim().isEmpty() || username.trim().isEmpty())
             return "missing";
@@ -78,6 +117,16 @@ public class User {
 
     }
 
+    /**
+     * Esegue il login dell'utente verificando username e password.
+     *
+     * @param username nome utente
+     * @param password password in chiaro
+     * @return ID utente se il login ha successo,
+     *         -1 se l'utente non esiste,
+     *         -2 se la password è errata
+     * @throws SQLException se si verifica un errore nella comunicazione col database
+     */
     public static int loginUser(String username, String password) throws SQLException {
         String[] user_info = DBHandler.getUserLoginInfo(username);
 
