@@ -1,0 +1,4 @@
+.root {
+  /* Sfondo sfumato bianco-arancio */
+  -fx-background-color: linear-gradient(to bottom, #ffffff, #fff7ed, #fde68a);
+}
