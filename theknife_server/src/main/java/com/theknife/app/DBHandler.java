@@ -702,4 +702,15 @@ public class DBHandler {
 
         return reviews.toArray(new String[][]{});
     }
+    public static void disconnect() {
+    try {
+        if (connection != null && !connection.isClosed()) {
+                connection.close();
+                System.out.println("Successfully disconnected from the database");
+            }
+        } catch (SQLException e) {
+            System.err.println("Errore durante la disconnessione dal DB: " + e.getMessage());
+        }
+    }
+
 }

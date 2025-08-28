@@ -4,6 +4,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.io.IOException;
 import java.net.ServerSocket;
+import java.net.Socket;
 import java.sql.SQLException;
 
 public class App {
@@ -49,7 +50,6 @@ public class App {
     }
 
     private static void startServer(JLabel statusLabel, JButton startButton, JButton stopButton) throws IOException, SQLException {
-        // Parametri di default
         String jdbcUrl = JOptionPane.showInputDialog("JDBC URL:", "jdbc:postgresql://localhost:5432/theknife");
         String username = JOptionPane.showInputDialog("DB Username:", "postgres");
         String password = JOptionPane.showInputDialog("DB Password:", "postgres");
@@ -71,11 +71,21 @@ public class App {
         running = true;
 
         serverThread = new Thread(() -> {
-            try {
-                while (running) {
-                    new ClientThread(serverSocket.accept()).start();
+            while (running) {
+                try {
+                    Socket clientSocket = serverSocket.accept();
+                    if (running) {
+                        new ClientThread(clientSocket).start();
+                    } else {
+                        clientSocket.close();
+                    }
+                } catch (IOException e) {
+                    if (running) {
+                        System.err.println("Errore nel thread del server: " + e.getMessage());
+                    }
+                    break;
                 }
-            } catch (IOException ignored) {}
+            }
         });
         serverThread.start();
 
@@ -86,11 +96,21 @@ public class App {
 
     private static void stopServer(JLabel statusLabel, JButton startButton, JButton stopButton) {
         running = false;
+
         try {
             if (serverSocket != null && !serverSocket.isClosed()) {
                 serverSocket.close();
             }
         } catch (IOException ignored) {}
+
+        try {
+            if (serverThread != null && serverThread.isAlive()) {
+                serverThread.join(1000);
+            }
+        } catch (InterruptedException ignored) {}
+
+        // 🔌 Disconnessione dal database
+        DBHandler.disconnect();
 
         statusLabel.setText("Server spento");
         startButton.setEnabled(true);
