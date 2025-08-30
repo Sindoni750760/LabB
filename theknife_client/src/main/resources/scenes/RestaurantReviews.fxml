@@ -6,7 +6,7 @@
 <?import javafx.scene.layout.AnchorPane?>
 
 <AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/19" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.theknife.app.controllers.RestaurantReviews"
-stylesheets="./styles/style.css">
+stylesheets="/styles/style.css">
    <children>
       <Button layoutX="14.0" layoutY="14.0" mnemonicParsing="false" onAction="#goBack" text="Indietro" />
       <ListView fx:id="reviews_listview" layoutX="50.0" layoutY="50.0" onKeyPressed="#checkSelected" onMouseClicked="#checkSelected" prefHeight="250.0" prefWidth="500.0" />
