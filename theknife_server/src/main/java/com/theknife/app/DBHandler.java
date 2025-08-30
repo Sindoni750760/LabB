@@ -18,6 +18,7 @@ import java.util.List;
  */
 public class DBHandler {
     private static Connection connection = null;
+    private static final String TARGET_DB = "theknife";
 
     /**
      * Stabilisce la connessione al database PostgreSQL.
@@ -27,19 +28,108 @@ public class DBHandler {
      * @param password password per la connessione
      * @return {@code true} se la connessione ha successo, {@code false} altrimenti
      */
+   
     public static boolean connect(String jdbcUrl, String username, String password) {
         try {
             Class.forName("org.postgresql.Driver");
-
-            connection = DriverManager.getConnection(jdbcUrl, username, password);
-
-            System.out.println("Successfully connected to the database");
-            return true;
         } catch (ClassNotFoundException e) {
             System.err.println("PostgreSQL JDBC driver not found: " + e.getMessage());
             return false;
+        }
+
+        // Se l'URL non punta a /theknife, costruiamo target e maintenance URL
+        boolean urlTargetsTheKnife = jdbcUrl.matches(".*/" + TARGET_DB + "(\\?.*)?$");
+        if (!urlTargetsTheKnife) {
+            int idx = jdbcUrl.lastIndexOf('/');
+            if (idx < 0) {
+                System.err.println("JDBC URL non valido: " + jdbcUrl);
+                return false;
+            }
+            String base = jdbcUrl.substring(0, idx);
+            String maintenanceUrl = base + "/postgres";
+            String targetUrl = base + "/" + TARGET_DB;
+
+            if (!ensureDatabaseExists(maintenanceUrl, username, password)) {
+                return false;
+            }
+
+            return connectToTarget(targetUrl, username, password);
+        }
+
+        // L'URL punta già a theknife: prova a connetterti, altrimenti crea e riprova
+        try {
+            connection = DriverManager.getConnection(jdbcUrl, username, password);
+            System.out.println("Connesso a " + jdbcUrl);
+            return true;
         } catch (SQLException e) {
-            System.err.println("Connection to database failed: " + e.getMessage());
+            // 3D000 = invalid_catalog_name (DB non esiste)
+            if ("3D000".equals(e.getSQLState())) {
+                // Deriva maintenance URL per creare il DB
+                int idx = jdbcUrl.lastIndexOf('/');
+                String maintenanceUrl = (idx > 0 ? jdbcUrl.substring(0, idx) : jdbcUrl) + "/postgres";
+                if (!ensureDatabaseExists(maintenanceUrl, username, password)) {
+                    return false;
+                }
+                return connectToTarget(jdbcUrl, username, password);
+            }
+            System.err.println("Connessione fallita: " + e.getMessage());
+            return false;
+        }
+    }
+    /**
+     * Metodo di controllo che prova a stabilire una connessione al database specificato
+     * @param targetUrl URL JDBC del database
+     * @param username nome utente per la connessione
+     * @param password password per la connessione
+     * @return {@code true} se la connessione avviene con successo, {@code false} altrimenti
+     */
+    private static boolean connectToTarget(String targetUrl, String username, String password) {
+        try {
+            connection = DriverManager.getConnection(targetUrl, username, password);
+            System.out.println("Connesso a " + targetUrl);
+            return true;
+        } catch (SQLException e) {
+            System.err.println("Connessione al DB target fallita: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Metodo di controllo che verifica se il database esista, altirmenti lo crea
+     * @param maintenanceUrl URL JDBC del database
+     * @param username nome utente con privilegi
+     * @param password password dell'utente
+     * @return {@code true} se il database esiste o se è stato creato correttamente, {@code false} altrimenti
+     */
+    private static boolean ensureDatabaseExists(String maintenanceUrl, String username, String password) {
+        try (Connection c = DriverManager.getConnection(maintenanceUrl, username, password)) {
+            // 1) Check esistenza
+            try (PreparedStatement check = c.prepareStatement(
+                    "SELECT 1 FROM pg_database WHERE datname = ?")) {
+                check.setString(1, TARGET_DB);
+                try (ResultSet rs = check.executeQuery()) {
+                    if (rs.next()) {
+                        // Già esiste, nulla da fare
+                        return true;
+                    }
+                }
+            }
+
+            // 2) Crea (CREATE DATABASE deve essere fuori da una transazione)
+            if (!c.getAutoCommit()) c.setAutoCommit(true);
+            try (PreparedStatement create = c.prepareStatement("CREATE DATABASE theknife")) {
+                create.executeUpdate();
+                System.out.println("Creato database '" + TARGET_DB + "'");
+            }
+            return true;
+
+        } catch (SQLException e) {
+            // 42501 = insufficient_privilege (manca CREATEDB)
+            if ("42501".equals(e.getSQLState())) {
+                System.err.println("Permessi insufficienti per creare database. Servono privilegi CREATEDB.");
+            } else {
+                System.err.println("Errore durante ensureDatabaseExists: " + e.getMessage());
+            }
             return false;
         }
     }
@@ -56,7 +146,11 @@ public class DBHandler {
      * @throws IOException se si verifica un errore nella lettura del file
      */
     public static int initDB() throws SQLException, IOException {
-        //checks if the db is initialized
+        if (connection == null) {
+            System.err.println("Connessione non inizializzata. Chiama connect() prima di initDB().");
+            return -1;
+        }
+
         boolean initialized = true;
         try {
             connection.createStatement().execute("SELECT 1 FROM utenti");
@@ -64,23 +158,22 @@ public class DBHandler {
             initialized = false;
         }
 
-        if(initialized)
+        if (initialized)
             return 2;
 
-        //loads the sql file
         InputStream is = DBHandler.class.getResourceAsStream("/init-db.sql");
 
-        if(is == null) {
+        if (is == null) {
             System.err.println("Sql file \"init-db.sql\" not found");
             return 1;
         }
 
         String statement = new String(is.readAllBytes(), StandardCharsets.UTF_8);
 
-        //creates the tables
         connection.createStatement().execute(statement);
         return 0;
     }
+
 
     /**
      * Aggiunge un nuovo utente al database.
