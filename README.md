@@ -1,5 +1,4 @@
 # Laboratorio Interdisciplinare B
-==========================================================
 Progetto Java svolto per il Laboratorio interdisciplinare composto da due moduli:
 - theknife_client: interfaccia utente
 - theknife_server: backend e gestione dei dati
