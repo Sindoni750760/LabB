@@ -19,7 +19,6 @@
 
   <build>
     <plugins>
-      <!-- Plugin JavaDoc -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
@@ -45,7 +44,6 @@
       </activation>
       <build>
         <plugins>
-          <!-- Step 1: Crea il database 'theknife' -->
           <plugin>
             <groupId>org.codehaus.mojo</groupId>
             <artifactId>exec-maven-plugin</artifactId>
@@ -67,15 +65,6 @@
                   </arguments>
                 </configuration>
               </execution>
-            </executions>
-          </plugin>
-
-          <!-- Step 2: Esegui lo script init-db.sql -->
-          <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>exec-maven-plugin</artifactId>
-            <version>3.1.0</version>
-            <executions>
               <execution>
                 <id>run-init-sql</id>
                 <phase>validate</phase>
