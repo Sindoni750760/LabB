@@ -4,12 +4,12 @@ Progetto Java svolto per il Laboratorio interdisciplinare composto da due moduli
 - theknife_server: backend e gestione dei dati
 
 ## Struttura del progetto
-LabB/
-|- pom.xml                                                      <- POM aggregatore del client e server
-|- src/
-|      |- theknife_client/                                      <- Path del client
-|      |- theknife_server/                                      <- Path del server
-|                          |- src/main/resources/init-db.sql    <- Script SQL per l'inizializzazione del DB
+- LabB/
+- pom.xml                                                      <- POM aggregatore del client e server
+- src/
+- theknife_client/                                      <- Path del client
+- theknife_server/                                      <- Path del server
+- src/main/resources/init-db.sql    <- Script SQL per l'inizializzazione del DB
 
 ## Prerequisit
 - Java 17 o superiore;
