@@ -55,6 +55,6 @@ per poter compilare un singolo modulo, ricorrere ai seguenti comandi:
 - Autore: Mattia Sindoni
   Email: msindoni@studenti.uninsubria.it
 - Autore: Erica Faccio
-  Email: eaccio@studenti.uninsubria.it
+  Email: efaccio@studenti.uninsubria.it
 - Autore: Giovanni
   Email: gisgro@studenti.uninsubria.it
