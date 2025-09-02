@@ -11,7 +11,7 @@ Progetto Java svolto per il Laboratorio interdisciplinare composto da due moduli
 - theknife_server/                                      <- Path del server
 - src/main/resources/init-db.sql    <- Script SQL per l'inizializzazione del DB
 
-## Prerequisit
+## Prerequisiti
 - Java 17 o superiore;
 - Maven 3.8 +
 - PostgreSQL installato e attivo sulla porta 5432
