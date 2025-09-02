@@ -53,8 +53,8 @@ per poter compilare un singolo modulo, ricorrere ai seguenti comandi:
 
 # Contatti del team di sviluppo
 - Autore: Mattia Sindoni
-  Email: mattia.sindoni@studenti.uninsubria.it
+  Email: msindoni@studenti.uninsubria.it
 - Autore: Erica Faccio
-  Email: erica.faccio@studenti.uninsubria.it
+  Email: eaccio@studenti.uninsubria.it
 - Autore: Giovanni
   Email: gisgro@studenti.uninsubria.it
