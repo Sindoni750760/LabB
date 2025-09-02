@@ -57,4 +57,4 @@ per poter compilare un singolo modulo, ricorrere ai seguenti comandi:
 - Autore: Erica Faccio
   Email: erica.faccio@studenti.uninsubria.it
 - Autore: Giovanni
-  Email: giovanni.isgrò@studenti.uninsubria.it
+  Email: gisgro@studenti.uninsubria.it
