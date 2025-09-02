@@ -31,10 +31,11 @@ Progetto Java svolto per il Laboratorio interdisciplinare composto da due moduli
 ## Setup del Database
 Il progetto include uno script SQL per la creazione automatica del database e delle relative tabelle
 Per eseguire il setup:
-1. Imposta la variabile d'ambiente per la password:
+1. Andare sulla cartella principale dove si è scaricata la cartella 'LabB' ed entrarci
+2. Una volta dentro, imposta la variabile d'ambiente per la password:
    (solo per powershell)
    $env:PGPASSWORD = "La_tua_password"
-2. Esegui il profilo Maven dedicato
+3. Esegui il profilo Maven dedicato
    mvn -P init-db validate
 Attraverso questo comando:
 - Viene creato il database 'theknife', qualora non esistesse
