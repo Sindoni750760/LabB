@@ -12,6 +12,9 @@ import java.nio.charset.StandardCharsets;
  * Classe utility per gestire la comunicazione con il server tramite socket TCP.
  * Fornisce metodi per inviare e ricevere stringhe, gestire errori di connessione,
  * e verificare lo stato della connessione.
+ * @author Mattia Sindoni 750760 VA
+ * @author Erica Faccio 751654 VA
+ * @author Giovanni Isgrò 753536 VA
  */
 public class Communicator {
     /** Socket TCP utilizzato per la comunicazione con il server. */

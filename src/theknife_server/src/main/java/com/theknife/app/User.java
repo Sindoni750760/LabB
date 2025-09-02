@@ -9,6 +9,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
  * Classe utility per la gestione lato server degli utenti.
  * Fornisce metodi per la registrazione e il login, con validazione dei dati
  * e protezione delle password tramite hashing BCrypt.
+ * @author Mattia Sindoni 750760 VA
+ * @author Erica Faccio 751654 VA
+ * @author Giovanni Isgrò 753536 VA
  */
 public class User {
     /**

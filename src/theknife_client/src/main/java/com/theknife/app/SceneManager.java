@@ -11,6 +11,9 @@ import javafx.stage.Stage;
  * Classe utility per la gestione delle scene JavaFX.
  * Permette di cambiare scena, inizializzare lo {@link Stage} principale,
  * e visualizzare messaggi di stato (alert o warning) nella schermata principale.
+ * @author Mattia Sindoni 750760 VA
+ * @author Erica Faccio 751654 VA
+ * @author Giovanni Isgrò 753536 VA
  */
 public class SceneManager {
     /** Stage principale dell'applicazione JavaFX. */

@@ -6,6 +6,9 @@ import java.io.IOException;
  * Classe statica che gestisce lo stato dell'utente attualmente loggato.
  * Fornisce metodi per effettuare login, logout e recuperare le informazioni dell'utente.
  * Supporta anche la disconnessione forzata in caso di errore di comunicazione.
+ * @author Mattia Sindoni 750760 VA
+ * @author Erica Faccio 751654 VA
+ * @author Giovanni Isgrò 753536 VA
  */
 public class User {
     /** Nome dell'utente loggato. */

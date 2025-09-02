@@ -11,6 +11,9 @@ import java.sql.SQLException;
  * Classe principale del server per l'applicazione TheKnife.
  * Fornisce un'interfaccia grafica Swing per avviare e arrestare il server TCP,
  * gestisce la connessione al database PostgreSQL e accetta connessioni client.
+ * @author Mattia Sindoni 750760 VA
+ * @author Erica Faccio 751654 VA
+ * @author Giovanni Isgrò 753536 VA
  */
 public class App {
     /** Socket del server TCP. */

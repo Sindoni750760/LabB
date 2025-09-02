@@ -15,6 +15,9 @@ import java.util.List;
 
 /**
  * Classe di utilità per la gestione della connessione e delle operazioni sul database PostgreSQL.
+ * @author Mattia Sindoni 750760 VA
+ * @author Erica Faccio 751654 VA
+ * @author Giovanni Isgrò 753536 VA
  */
 public class DBHandler {
     private static Connection connection = null;

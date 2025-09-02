@@ -16,6 +16,9 @@ import javafx.scene.control.ListView;
  * Controller per la schermata "MyRestaurants".
  * Gestisce la visualizzazione, modifica, aggiunta e rimozione dei ristoranti dell'utente.
  * Supporta la paginazione e la navigazione tra le recensioni.
+ * @author Mattia Sindoni 750760 VA
+ * @author Erica Faccio 751654 VA
+ * @author Giovanni Isgrò 753536 VA
  */
 public class MyRestaurants {
     /** Lista visuale contenente i nomi dei ristoranti dell'utente. */

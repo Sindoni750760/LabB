@@ -10,7 +10,10 @@ import javafx.stage.Stage;
 /**
  * Classe principale dell'applicazione JavaFX.
  * Inizializza la configurazione di rete, verifica l'integrità del file di configurazione,
- * e avvia i moduli principali: {@code Communicator} e {@code SceneManager}.
+ * e avvia i moduli principali: {@code Communicator} e {@code SceneManager}
+ * @author Mattia Sindoni 750760 VA
+ * @author Erica Faccio 751654 VA
+ * @author Giovanni Isgrò 753536 VA.
  */
 public class App extends Application {
     /**

@@ -6,6 +6,9 @@ import java.io.IOException;
  * Classe statica che gestisce lo stato del ristorante attualmente in modifica.
  * Memorizza le informazioni del ristorante selezionato e fornisce metodi
  * per aggiungere, modificare e recuperare i dati associati.
+ * @author Mattia Sindoni 750760 VA
+ * @author Erica Faccio 751654 VA
+ * @author Giovanni Isgrò 753536 VA
  */
 public class EditingRestaurant {
         /** ID del ristorante attualmente in modifica. */

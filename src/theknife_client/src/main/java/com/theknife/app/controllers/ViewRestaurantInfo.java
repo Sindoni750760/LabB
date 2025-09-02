@@ -15,6 +15,9 @@ import javafx.scene.control.Label;
  * Controller per la schermata di visualizzazione delle informazioni di un ristorante.
  * Mostra i dettagli del ristorante selezionato, consente di visualizzare le recensioni
  * e di aggiungere/rimuovere il ristorante dai preferiti.
+ * @author Mattia Sindoni 750760 VA
+ * @author Erica Faccio 751654 VA
+ * @author Giovanni Isgrò 753536 VA
  */
 public class ViewRestaurantInfo {
     /** Indica se il ristorante è attualmente tra i preferiti dell'utente. */

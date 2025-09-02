@@ -17,6 +17,9 @@ import javafx.scene.control.TextField;
 /**
  * Controller per la schermata di registrazione.
  * Gestisce l'inserimento dei dati utente, la validazione e la comunicazione con il server.
+ * @author Mattia Sindoni 750760 VA
+ * @author Erica Faccio 751654 VA
+ * @author Giovanni Isgrò 753536 VA
  */
 public class RegisterController {
     /** Campo di testo per il nome dell'utente. */

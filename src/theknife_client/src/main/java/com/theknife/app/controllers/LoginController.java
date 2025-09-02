@@ -13,6 +13,9 @@ import javafx.scene.control.TextField;
 /**
  * Controller per la schermata di login.
  * Gestisce l'autenticazione dell'utente e la navigazione tra le scene.
+ * @author Mattia Sindoni 750760 VA
+ * @author Erica Faccio 751654 VA
+ * @author Giovanni Isgrò 753536 VA
  */
 public class LoginController {
     /** Campo di testo per l'inserimento del nome utente. */

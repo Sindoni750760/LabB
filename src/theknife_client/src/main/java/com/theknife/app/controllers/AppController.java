@@ -14,6 +14,9 @@ import javafx.scene.control.Label;
 /**
  * Controller principale dell'applicazione.
  * Gestisce l'interfaccia utente e le interazioni con i pulsanti della schermata principale
+ * @author Mattia Sindoni 750760 VA
+ * @author Erica Faccio 751654 VA
+ * @author Giovanni Isgrò 753536 VA
  */
 public class AppController {
     /**

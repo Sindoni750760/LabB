@@ -6,6 +6,9 @@ import java.sql.SQLException;
  * Classe utility per la gestione delle operazioni relative ai ristoranti.
  * Contiene metodi per recuperare informazioni filtrate sui ristoranti,
  * validando i parametri ricevuti prima di interrogare il database.
+ * @author Mattia Sindoni 750760 VA
+ * @author Erica Faccio 751654 VA
+ * @author Giovanni Isgrò 753536 VA
  */
 public class Restaurant {
         /**

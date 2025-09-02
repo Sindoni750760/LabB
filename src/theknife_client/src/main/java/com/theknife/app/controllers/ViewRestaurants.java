@@ -18,6 +18,9 @@ import javafx.scene.control.TextField;
  * Controller per la schermata di visualizzazione dei ristoranti.
  * Permette agli utenti di cercare ristoranti applicando vari filtri,
  * navigare tra le pagine dei risultati e visualizzare informazioni dettagliate.
+ * @author Mattia Sindoni 750760 VA
+ * @author Erica Faccio 751654 VA
+ * @author Giovanni Isgrò 753536 VA
  */
 public class ViewRestaurants {
     /** ID dei ristoranti visualizzati nella pagina corrente. */

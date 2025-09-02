@@ -15,6 +15,9 @@ import javafx.scene.control.ListView;
  * Controller per la schermata "MyReviews".
  * Gestisce la visualizzazione delle recensioni lasciate dall'utente,
  * con supporto alla paginazione e formattazione del testo.
+ * @author Mattia Sindoni 750760 VA
+ * @author Erica Faccio 751654 VA
+ * @author Giovanni Isgrò 753536 VA
  */
 public class MyReviews {
     /** Pagina attualmente visualizzata. */

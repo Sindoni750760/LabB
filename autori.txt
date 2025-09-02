@@ -1,6 +1,6 @@
 Sindoni Mattia 750760 VA
 Erica Faccio 751654 VA
-Giovanni Isgró 753536
+Giovanni Isgró 753536 VA
 
 Repository di github:
 https://github.com/Sindoni750760/LabB

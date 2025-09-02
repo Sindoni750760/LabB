@@ -12,6 +12,9 @@ import java.sql.SQLException;
  * Gestisce la comunicazione tra il server e un singolo client tramite socket.
  * Ogni istanza di {@code ClientThread} rappresenta una connessione attiva.
  * Supporta comandi come login, registrazione, gestione ristoranti e ping.
+ * @author Mattia Sindoni 750760 VA
+ * @author Erica Faccio 751654 VA
+ * @author Giovanni Isgrò 753536 VA
  */
 public class ClientThread extends Thread {
     private String ip;

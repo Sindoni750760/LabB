@@ -19,6 +19,9 @@ import javafx.scene.control.TextArea;
  * Controller per la schermata di scrittura o modifica di una recensione.
  * Gestisce sia le recensioni degli utenti che le risposte dei ristoratori.
  * Permette di aggiungere, modificare o eliminare contenuti testuali e valutazioni in stelle.
+ * @author Mattia Sindoni 750760 VA
+ * @author Erica Faccio 751654 VA
+ * @author Giovanni Isgrò 753536 VA
  */
 public class WriteReview {
 

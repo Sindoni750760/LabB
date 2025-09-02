@@ -19,6 +19,9 @@ import javafx.scene.control.TextField;
 /**
  * Controller per la schermata di modifica o aggiunta di un ristorante.
  * Gestisce il caricamento dei dati, l'aggiornamento, l'eliminazione e la validazione dei campi.
+ * @author Mattia Sindoni 750760 VA
+ * @author Erica Faccio 751654 VA
+ * @author Giovanni Isgrò 753536 VA
  */
 public class EditRestaurant {
     /** ID del ristorante attualmente in fase di modifica. */

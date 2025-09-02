@@ -18,6 +18,9 @@ import javafx.scene.control.ListView;
  * Gestisce la visualizzazione delle recensioni, la paginazione,
  * e consente agli utenti di aggiungere o modificare la propria recensione.
  * I ristoratori possono rispondere alle recensioni ricevute.
+ * @author Mattia Sindoni 750760 VA
+ * @author Erica Faccio 751654 VA
+ * @author Giovanni Isgrò 753536 VA
  */
 public class RestaurantReviews {
     /** Indica se l'utente è loggato. */
