@@ -34,7 +34,7 @@ public class ClientThread extends Thread {
         ip = socket.getInetAddress().toString();
         reader = new BufferedReader(new InputStreamReader(socket.getInputStream(),  StandardCharsets.UTF_8));
         os = socket.getOutputStream();
-        start();
+        //start();
     }
     /**
      * Metodo principale del thread. Esegue la logica di comunicazione con il client.

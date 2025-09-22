@@ -8,6 +8,8 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 
+import javax.swing.JOptionPane;
+
 /**
  * Classe utility per gestire la comunicazione con il server tramite socket TCP.
  * Fornisce metodi per inviare e ricevere stringhe, gestire errori di connessione,
@@ -74,6 +76,7 @@ public class Communicator {
         //does the integral portion of the handling
         if(complete)
             SceneManager.changeScene("App");
+            JOptionPane.showMessageDialog(null, "IL SERVER E' SPENTO. \n PER POTER UTILIZZARE L'APP, ACCENDERE IL SERVER");
         server_reachable = false;
     }
 
@@ -89,11 +92,13 @@ public class Communicator {
         try {
             //creates a new socket and configures the input/output streams
             socket = new Socket(ip, port);
+            socket.setSoTimeout(1000);
             reader = new BufferedReader(new InputStreamReader(socket.getInputStream(),  StandardCharsets.UTF_8));
             os = socket.getOutputStream();
             server_reachable = true;
             return socket != null;
         } catch(IOException e) {
+            JOptionPane.showMessageDialog(null, "IL SERVER E' SPENTO. \n PER POTER UTILIZZARE L'APP, ACCENDERE IL SERVER");
             return false;
         }
     }

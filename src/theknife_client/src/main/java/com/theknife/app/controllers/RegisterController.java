@@ -2,10 +2,12 @@ package com.theknife.app.controllers;
 
 import java.io.IOException;
 import java.time.LocalDate;
+import java.util.regex.Pattern;
 
 import com.theknife.app.Communicator;
 import com.theknife.app.SceneManager;
 
+import javafx.animation.PauseTransition;
 import javafx.fxml.FXML;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.DateCell;
@@ -13,6 +15,7 @@ import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
+import javafx.util.Duration;
 
 /**
  * Controller per la schermata di registrazione.
@@ -82,46 +85,57 @@ public class RegisterController {
     @FXML
     private void register() throws IOException {
         //checks if the two passwords inserted correspond
-        if(!password.getText().equals(confirm_password.getText())) {
+        String pwd = password.getText();
+        String confirmPwd=confirm_password.getText();
+        if(!pwd.equals(confirmPwd)){
             setNotification("Le password inserite non corrispondono");
             return;
         }
+        Pattern PASSWORD_PATTERN = Pattern.compile(
+                    "^(?=.{8,}$)(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*\\W).*$"
+        );
+         try{
+                Communicator.sendStream("register");
+                Communicator.sendStream(name.getText());
+                Communicator.sendStream(surname.getText());
+                Communicator.sendStream(username.getText());
+                Communicator.sendStream(pwd);
+                Communicator.sendStream(
+                birth_date.getValue() == null
+                    ? "-"
+                    : birth_date.getValue().toString()
+                );
+                Communicator.sendStream(latitude.getText());
+                Communicator.sendStream(longitude.getText());
+                Communicator.sendStream(is_restaurateur.isSelected() ? "y" : "n");
+                switch(Communicator.readStream()){
+                    case "ok":
+                    SceneManager.setAppAlert("Registrazione avvenuta con successo");
+                    SceneManager.changeScene("App");
+                    break;
+                case "missing":
+                    setNotification("Devi inserire tutti i campi obbligatori");
+                    break;
+                case "password":
+                        if(!PASSWORD_PATTERN.matcher(pwd).matches()){
+                            setNotification( "La password non rispetta i requisiti. Verificare che abbia \n" +
+                            "almeno 8 caratteri | " +
+                            "almeno una maiuscola | " +
+                            "almeno una minuscola | " +
+                            "almeno un numero \n" +
+                            "| almeno un carattere speciale");
+                        return;
+                    }
+                    break;
+                case "credentials":
+                    setNotification("Username già esistente");
+                    break;
+                default:
+                    setNotification("Errore imprevisto dal server");
+                }
 
-        Communicator.sendStream("register");
-        Communicator.sendStream(name.getText());
-        Communicator.sendStream(surname.getText());
-        Communicator.sendStream(username.getText());
-        Communicator.sendStream(password.getText());
-        Communicator.sendStream(birth_date.getValue() == null ? "-" : birth_date.getValue().toString());
-        Communicator.sendStream(latitude.getText());
-        Communicator.sendStream(longitude.getText());
-        Communicator.sendStream(is_restaurateur.isSelected() ? "y" : "n");
-
-        //switches the response code received by the server
-        switch(Communicator.readStream()) {
-            case "ok":
-                SceneManager.setAppAlert("Registrazione avvenuta con successo");
-                SceneManager.changeScene("App");
-                break;
-            case "missing":
-                setNotification("Devi inserire tutti i campi obbligatori");
-                break;
-            case "password":
-                setNotification("La password inserita non rispetta i requisiti");
-                break;
-            case "date":
-                //shouldn't happen with this client
-                setNotification("Errore nel client");
-                break;
-            case "coordinates":
-                setNotification("Le coordinate inserite non sono nel formato corretto");
-                break;
-            case "username":
-                setNotification("Esiste già un utente con questo username");
-                break;
-            default:
-                setNotification("Errore imprevisto da parte del server");
-                break;
+            }catch(IOException e){
+            setNotification("Errore di comunicazione: "+e.getMessage());
         }
     }
 
