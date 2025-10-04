@@ -108,11 +108,7 @@ public class App {
             while (running) {
                 try {
                     Socket clientSocket = serverSocket.accept();
-                    if (running) {
-                        new ClientThread(clientSocket).start();
-                    } else {
-                        clientSocket.close();
-                    }
+                    new ClientThread(clientSocket).start();
                 } catch (IOException e) {
                     if (running) {
                         System.err.println("Errore nel thread del server: " + e.getMessage());

@@ -49,26 +49,18 @@ public class User {
      * @param password la password da validare
      * @return {@code true} se la password è valida, {@code false} altrimenti
      */
-    private static boolean checkPassword(String password) {
-        if(password.length() < 8 || password.length() > 32)
-            return false;
-
-        boolean lalph, ualph, num, spec;
-        lalph = ualph = num = spec = false;
-
-        for(char c : password.toCharArray()) {
-            if(c > 'a' && c < 'z')
-                lalph = true;
-            else if(c > 'A' && c < 'Z')
-                ualph = true;
-            else if(c > '0' && c < '9')
-                num = true;
-            else
-                spec = true;
-        }
-
-        return lalph && ualph && num && spec;
+    private static boolean checkPassword(String pw) {
+    if (pw.length() < 8 || pw.length() > 32) return false;
+    boolean lower=false, upper=false, digit=false, special=false;
+    for (char c: pw.toCharArray()) {
+        if (Character.isLowerCase(c)) lower = true;
+        else if (Character.isUpperCase(c)) upper = true;
+        else if (Character.isDigit(c)) digit = true;
+        else if (!Character.isWhitespace(c)) special = true;
     }
+    return lower && upper && digit && special;
+    }
+
 
     /**
      * Registra un nuovo utente nel sistema.

@@ -44,10 +44,11 @@ public class ClientThread extends Thread {
         try {
             exec();
         } catch(InterruptedException | IOException | SQLException e) {
-            if(e.getMessage().equals("Connection reset"))
-                log("Disconnected");
-            else
-                e.printStackTrace();
+            log("client disconnected: " + ip + "(" + e.getMessage() + ")");
+            }finally{try{
+                reader.close();
+                os.close();
+            }catch(IOException ignored){}
         }
     }
 

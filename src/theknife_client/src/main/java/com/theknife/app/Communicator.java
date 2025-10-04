@@ -4,11 +4,14 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.lang.management.PlatformLoggingMXBean;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 
 import javax.swing.JOptionPane;
+
+import javafx.application.Platform;
 
 /**
  * Classe utility per gestire la comunicazione con il server tramite socket TCP.
@@ -110,13 +113,17 @@ public class Communicator {
      * @return stringa ricevuta dal server, oppure stringa vuota in caso di errore
      * @throws IOException se si verifica un errore di lettura
      */
-    public static String readStream() throws IOException {
-        try {
-            if(socket.isClosed())
-                throw new IOException();
+    public static String readStream(){
+        try{
             return reader.readLine();
-        } catch(IOException e) {
-            handleConnectionError(true);
+        }catch(IOException e){
+            server_reachable = false;
+            Platform.runLater(() ->{
+                SceneManager.setAppWarning("Il server non è raggiungibile");
+                try{
+                    SceneManager.changeScene("App");
+                }catch(IOException ignored){};
+            });
             return "";
         }
     }
@@ -129,12 +136,16 @@ public class Communicator {
      * @throws IOException se si verifica un errore di scrittura
      */
     public static void sendStream(String msg) throws IOException {
-        try {
-            if(socket.isClosed())
-                throw new IOException();
-            os.write((msg + '\n').getBytes(StandardCharsets.UTF_8));
-        } catch(IOException e) {
-            handleConnectionError(true);
+        try{
+            os.write((msg + "\n").getBytes());
+        }catch(IOException e){
+            server_reachable = false;
+            Platform.runLater(()->{
+                SceneManager.setAppWarning("Il server non è raggiungibile");
+                try{
+                    SceneManager.changeScene("App");
+                }catch(IOException ignored){}
+            });
         }
     }
 }
