@@ -226,7 +226,10 @@ public class RestaurantReviews {
     @FXML
     private void goBack() throws IOException {
         //changes page based on the role
-        if(is_restaurateur)
+        if(!is_logged){
+            SceneManager.changeScene("ViewRestaurants");
+        }
+        else if(is_restaurateur)
             SceneManager.changeScene("MyRestaurants");
         else
             SceneManager.changeScene("ViewRestaurantInfo");

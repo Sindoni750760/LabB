@@ -68,7 +68,7 @@ public class ViewRestaurants {
     private ListView<String> restaurants_listview;
     /** Pulsanti per navigazione e visualizzazione dettagli. */
     @FXML
-    private Button prev_btn, next_btn, view_info_btn;
+    private Button prev_btn, next_btn, view_info_btn, clear_btn;
     /**
      * Inizializza la schermata, resetta lo stato del ristorante in modifica
      * e avvia la ricerca iniziale.
@@ -105,9 +105,20 @@ public class ViewRestaurants {
     private void updateFilters() throws IOException {
         //updates the filters to be used in the search
         hideNotification();
-        latitude = filledOrDash(latitude_field.getText());
-        longitude = filledOrDash(longitude_field.getText());
-        range_km = filledOrDash(range_km_field.getText());
+
+        String latText = latitude_field.getText().trim();
+        String lonText = longitude_field.getText().trim();
+        String rangeText = range_km_field.getText().trim();
+
+        if(latText.isEmpty() || lonText.isEmpty()){
+            setNotification("Inserisci latitudine e longitudine prima di cercare");
+            return;
+        }
+
+        latitude =  latText;
+        longitude = lonText;
+        range_km = rangeText.isEmpty() ? "-" : rangeText;
+
         price_min = filledOrDash(price_min_field.getText());
         price_max = filledOrDash(price_max_field.getText());
         has_delivery = delivery_check.isSelected() ? "y" : "n";
@@ -115,10 +126,7 @@ public class ViewRestaurants {
         stars_min = filledOrDash(stars_min_field.getText());
         stars_max = filledOrDash(stars_max_field.getText());
         only_favourites = favourites_check.isSelected() ? "y" : "n";
-        if(category_field.getText().isEmpty())
-            category = null;
-        else
-            category = category_field.getText();
+        category = category_field.getText().isEmpty() ? null : category_field.getText();
         near_me = near_me_check.isSelected() ? "y" : "n";
         searchPage(0);
     }
@@ -277,5 +285,31 @@ public class ViewRestaurants {
     @FXML
     private void goBack() throws IOException {
         SceneManager.changeScene("App");
+    }
+
+    @FXML
+    private void clearFilters() throws IOException{
+        latitude_field.clear();
+        longitude_field.clear();
+        range_km_field.clear();
+        price_min_field.clear();
+        price_max_field.clear();
+        stars_min_field.clear();
+        stars_max_field.clear();
+        category_field.clear();
+
+        delivery_check.setSelected(false);
+        online_check.setSelected(false);
+        favourites_check.setSelected(false);
+        near_me_check.setSelected(false);
+
+        latitude = longitude = range_km = "-";
+        price_min = price_max = stars_min = stars_max = "-";
+        has_delivery = has_online = only_favourites = near_me = "n";
+        category = null;
+
+        hideNotification();
+
+        searchPage(0);
     }
 }

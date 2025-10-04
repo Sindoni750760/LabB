@@ -127,20 +127,13 @@ public class ViewRestaurantInfo {
      */
     @FXML
     private void addToFavourites() throws IOException {
-        //sets/unsets current restaurant as favourite
-        String restaurant_id = Integer.toString(EditingRestaurant.getId());
-        if(is_favourite) {
-            fav_btn.setText("Aggiungi ai preferiti");
-            Communicator.sendStream("removeFavourite");
-            Communicator.sendStream(restaurant_id);
-            Communicator.readStream();
-        } else {
-            fav_btn.setText("Rimuovi dai preferiti");
-            Communicator.sendStream("addFavourite");
-            Communicator.sendStream(restaurant_id);
-            Communicator.readStream();
-        }
-
-        is_favourite = !is_favourite;
+    Communicator.sendStream(is_favourite ? "removeFavourite" : "addFavourite");
+    Communicator.sendStream(Integer.toString(EditingRestaurant.getId()));
+    Communicator.readStream();
+    // show feedback and go back to favourites list
+    SceneManager.setAppAlert(is_favourite
+        ? "Rimosso dai preferiti"
+        : "Aggiunto ai preferiti");
+    SceneManager.changeScene("ViewRestaurants");
     }
 }
