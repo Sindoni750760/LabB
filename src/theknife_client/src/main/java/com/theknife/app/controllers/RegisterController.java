@@ -92,8 +92,9 @@ public class RegisterController {
             return;
         }
         Pattern PASSWORD_PATTERN = Pattern.compile(
-                    "^(?=.{8,}$)(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*\\W).*$"
+        "^(?=.{8,32}$)(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*\\W).*$"
         );
+
          try{
                 Communicator.sendStream("register");
                 Communicator.sendStream(name.getText());
