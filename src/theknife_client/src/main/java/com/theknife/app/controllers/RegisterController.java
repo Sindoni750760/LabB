@@ -7,7 +7,6 @@ import java.util.regex.Pattern;
 import com.theknife.app.Communicator;
 import com.theknife.app.SceneManager;
 
-import javafx.animation.PauseTransition;
 import javafx.fxml.FXML;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.DateCell;
@@ -15,7 +14,6 @@ import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
-import javafx.util.Duration;
 
 /**
  * Controller per la schermata di registrazione.
