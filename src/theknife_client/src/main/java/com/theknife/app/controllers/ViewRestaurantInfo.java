@@ -70,7 +70,9 @@ public class ViewRestaurantInfo {
             //checks if the restaurant is favourite
             Communicator.sendStream("isFavourite");
             Communicator.sendStream(Integer.toString(EditingRestaurant.getId()));
-            is_favourite = Communicator.readStream().equals("y");
+            String favResp = Communicator.readStream();
+            if (favResp == null) { SceneManager.setAppWarning("Il server non è raggiungibile"); SceneManager.changeScene("App"); return; }
+            is_favourite = favResp.equals("y");
 
             if(is_favourite)
                 fav_btn.setText("Rimuovi dai preferiti");
@@ -134,6 +136,7 @@ public class ViewRestaurantInfo {
     SceneManager.setAppAlert(is_favourite
         ? "Rimosso dai preferiti"
         : "Aggiunto ai preferiti");
-    SceneManager.changeScene("ViewRestaurants");
+    // if the user added/removed from favourites, open the ViewRestaurants in favourites mode
+    com.theknife.app.controllers.ViewRestaurants.openFavoritesFromApp();
     }
 }

@@ -70,47 +70,59 @@ public class RestaurantReviews {
      */
     @FXML
     private void initialize() throws IOException {
+        // Make initialization resilient: if any communication fails, keep UI responsive and allow user to go back
         prev_btn.setDisable(true);
         next_btn.setDisable(true);
         no_reviews_label.setVisible(false);
         current_page = 0;
-        String[] user_info = User.getInfo();
-        
-        is_logged = user_info != null;
 
-        if(is_logged) {
-            add_review_btn.setVisible(true);
-            is_restaurateur = user_info[2].equals("y");
+        try {
+            String[] user_info = User.getInfo();
+            is_logged = user_info != null;
 
-            if(is_restaurateur) {
-                add_review_btn.setDisable(true);
-                add_review_btn.setText("Rispondi/modifica risposta");
-            } else {
-                //checks if the user has set a review
-                Communicator.sendStream("getMyReview");
-                Communicator.sendStream(Integer.toString(EditingRestaurant.getId()));
+            if(is_logged) {
+                add_review_btn.setVisible(true);
+                is_restaurateur = user_info[2].equals("y");
 
-                int stars = Integer.parseInt(Communicator.readStream());
-                Communicator.readStream();
+                if(is_restaurateur) {
+                    add_review_btn.setDisable(true);
+                    add_review_btn.setText("Rispondi/modifica risposta");
+                } else {
+                    //checks if the user has set a review
+                    Communicator.sendStream("getMyReview");
+                    Communicator.sendStream(Integer.toString(EditingRestaurant.getId()));
 
-                if(stars > 0)
-                    add_review_btn.setText("Modifica recensione");
+                    String starsStr = Communicator.readStream();
+                    if (starsStr == null) throw new IOException("server unreachable");
+                    int stars = Integer.parseInt(starsStr);
+                    if (Communicator.readStream() == null) throw new IOException("server unreachable");
+
+                    if(stars > 0)
+                        add_review_btn.setText("Modifica recensione");
+                }
             }
-        }
 
-        String[] restaurant_info = EditingRestaurant.getInfo();
-        reviews_label.setText("Recensioni ricevute: " + restaurant_info[10]);
-        String stars_text = restaurant_info[9];
-        stars_label.setText("Valutazione media (stelle): " + (stars_text.equals("0") ? "-" : stars_text));
+            String[] restaurant_info = EditingRestaurant.getInfo();
+            reviews_label.setText("Recensioni ricevute: " + restaurant_info[10]);
+            String stars_text = restaurant_info[9];
+            stars_label.setText("Valutazione media (stelle): " + (stars_text.equals("0") ? "-" : stars_text));
 
-        Communicator.sendStream("getReviewsPages");
-        Communicator.sendStream(Integer.toString(EditingRestaurant.getId()));
-        total_pages = Integer.parseInt(Communicator.readStream());
+            Communicator.sendStream("getReviewsPages");
+            Communicator.sendStream(Integer.toString(EditingRestaurant.getId()));
+            String totalPagesStr = Communicator.readStream();
+            if (totalPagesStr == null) throw new IOException("server unreachable");
+            total_pages = Integer.parseInt(totalPagesStr);
 
-        if(total_pages > 0)
-            changePage(0);
-        else
+            if(total_pages > 0)
+                changePage(0);
+            else
+                no_reviews_label.setVisible(true);
+        } catch(Exception e) {
+            // log and keep UI responsive; user can still go back to previous scene
+            System.err.println("[RestaurantReviews] init error: " + e.getMessage());
             no_reviews_label.setVisible(true);
+            add_review_btn.setVisible(false);
+        }
 
         //function used to wrap the text for every cell of the listview
         reviews_listview.setCellFactory(lv -> new ListCell<String>() {
@@ -150,7 +162,9 @@ public class RestaurantReviews {
         Communicator.sendStream(Integer.toString(EditingRestaurant.getId()));
         Communicator.sendStream(Integer.toString(page));
 
-        int size = Integer.parseInt(Communicator.readStream());
+    String sizeStr = Communicator.readStream();
+    if (sizeStr == null) { SceneManager.setAppWarning("Il server non è raggiungibile"); SceneManager.changeScene("App"); return; }
+    int size = Integer.parseInt(sizeStr);
         String[] reviews_stars = new String[size];
         String[] reviews_texts = new String[size];
         String[] reviews_reply = new String[size];
@@ -225,13 +239,18 @@ public class RestaurantReviews {
      */
     @FXML
     private void goBack() throws IOException {
-        //changes page based on the role
-        if(!is_logged){
+        try {
+            //changes page based on the role
+            if(!is_logged){
+                SceneManager.changeScene("ViewRestaurants");
+            }
+            else if(is_restaurateur)
+                SceneManager.changeScene("MyRestaurants");
+            else
+                SceneManager.changeScene("ViewRestaurantInfo");
+        } catch(IOException e) {
+            // fallback to main restaurants view to ensure user can always navigate away
             SceneManager.changeScene("ViewRestaurants");
         }
-        else if(is_restaurateur)
-            SceneManager.changeScene("MyRestaurants");
-        else
-            SceneManager.changeScene("ViewRestaurantInfo");
     }
 }

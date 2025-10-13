@@ -51,8 +51,12 @@ public class MyReviews {
         prev_btn.setDisable(true);
         next_btn.setDisable(true);
         Communicator.sendStream("getMyReviewsPages");
-        if(Communicator.readStream().equals("ok")) {
-            total_pages = Integer.parseInt(Communicator.readStream());
+        String ok = Communicator.readStream();
+        if (ok == null) { SceneManager.setAppWarning("Il server non è raggiungibile"); SceneManager.changeScene("App"); return; }
+        if(ok.equals("ok")) {
+            String totalPagesStr = Communicator.readStream();
+            if (totalPagesStr == null) { SceneManager.setAppWarning("Il server non è raggiungibile"); SceneManager.changeScene("App"); return; }
+            total_pages = Integer.parseInt(totalPagesStr);
             changePage(0);
         } else {
             no_reviews_label.setVisible(true);
@@ -104,7 +108,9 @@ public class MyReviews {
 
         Communicator.sendStream("getMyReviews");
         Communicator.sendStream(Integer.toString(page));
-        int size = Integer.parseInt(Communicator.readStream());
+    String sizeStr = Communicator.readStream();
+    if (sizeStr == null) { SceneManager.setAppWarning("Il server non è raggiungibile"); SceneManager.changeScene("App"); return; }
+    int size = Integer.parseInt(sizeStr);
 
         String[] reviews_compact = new String[size];
 

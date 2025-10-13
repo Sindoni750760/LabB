@@ -20,6 +20,7 @@ public class ClientThread extends Thread {
     private String ip;
     private BufferedReader reader;
     private OutputStream os;
+    private Socket socket;
     private int user_id = -1;
 
     /**
@@ -32,6 +33,7 @@ public class ClientThread extends Thread {
     public ClientThread(Socket socket) throws IOException {
         //sets up the input/output streams
         ip = socket.getInetAddress().toString();
+        this.socket = socket;
         reader = new BufferedReader(new InputStreamReader(socket.getInputStream(),  StandardCharsets.UTF_8));
         os = socket.getOutputStream();
         //start();
@@ -45,10 +47,19 @@ public class ClientThread extends Thread {
             exec();
         } catch(InterruptedException | IOException | SQLException e) {
             log("client disconnected: " + ip + "(" + e.getMessage() + ")");
-            }finally{try{
-                reader.close();
-                os.close();
-            }catch(IOException ignored){}
+        } catch(Exception e) {
+            // Catch-all to avoid unexpected runtime exceptions killing the server thread
+            log("unexpected error: " + ip + "(" + e.getClass().getSimpleName() + ": " + e.getMessage() + ")");
+        } finally {
+            try{
+                if(reader != null) reader.close();
+            } catch(IOException ignored){}
+            try{
+                if(os != null) os.close();
+            } catch(IOException ignored){}
+            try{
+                if(socket != null && !socket.isClosed()) socket.close();
+            } catch(IOException ignored){}
         }
     }
 
@@ -69,6 +80,11 @@ public class ClientThread extends Thread {
      */
     private String readStream() throws IOException {
         String msg = reader.readLine();
+        // reader.readLine() returns null if the client closed the connection
+        if (msg == null) {
+            log("client closed connection");
+            return null;
+        }
         log("[In<--]" + msg);
         return msg;
     }
@@ -94,6 +110,8 @@ public class ClientThread extends Thread {
         log("Connected");
 
         String cmd = readStream();
+        // if client closed connection, readStream() returns null -> exit
+        if (cmd == null) return;
         //keeps reading the user command until it's "disconnect"
         while(!cmd.equals("disconnect")) {
             //operates based on the received command
@@ -577,6 +595,7 @@ public class ClientThread extends Thread {
                     break;
             }
             cmd = readStream();
+            if (cmd == null) return; // client disconnected
         }
     }
 }

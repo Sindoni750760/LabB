@@ -65,7 +65,7 @@ public class WriteReview {
     private void initialize() throws IOException {
         is_editing = false;
         stars = 0;
-        is_restaurateur = User.getInfo()[2].equals("y");
+    is_restaurateur = User.getInfo()[2].equals("y");
 
         if(is_restaurateur) {
             stars_1_btn.setVisible(false);
@@ -77,9 +77,12 @@ public class WriteReview {
 
             Communicator.sendStream("getResponse");
             Communicator.sendStream(Integer.toString(EditingRestaurant.getReviewId()));
-            
-            if(Communicator.readStream().equals("ok")) {
-                text_area.setText(Communicator.readStream());
+            String resp = Communicator.readStream();
+            if (resp == null) { SceneManager.setAppWarning("Il server non è raggiungibile"); SceneManager.changeScene("App"); return; }
+            if(resp.equals("ok")) {
+                String text = Communicator.readStream();
+                if (text == null) { SceneManager.setAppWarning("Il server non è raggiungibile"); SceneManager.changeScene("App"); return; }
+                text_area.setText(text);
                 checkTextBox();
                 publish_btn.setText("Modifica");
                 delete_btn.setVisible(true);
@@ -89,8 +92,12 @@ public class WriteReview {
             Communicator.sendStream("getMyReview");
             Communicator.sendStream(Integer.toString(EditingRestaurant.getId()));
 
-            stars = Integer.parseInt(Communicator.readStream());
-            text_area.setText(Communicator.readStream());
+            String starsStr = Communicator.readStream();
+            if (starsStr == null) { SceneManager.setAppWarning("Il server non è raggiungibile"); SceneManager.changeScene("App"); return; }
+            stars = Integer.parseInt(starsStr);
+            String text = Communicator.readStream();
+            if (text == null) { SceneManager.setAppWarning("Il server non è raggiungibile"); SceneManager.changeScene("App"); return; }
+            text_area.setText(text);
             checkTextBox();
 
             is_editing = stars > 0;

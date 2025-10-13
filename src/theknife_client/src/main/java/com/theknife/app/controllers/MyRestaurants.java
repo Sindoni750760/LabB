@@ -59,8 +59,10 @@ public class MyRestaurants {
         EditingRestaurant.reset();
         prev_btn.setDisable(true);
         next_btn.setDisable(true);
-        Communicator.sendStream("getMyRestaurantsPages");
-        total_pages = Integer.parseInt(Communicator.readStream());
+    Communicator.sendStream("getMyRestaurantsPages");
+    String totalPagesStr = Communicator.readStream();
+    if (totalPagesStr == null) { SceneManager.setAppWarning("Il server non è raggiungibile"); SceneManager.changeScene("App"); return; }
+    total_pages = Integer.parseInt(totalPagesStr);
         if(total_pages > 0)
             changePage(0);
         else
@@ -81,14 +83,20 @@ public class MyRestaurants {
 
     Communicator.sendStream("getMyRestaurants");
     Communicator.sendStream(Integer.toString(page));
-    int size = Integer.parseInt(Communicator.readStream());
+    String sizeStr = Communicator.readStream();
+    if (sizeStr == null) { SceneManager.setAppWarning("Il server non è raggiungibile"); SceneManager.changeScene("App"); return; }
+    int size = Integer.parseInt(sizeStr);
 
     restaurants_ids = new int[size];
     restaurants_names = new String[size];
 
     for(int i = 0; i < size; i++) {
-        restaurants_ids[i] = Integer.parseInt(Communicator.readStream());
-        restaurants_names[i] = Communicator.readStream();
+    String idStr = Communicator.readStream();
+    if (idStr == null) { SceneManager.setAppWarning("Il server non è raggiungibile"); SceneManager.changeScene("App"); return; }
+    restaurants_ids[i] = Integer.parseInt(idStr);
+    String name = Communicator.readStream();
+    if (name == null) { SceneManager.setAppWarning("Il server non è raggiungibile"); SceneManager.changeScene("App"); return; }
+    restaurants_names[i] = name;
     }
 
     restaurants_container.getItems().setAll(restaurants_names);

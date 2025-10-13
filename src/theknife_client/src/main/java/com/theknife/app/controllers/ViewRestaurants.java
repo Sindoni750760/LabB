@@ -23,6 +23,15 @@ import javafx.scene.control.TextField;
  * @author Giovanni Isgrò 753536 VA
  */
 public class ViewRestaurants {
+    /** If true, when the ViewRestaurants scene initializes it will show only favourites. */
+    private static boolean startFavoritesMode = false;
+
+    /** Open the ViewRestaurants scene and force it to show only favourites on load. */
+    public static void openFavoritesFromApp() throws IOException {
+        startFavoritesMode = true;
+        SceneManager.changeScene("ViewRestaurants");
+    }
+
     /** ID dei ristoranti visualizzati nella pagina corrente. */
     private String[] restaurants_ids;
 
@@ -82,6 +91,13 @@ public class ViewRestaurants {
             favourites_check.setVisible(true);
             near_me_check.setVisible(true);
         }
+        // if launched to show favorites only, set the checkbox and reset the flag
+        if (startFavoritesMode) {
+            only_favourites = "y";
+            favourites_check.setSelected(true);
+            startFavoritesMode = false;
+        }
+
         searchPage(0);
     }
 
@@ -110,14 +126,27 @@ public class ViewRestaurants {
         String lonText = longitude_field.getText().trim();
         String rangeText = range_km_field.getText().trim();
 
-        if(latText.isEmpty() || lonText.isEmpty()){
-            setNotification("Inserisci latitudine e longitudine prima di cercare");
-            return;
+        // If near_me is selected, ignore manual coordinates and let the server use user's position
+        if(near_me_check.isSelected()) {
+            latitude = "-";
+            longitude = "-";
+            range_km = rangeText.isEmpty() ? "-" : rangeText;
+        } else {
+            // If both empty, treat as no place filter
+            if(latText.isEmpty() && lonText.isEmpty()) {
+                latitude = "-";
+                longitude = "-";
+                range_km = "-";
+            } else if(latText.isEmpty() || lonText.isEmpty() || rangeText.isEmpty()) {
+                // partial coordinates or missing range is invalid
+                setNotification("Inserisci latitudine, longitudine e raggio di ricerca oppure lascia tutti vuoti");
+                return;
+            } else {
+                latitude = latText;
+                longitude = lonText;
+                range_km = rangeText;
+            }
         }
-
-        latitude =  latText;
-        longitude = lonText;
-        range_km = rangeText.isEmpty() ? "-" : rangeText;
 
         price_min = filledOrDash(price_min_field.getText());
         price_max = filledOrDash(price_max_field.getText());
@@ -171,9 +200,16 @@ public class ViewRestaurants {
             Communicator.sendStream(only_favourites);
         
         String response = Communicator.readStream();
+        if (response == null) {
+            SceneManager.setAppWarning("Il server non è raggiungibile");
+            SceneManager.changeScene("App");
+            return;
+        }
         switch(response) {
             case "ok":
-                pages = Integer.parseInt(Communicator.readStream());
+                String pagesStr = Communicator.readStream();
+                if (pagesStr == null) { SceneManager.setAppWarning("Il server non è raggiungibile"); SceneManager.changeScene("App"); return; }
+                pages = Integer.parseInt(pagesStr);
                 if(pages < 1) {
                     no_restaurants_label.setVisible(true);
                     Communicator.readStream();
@@ -186,7 +222,9 @@ public class ViewRestaurants {
                     next_btn.setDisable(false);
 
                 pages_label.setText(Integer.toString(page + 1) + '/' + pages);
-                int size = Integer.parseInt(Communicator.readStream());
+                String sizeStr = Communicator.readStream();
+                if (sizeStr == null) { SceneManager.setAppWarning("Il server non è raggiungibile"); SceneManager.changeScene("App"); return; }
+                int size = Integer.parseInt(sizeStr);
                 restaurants_ids = new String[size];
                 restaurants_names = new String[size];
 

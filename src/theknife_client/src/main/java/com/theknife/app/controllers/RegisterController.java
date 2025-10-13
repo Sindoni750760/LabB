@@ -89,9 +89,10 @@ public class RegisterController {
             setNotification("Le password inserite non corrispondono");
             return;
         }
-        Pattern PASSWORD_PATTERN = Pattern.compile(
-        "^(?=.{8,32}$)(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*\\W).*$"
-        );
+    // Match server-side rules: 8-32 chars, lower, upper, digit, and at least one non-alphanumeric non-space char
+    Pattern PASSWORD_PATTERN = Pattern.compile(
+    "^(?=.{8,32}$)(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^\\p{Alnum}\\s]).*$"
+    );
 
          try{
                 Communicator.sendStream("register");

@@ -107,7 +107,7 @@ public class Communicator {
 
     /**
      * Legge una stringa dal server.
-     * Se la connessione è chiusa o fallisce, gestisce l'errore e restituisce una stringa vuota.
+     * Se la connessione è chiusa o fallisce, gestisce l'errore.
      *
      * @return stringa ricevuta dal server, oppure stringa vuota in caso di errore
      * @throws IOException se si verifica un errore di lettura
@@ -123,7 +123,7 @@ public class Communicator {
                     SceneManager.changeScene("App");
                 }catch(IOException ignored){};
             });
-            return "";
+            return null;
         }
     }
 
@@ -145,6 +145,7 @@ public class Communicator {
                     SceneManager.changeScene("App");
                 }catch(IOException ignored){}
             });
+            throw e;
         }
     }
 }

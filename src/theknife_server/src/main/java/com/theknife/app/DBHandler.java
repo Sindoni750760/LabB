@@ -15,9 +15,8 @@ import java.util.List;
  * Ogni metodo prende una Connection dal pool e chiude tutte le risorse con try-with-resources.
  */
 public class DBHandler {
-    private static HikariDataSource ds = null;
+    private static volatile HikariDataSource ds = null;
     private static final String TARGET_DB = "theknife";
-    private static String sql = "";
     private DBHandler() { /* utility class */ }
 
     /**
@@ -28,7 +27,7 @@ public class DBHandler {
      * @param password DB password
      * @return true se il DataSource è inizializzato correttamente
      */
-    public static boolean connect(String jdbcUrl, String username, String password) {
+    public static synchronized boolean connect(String jdbcUrl, String username, String password) {
         try {
             Class.forName("org.postgresql.Driver");
         } catch (ClassNotFoundException e) {
@@ -73,7 +72,7 @@ public class DBHandler {
         }
     }
 
-    private static boolean initDataSource(String jdbcUrl, String username, String password) {
+    private static synchronized boolean initDataSource(String jdbcUrl, String username, String password) {
         try {
             if (ds != null && !ds.isClosed()) ds.close();
 
@@ -183,7 +182,7 @@ public class DBHandler {
     // ----------------- Metodi DB (rifattorizzati) -----------------
 
     public static boolean addUser(String nome, String cognome, String username, String hash, long data_nascita_time, double latitude, double longitude, boolean is_ristoratore) throws SQLException {
-        sql = data_nascita_time < 0 ?
+        String sql = data_nascita_time < 0 ?
                 "INSERT INTO utenti(nome, cognome, username, password, latitudine_domicilio, longitudine_domicilio, is_ristoratore) VALUES (?, ?, ?, ?, ?, ?, ?)" :
                 "INSERT INTO utenti(nome, cognome, username, password, latitudine_domicilio, longitudine_domicilio, is_ristoratore, data_nascita) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
@@ -206,7 +205,7 @@ public class DBHandler {
     }
 
     public static String[] getUserLoginInfo(String username) throws SQLException {
-        sql = "SELECT id, password FROM utenti WHERE username = ?";
+        String sql = "SELECT id, password FROM utenti WHERE username = ?";
         return withConnection(conn -> {
             try (PreparedStatement st = conn.prepareStatement(sql)) {
                 st.setString(1, username);
@@ -221,7 +220,7 @@ public class DBHandler {
     }
 
     public static String[] getUserInfo(int id) throws SQLException {
-        sql = "SELECT nome, cognome, is_ristoratore FROM utenti WHERE id = ?";
+        String sql = "SELECT nome, cognome, is_ristoratore FROM utenti WHERE id = ?";
         return withConnection(conn -> {
             try (PreparedStatement st = conn.prepareStatement(sql)) {
                 st.setInt(1, id);
@@ -236,7 +235,7 @@ public class DBHandler {
     }
 
     public static boolean addRestaurant(int user_id, String name, String nation, String city, String address, double latitude, double longitude, int price, String categories, boolean has_delivery, boolean has_online) throws SQLException {
-        sql = "INSERT INTO \"RistorantiTheKnife\"(nome, nazione, citta, indirizzo, latitudine, longitudine, fascia_prezzo, servizio_delivery, prenotazione_online, proprietario, tipo_cucina) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO \"RistorantiTheKnife\"(nome, nazione, citta, indirizzo, latitudine, longitudine, fascia_prezzo, servizio_delivery, prenotazione_online, proprietario, tipo_cucina) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         return withConnection(conn -> {
             try (PreparedStatement st = conn.prepareStatement(sql)) {
                 st.setString(1, name);
@@ -260,7 +259,7 @@ public class DBHandler {
     }
 
     public static int getUserRestaurantsPages(int user_id) throws SQLException {
-        sql = "SELECT COUNT(*) AS num_restaurants FROM \"RistorantiTheKnife\" WHERE proprietario = ?";
+        String sql = "SELECT COUNT(*) AS num_restaurants FROM \"RistorantiTheKnife\" WHERE proprietario = ?";
         return withConnection(conn -> {
             try (PreparedStatement st = conn.prepareStatement(sql)) {
                 st.setInt(1, user_id);
@@ -275,7 +274,7 @@ public class DBHandler {
 
     public static String[][] getUserRestaurants(int user_id, int page) throws SQLException {
         int offset = page * 10;
-        sql = "SELECT id, nome FROM \"RistorantiTheKnife\" WHERE proprietario = ? LIMIT 10 OFFSET ?";
+        String sql = "SELECT id, nome FROM \"RistorantiTheKnife\" WHERE proprietario = ? LIMIT 10 OFFSET ?";
         return withConnection(conn -> {
             try (PreparedStatement st = conn.prepareStatement(sql)) {
                 st.setInt(1, user_id);
@@ -290,7 +289,7 @@ public class DBHandler {
     }
 
     public static String[] getRestaurantInfo(int id) throws SQLException {
-        sql = "SELECT * FROM \"RistorantiTheKnife\" WHERE id = ?";
+        String sql = "SELECT * FROM \"RistorantiTheKnife\" WHERE id = ?";
         return withConnection(conn -> {
             try (PreparedStatement st = conn.prepareStatement(sql)) {
                 st.setInt(1, id);
@@ -327,7 +326,7 @@ public class DBHandler {
     }
 
     public static boolean hasAccess(int user_id, int restaurant_id) throws SQLException {
-        sql = "SELECT 1 FROM \"RistorantiTheKnife\" r JOIN utenti u ON proprietario = u.id WHERE r.id = ? AND u.id = ?";
+        String sql = "SELECT 1 FROM \"RistorantiTheKnife\" r JOIN utenti u ON proprietario = u.id WHERE r.id = ? AND u.id = ?";
         return withConnection(conn -> {
             try (PreparedStatement st = conn.prepareStatement(sql)) {
                 st.setInt(1, restaurant_id);
@@ -340,7 +339,7 @@ public class DBHandler {
     }
 
     public static boolean editRestaurant(int restaurant_id, String name, String nation, String city, String address, double latitude, double longitude, int price, String categories, boolean has_delivery, boolean has_online) throws SQLException {
-        sql = "UPDATE \"RistorantiTheKnife\" SET nome = ?, nazione = ?, citta = ?, indirizzo = ?, latitudine = ?, longitudine = ?, fascia_prezzo = ?, servizio_delivery = ?, prenotazione_online = ?, tipo_cucina = ? WHERE id = ?";
+        String sql = "UPDATE \"RistorantiTheKnife\" SET nome = ?, nazione = ?, citta = ?, indirizzo = ?, latitudine = ?, longitudine = ?, fascia_prezzo = ?, servizio_delivery = ?, prenotazione_online = ?, tipo_cucina = ? WHERE id = ?";
         return withConnection(conn -> {
             try (PreparedStatement st = conn.prepareStatement(sql)) {
                 st.setString(1, name);
@@ -364,7 +363,7 @@ public class DBHandler {
     }
 
     public static boolean deleteRestaurant(int restaurant_id) throws SQLException {
-        sql = "DELETE FROM \"RistorantiTheKnife\" WHERE id = ?";
+        String sql = "DELETE FROM \"RistorantiTheKnife\" WHERE id = ?";
         return withConnection(conn -> {
             try (PreparedStatement st = conn.prepareStatement(sql)) {
                 st.setInt(1, restaurant_id);
@@ -395,19 +394,19 @@ public class DBHandler {
 
     public static String[][] getRestaurantsWithFilter(int page, double latitude, double longitude, double range_km, int price_min, int price_max, boolean has_delivery, boolean has_online, double stars_min, double stars_max, int favourite_id, String category) throws SQLException {
         int offset = page * 10;
-        sql = " FROM \"RistorantiTheKnife\" r";
+        StringBuilder sb = new StringBuilder(" FROM \"RistorantiTheKnife\" r");
         List<String> parameters = new LinkedList<>();
         List<String> parameters_types = new LinkedList<>();
 
         if (favourite_id > 0) {
-            sql += " JOIN preferiti ON id = id_ristorante WHERE id_utente = ?";
+            sb.append(" JOIN preferiti ON id = id_ristorante WHERE id_utente = ?");
             parameters.add(Integer.toString(favourite_id));
             parameters_types.add("int");
-        } else sql += " WHERE 1 = 1";
+        } else sb.append(" WHERE 1 = 1");
 
         if (latitude >= 0) {
             range_km /= 111;
-            sql += " AND SQRT((latitudine - ?)*(latitudine - ?) + (longitudine - ?)*(longitudine - ?)) < ?";
+            sb.append(" AND SQRT((latitudine - ?)*(latitudine - ?) + (longitudine - ?)*(longitudine - ?)) < ?");
             parameters.add(Double.toString(latitude));
             parameters.add(Double.toString(latitude));
             parameters.add(Double.toString(longitude));
@@ -421,37 +420,39 @@ public class DBHandler {
         }
 
         if (price_min >= 0) {
-            sql += " AND fascia_prezzo >= ?";
+            sb.append(" AND fascia_prezzo >= ?");
             parameters.add(Integer.toString(price_min));
             parameters_types.add("int");
         }
 
         if (price_max >= 0) {
-            sql += " AND fascia_prezzo <= ?";
+            sb.append(" AND fascia_prezzo <= ?");
             parameters.add(Integer.toString(price_max));
             parameters_types.add("int");
         }
 
-        if (has_delivery) sql += " AND servizio_delivery = true";
-        if (has_online) sql += " AND prenotazione_online = true";
+        if (has_delivery) sb.append(" AND servizio_delivery = true");
+        if (has_online) sb.append(" AND prenotazione_online = true");
 
         String stars_query = "(SELECT AVG(stelle) FROM recensioni WHERE id_ristorante = r.id GROUP BY id_ristorante)";
         if (stars_min >= 0) {
-            sql += " AND " + stars_query + " >= ?";
+            sb.append(" AND ").append(stars_query).append(" >= ?");
             parameters.add(Double.toString(stars_min));
             parameters_types.add("double");
         }
         if (stars_max >= 0) {
-            sql += " AND " + stars_query + " <= ?";
+            sb.append(" AND ").append(stars_query).append(" <= ?");
             parameters.add(Double.toString(stars_max));
             parameters_types.add("double");
         }
 
         if (category != null) {
-            sql += " AND LOWER(tipo_cucina) LIKE LOWER(?)";
+            sb.append(" AND LOWER(tipo_cucina) LIKE LOWER(?)");
             parameters.add('%' + category + '%');
             parameters_types.add("string");
         }
+
+        final String sql = sb.toString();
 
         // count and page
         return withConnection(conn -> {
@@ -483,7 +484,7 @@ public class DBHandler {
     }
 
     public static double[] getUserPosition(int user_id) throws SQLException {
-        sql = "SELECT latitudine_domicilio AS la, longitudine_domicilio AS lo FROM utenti WHERE id = ?";
+        String sql = "SELECT latitudine_domicilio AS la, longitudine_domicilio AS lo FROM utenti WHERE id = ?";
         return withConnection(conn -> {
             try (PreparedStatement st = conn.prepareStatement(sql)) {
                 st.setInt(1, user_id);
@@ -496,7 +497,7 @@ public class DBHandler {
     }
 
     public static boolean setFavourite(int user_id, int id_restaurant, boolean set_favourite) throws SQLException {
-        sql = set_favourite ? "INSERT INTO preferiti(id_utente, id_ristorante) VALUES(?, ?)" : "DELETE FROM preferiti WHERE id_utente = ? AND id_ristorante = ?";
+        String sql = set_favourite ? "INSERT INTO preferiti(id_utente, id_ristorante) VALUES(?, ?)" : "DELETE FROM preferiti WHERE id_utente = ? AND id_ristorante = ?";
         return withConnection(conn -> {
             try (PreparedStatement st = conn.prepareStatement(sql)) {
                 st.setInt(1, user_id);
@@ -510,7 +511,7 @@ public class DBHandler {
     }
 
     public static boolean isFavourite(int user_id, int id_restaurant) throws SQLException {
-        sql = "SELECT 1 FROM preferiti WHERE id_utente = ? AND id_ristorante = ?";
+        String sql = "SELECT 1 FROM preferiti WHERE id_utente = ? AND id_ristorante = ?";
         return withConnection(conn -> {
             try (PreparedStatement st = conn.prepareStatement(sql)) {
                 st.setInt(1, user_id);
@@ -523,7 +524,7 @@ public class DBHandler {
     }
 
     public static boolean addReview(int user_id, int rest_id, int rating, String text) throws SQLException {
-        sql = "INSERT INTO recensioni(id_utente, id_ristorante, stelle, testo) VALUES(?, ?, ?, ?)";
+        String sql = "INSERT INTO recensioni(id_utente, id_ristorante, stelle, testo) VALUES(?, ?, ?, ?)";
         return withConnection(conn -> {
             try (PreparedStatement st = conn.prepareStatement(sql)) {
                 st.setInt(1, user_id);
@@ -539,7 +540,7 @@ public class DBHandler {
     }
 
     public static boolean removeReview(int user_id, int rest_id) throws SQLException {
-        sql = "DELETE FROM recensioni WHERE id_utente = ? AND id_ristorante = ?";
+        String sql = "DELETE FROM recensioni WHERE id_utente = ? AND id_ristorante = ?";
         return withConnection(conn -> {
             try (PreparedStatement st = conn.prepareStatement(sql)) {
                 st.setInt(1, user_id);
@@ -553,7 +554,7 @@ public class DBHandler {
     }
 
     public static String[] getUserReview(int user_id, int rest_id) throws SQLException {
-        sql = "SELECT * FROM recensioni WHERE id_utente = ? AND id_ristorante = ?";
+        String sql = "SELECT * FROM recensioni WHERE id_utente = ? AND id_ristorante = ?";
         return withConnection(conn -> {
             try (PreparedStatement st = conn.prepareStatement(sql)) {
                 st.setInt(1, user_id);
@@ -567,7 +568,7 @@ public class DBHandler {
     }
 
     public static boolean editReview(int user_id, int rest_id, int rating, String text) throws SQLException {
-        sql = "UPDATE recensioni SET stelle = ?, testo = ? WHERE id_utente = ? AND id_ristorante = ?";
+        String sql = "UPDATE recensioni SET stelle = ?, testo = ? WHERE id_utente = ? AND id_ristorante = ?";
         return withConnection(conn -> {
             try (PreparedStatement st = conn.prepareStatement(sql)) {
                 st.setInt(1, rating);
@@ -583,7 +584,7 @@ public class DBHandler {
     }
 
     public static int getReviewsPages(int id) throws SQLException {
-        sql = "SELECT COUNT(*) AS num FROM recensioni WHERE id_ristorante = ?";
+        String sql = "SELECT COUNT(*) AS num FROM recensioni WHERE id_ristorante = ?";
         return withConnection(conn -> {
             try (PreparedStatement st = conn.prepareStatement(sql)) {
                 st.setInt(1, id);
@@ -598,7 +599,7 @@ public class DBHandler {
 
     public static String[][] getReviews(int id, int page) throws SQLException {
         int offset = page * 10;
-        sql = "SELECT r.id, stelle, testo, (SELECT testo FROM risposte WHERE id_recensione = r.id) AS risposta FROM recensioni r WHERE id_ristorante = ? LIMIT 10 OFFSET ?";
+        String sql = "SELECT r.id, stelle, testo, (SELECT testo FROM risposte WHERE id_recensione = r.id) AS risposta FROM recensioni r WHERE id_ristorante = ? LIMIT 10 OFFSET ?";
         return withConnection(conn -> {
             try (PreparedStatement st = conn.prepareStatement(sql)) {
                 st.setInt(1, id);
@@ -615,7 +616,7 @@ public class DBHandler {
     }
 
     public static boolean canRespond(int user_id, int review_id) throws SQLException {
-        sql = "SELECT 1 FROM recensioni re JOIN \"RistorantiTheKnife\" ri ON id_ristorante = ri.id WHERE re.id = ? AND proprietario = ?";
+        String sql = "SELECT 1 FROM recensioni re JOIN \"RistorantiTheKnife\" ri ON id_ristorante = ri.id WHERE re.id = ? AND proprietario = ?";
         return withConnection(conn -> {
             try (PreparedStatement st = conn.prepareStatement(sql)) {
                 st.setInt(1, review_id);
@@ -628,7 +629,7 @@ public class DBHandler {
     }
 
     public static boolean addResponse(int review_id, String text) throws SQLException {
-        sql = "INSERT INTO risposte(id_recensione, testo) VALUES(?, ?)";
+        String sql = "INSERT INTO risposte(id_recensione, testo) VALUES(?, ?)";
         return withConnection(conn -> {
             try (PreparedStatement st = conn.prepareStatement(sql)) {
                 st.setInt(1, review_id);
@@ -642,7 +643,7 @@ public class DBHandler {
     }
 
     public static String getResponse(int review_id) throws SQLException {
-        sql = "SELECT testo FROM risposte WHERE id_recensione = ?";
+        String sql = "SELECT testo FROM risposte WHERE id_recensione = ?";
         return withConnection(conn -> {
             try (PreparedStatement st = conn.prepareStatement(sql)) {
                 st.setInt(1, review_id);
@@ -655,7 +656,7 @@ public class DBHandler {
     }
 
     public static boolean editResponse(int review_id, String text) throws SQLException {
-        sql = "UPDATE risposte SET testo = ? WHERE id_recensione = ?";
+        String sql = "UPDATE risposte SET testo = ? WHERE id_recensione = ?";
         return withConnection(conn -> {
             try (PreparedStatement st = conn.prepareStatement(sql)) {
                 st.setString(1, text);
@@ -669,7 +670,7 @@ public class DBHandler {
     }
 
     public static boolean removeResponse(int review_id) throws SQLException {
-        sql = "DELETE FROM risposte WHERE id_recensione = ?";
+        String sql = "DELETE FROM risposte WHERE id_recensione = ?";
         return withConnection(conn -> {
             try (PreparedStatement st = conn.prepareStatement(sql)) {
                 st.setInt(1, review_id);
@@ -682,7 +683,7 @@ public class DBHandler {
     }
 
     public static int getUserReviewsPages(int user_id) throws SQLException {
-        sql = "SELECT COUNT(*) AS num FROM recensioni WHERE id_utente = ?";
+        String sql = "SELECT COUNT(*) AS num FROM recensioni WHERE id_utente = ?";
         return withConnection(conn -> {
             try (PreparedStatement st = conn.prepareStatement(sql)) {
                 st.setInt(1, user_id);
@@ -699,7 +700,7 @@ public class DBHandler {
 
     public static String[][] getUserReviews(int user_id, int page) throws SQLException {
         int offset = page * 10;
-        sql = "SELECT nome, stelle, testo FROM \"RistorantiTheKnife\" ri JOIN recensioni re ON ri.id = id_ristorante WHERE id_utente = ? LIMIT 10 OFFSET ?";
+        String sql = "SELECT nome, stelle, testo FROM \"RistorantiTheKnife\" ri JOIN recensioni re ON ri.id = id_ristorante WHERE id_utente = ? LIMIT 10 OFFSET ?";
         return withConnection(conn -> {
             try (PreparedStatement st = conn.prepareStatement(sql)) {
                 st.setInt(1, user_id);
@@ -718,10 +719,11 @@ public class DBHandler {
     /**
      * Chiude il pool Hikari.
      */
-    public static void disconnect() {
+    public static synchronized void disconnect() {
         try {
             if (ds != null && !ds.isClosed()) {
                 ds.close();
+                ds = null;
                 System.out.println("Successfully disconnected from the database");
             }
         } catch (Exception e) {
