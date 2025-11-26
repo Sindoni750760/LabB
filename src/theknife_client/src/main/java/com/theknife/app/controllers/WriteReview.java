@@ -23,201 +23,207 @@ import javafx.scene.control.TextArea;
  * @author Erica Faccio 751654 VA
  * @author Giovanni Isgrò 753536 VA
  */
+
 public class WriteReview {
 
-    /** Valutazione in stelle assegnata alla recensione. */
     private static int stars;
-
-    /** Indica se l'utente è un ristoratore. */
     private static boolean is_restaurateur;
-
-    /** Indica se si sta modificando una recensione o risposta esistente. */
     private static boolean is_editing;
 
-   /** Pulsanti per selezionare il numero di stelle. */
     @FXML private Button stars_1_btn, stars_2_btn, stars_3_btn, stars_4_btn, stars_5_btn;
-
-    /** Pulsante per pubblicare o modificare la recensione/risposta. */
-    @FXML private Button publish_btn;
-
-    /** Pulsante per eliminare la recensione/risposta. */
-    @FXML private Button delete_btn;
-
-    /** Etichetta che mostra il numero di stelle selezionate. */
-    @FXML private Label stars_label;
-
-    /** Etichetta che mostra il numero massimo di caratteri consentiti. */
-    @FXML private Label max_chars_label;
-
-    /** Etichetta per notifiche o messaggi di errore. */
-    @FXML private Label notification_label;
-
-    /** Area di testo per scrivere la recensione o la risposta. */
+    @FXML private Button publish_btn, delete_btn;
+    @FXML private Label stars_label, max_chars_label, notification_label;
     @FXML private TextArea text_area;
 
-    /**
-     * Inizializza la schermata in base al ruolo dell'utente.
-     * Carica eventuali contenuti esistenti e imposta lo stato iniziale.
-     *
-     * @throws IOException se si verifica un errore nella comunicazione
-     */
     @FXML
     private void initialize() throws IOException {
-        is_editing = false;
+
         stars = 0;
-    is_restaurateur = User.getInfo()[2].equals("y");
+        is_editing = false;
 
-        if(is_restaurateur) {
-            stars_1_btn.setVisible(false);
-            stars_2_btn.setVisible(false);
-            stars_3_btn.setVisible(false);
-            stars_4_btn.setVisible(false);
-            stars_5_btn.setVisible(false);
-            stars_label.setVisible(false);
+        is_restaurateur = User.getInfo() != null && User.getInfo()[2].equals("y");
 
-            Communicator.sendStream("getResponse");
-            Communicator.sendStream(Integer.toString(EditingRestaurant.getReviewId()));
-            String resp = Communicator.readStream();
-            if (resp == null) { SceneManager.setAppWarning("Il server non è raggiungibile"); SceneManager.changeScene("App"); return; }
-            if(resp.equals("ok")) {
-                String text = Communicator.readStream();
-                if (text == null) { SceneManager.setAppWarning("Il server non è raggiungibile"); SceneManager.changeScene("App"); return; }
-                text_area.setText(text);
-                checkTextBox();
-                publish_btn.setText("Modifica");
-                delete_btn.setVisible(true);
-                is_editing = true;
-            }
+        if (is_restaurateur) {
+            setupRestaurateurMode();
         } else {
-            Communicator.sendStream("getMyReview");
-            Communicator.sendStream(Integer.toString(EditingRestaurant.getId()));
+            setupUserMode();
+        }
+    }
 
-            String starsStr = Communicator.readStream();
-            if (starsStr == null) { SceneManager.setAppWarning("Il server non è raggiungibile"); SceneManager.changeScene("App"); return; }
-            stars = Integer.parseInt(starsStr);
-            String text = Communicator.readStream();
-            if (text == null) { SceneManager.setAppWarning("Il server non è raggiungibile"); SceneManager.changeScene("App"); return; }
+    /* ---------------------- MODALITÀ RISTORATORE ---------------------- */
+
+    private void setupRestaurateurMode() throws IOException {
+
+        stars_1_btn.setVisible(false);
+        stars_2_btn.setVisible(false);
+        stars_3_btn.setVisible(false);
+        stars_4_btn.setVisible(false);
+        stars_5_btn.setVisible(false);
+        stars_label.setVisible(false);
+
+        Communicator.send("getResponse");
+        Communicator.send(Integer.toString(EditingRestaurant.getReviewId()));
+
+        String resp = Communicator.read();
+        if (resp == null) { fallback(); return; }
+
+        if (resp.equals("ok")) {
+            String text = Communicator.read();
+            if (text == null) { fallback(); return; }
+
             text_area.setText(text);
             checkTextBox();
 
-            is_editing = stars > 0;
-
-            if(is_editing) {
-                publish_btn.setText("Modifica");
-                stars_label.setText(Integer.toString(stars) + " stelle");
-                delete_btn.setVisible(true);
-            }
+            publish_btn.setText("Modifica");
+            delete_btn.setVisible(true);
+            is_editing = true;
         }
     }
 
-    /**
-     * Controlla e limita il testo inserito a un massimo di 255 caratteri.
-     * Aggiorna l'etichetta che mostra il conteggio dei caratteri.
-     */
+
+    /* ---------------------- MODALITÀ UTENTE ---------------------- */
+
+    private void setupUserMode() throws IOException {
+
+        Communicator.send("getMyReview");
+        Communicator.send(Integer.toString(EditingRestaurant.getId()));
+
+        String starsStr = Communicator.read();
+        if (starsStr == null) { fallback(); return; }
+
+        stars = Integer.parseInt(starsStr);
+
+        String text = Communicator.read();
+        if (text == null) { fallback(); return; }
+
+        text_area.setText(text);
+        checkTextBox();
+
+        is_editing = stars > 0;
+
+        if (is_editing) {
+            publish_btn.setText("Modifica");
+            stars_label.setText(stars + " stelle");
+            delete_btn.setVisible(true);
+        }
+    }
+
+
+    /* ---------------------- INPUT LIMITS ---------------------- */
+
     @FXML
     private void checkTextBox() {
-        //to limitate the review text to max 255 chars
         String text = text_area.getText();
-        if(text.length() > 255) {
+
+        if (text.length() > 255) {
             text = text.substring(0, 255);
             text_area.setText(text);
         }
-        max_chars_label.setText(Integer.toString(text.length()) + "/255");
+
+        max_chars_label.setText(text.length() + "/255");
     }
 
-    /**
-     * Pubblica o modifica una recensione o una risposta.
-     * Valida l'input e invia i dati al server.
-     *
-     * @throws IOException se si verifica un errore nella comunicazione
-     */
+
+    /* ---------------------- PUBBLICAZIONE ---------------------- */
+
     @FXML
     private void publish() throws IOException {
-        //edits/adds a review/response
-        if(is_restaurateur) {
-            Communicator.sendStream(is_editing ? "editResponse" : "addResponse");
-            Communicator.sendStream(Integer.toString(EditingRestaurant.getReviewId()));
-            Communicator.sendStream(text_area.getText());
-            Communicator.readStream();
-            goBack();
-        } else {
-            if(is_editing) {
-                //editing the review
-                Communicator.sendStream("editReview");
-                Communicator.sendStream(Integer.toString(EditingRestaurant.getId()));
-                Communicator.sendStream(Integer.toString(stars));
-                Communicator.sendStream(text_area.getText());
-                Communicator.readStream();
-                goBack();
-            } else if(stars < 1 || stars > 5)
-                setNotification("Devi dare un voto in stelle!");
-            else {
-                //creation of the review
-                Communicator.sendStream("addReview");
-                Communicator.sendStream(Integer.toString(EditingRestaurant.getId()));
-                Communicator.sendStream(Integer.toString(stars));
-                Communicator.sendStream(text_area.getText());
-                Communicator.readStream();
-                goBack();
-            }
+
+        if (is_restaurateur) {
+            sendRestaurateurReview();
+            return;
         }
+
+        sendUserReview();
     }
 
-    /**
-     * Elimina la recensione o la risposta dopo conferma dell'utente.
-     *
-     * @throws IOException se si verifica un errore nella comunicazione
-     */
+
+    private void sendRestaurateurReview() throws IOException {
+        Communicator.send(is_editing ? "editResponse" : "addResponse");
+        Communicator.send(Integer.toString(EditingRestaurant.getReviewId()));
+        Communicator.send(text_area.getText());
+
+        Communicator.read();
+        goBack();
+    }
+
+
+    private void sendUserReview() throws IOException {
+
+        if (!is_editing && (stars < 1 || stars > 5)) {
+            setNotification("Devi dare un voto in stelle!");
+            return;
+        }
+
+        if (is_editing) {
+            Communicator.send("editReview");
+        } else {
+            Communicator.send("addReview");
+        }
+
+        Communicator.send(Integer.toString(EditingRestaurant.getId()));
+        Communicator.send(Integer.toString(stars));
+        Communicator.send(text_area.getText());
+
+        Communicator.read();
+        goBack();
+    }
+
+
+    /* ---------------------- ELIMINAZIONE ---------------------- */
+
     @FXML
     private void delete() throws IOException {
-        String text = is_restaurateur ? "Sei sicuro di voler eliminare questa risposta?" : "Sei sicuro di voler eliminare questa recensione?";
-        Alert alert = new Alert(AlertType.CONFIRMATION, text, ButtonType.YES, ButtonType.NO);
+
+        String msg = is_restaurateur
+                ? "Sei sicuro di voler eliminare questa risposta?"
+                : "Sei sicuro di voler eliminare questa recensione?";
+
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION, msg, ButtonType.YES, ButtonType.NO);
         alert.showAndWait();
 
-        if (alert.getResult() == ButtonType.YES) {
-            if(is_restaurateur) {
-                Communicator.sendStream("removeResponse");
-                Communicator.sendStream(Integer.toString(EditingRestaurant.getReviewId()));
-            } else {
-                Communicator.sendStream("removeReview");
-                Communicator.sendStream(Integer.toString(EditingRestaurant.getId()));
-            }
-            Communicator.readStream();
-            goBack();
+        if (alert.getResult() != ButtonType.YES)
+            return;
+
+        if (is_restaurateur) {
+            Communicator.send("removeResponse");
+            Communicator.send(Integer.toString(EditingRestaurant.getReviewId()));
+        } else {
+            Communicator.send("removeReview");
+            Communicator.send(Integer.toString(EditingRestaurant.getId()));
         }
+
+        Communicator.read();
+        goBack();
     }
 
-    /**
-     * Imposta il numero di stelle selezionato e aggiorna l'etichetta.
-     *
-     * @param num numero di stelle da assegnare
-     */
+
+    /* ---------------------- STAR SELECT ---------------------- */
+
     private void setStar(int num) {
         stars = num;
-        stars_label.setText(Integer.toString(stars) + " stelle");
+        stars_label.setText(stars + " stelle");
     }
 
-    /** Seleziona 1 stella. */ @FXML private void setStar1() { setStar(1); }
-    /** Seleziona 2 stelle. */ @FXML private void setStar2() { setStar(2); }
-    /** Seleziona 3 stelle. */ @FXML private void setStar3() { setStar(3); }
-    /** Seleziona 4 stelle. */ @FXML private void setStar4() { setStar(4); }
-    /** Seleziona 5 stelle. */ @FXML private void setStar5() { setStar(5); }
+    @FXML private void setStar1() { setStar(1); }
+    @FXML private void setStar2() { setStar(2); }
+    @FXML private void setStar3() { setStar(3); }
+    @FXML private void setStar4() { setStar(4); }
+    @FXML private void setStar5() { setStar(5); }
 
-    /**
-     * Mostra un messaggio di notifica all'utente.
-     *
-     * @param msg testo della notifica da visualizzare
-     */
+
+    /* ---------------------- UTIL ---------------------- */
+
     private void setNotification(String msg) {
         notification_label.setVisible(true);
         notification_label.setText(msg);
     }
 
-    /**
-     * Torna alla schermata delle recensioni del ristorante.
-     *
-     * @throws IOException se si verifica un errore nel cambio scena
-     */
+    private void fallback() throws IOException {
+        SceneManager.setAppWarning("Il server non è raggiungibile");
+        SceneManager.changeScene("App");
+    }
+
     @FXML
     private void goBack() throws IOException {
         SceneManager.changeScene("RestaurantReviews");

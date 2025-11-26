@@ -23,127 +23,115 @@ import javafx.scene.control.TextField;
  * @author Giovanni Isgrò 753536 VA
  */
 public class RegisterController {
-    /** Campo di testo per il nome dell'utente. */
-    @FXML
-    private TextField name, 
-    /** Campo di testo per il cognome dell'utente. */
-    surname, 
-    /** Campo di testo per lo username scelto dall'utente. */
-    username, 
-    /** Campo di testo per la latitudine della posizione dell'utente. */
-    latitude, 
-    /** Campo di testo per la longitudine della posizione dell'utente. */
-    longitude;
-    /** Campo password per l'inserimento della password. */
-    @FXML
-    private PasswordField password, 
-    /** Campo password per confermare la password inserita. */
-    confirm_password;
-    /** Selettore per la data di nascita dell'utente. */
-    @FXML
-    private DatePicker birth_date;
-    /** Checkbox per indicare se l'utente è un ristoratore. */
-    @FXML
-    private CheckBox is_restaurateur;
-    /** Etichetta per mostrare notifiche o messaggi di errore. */
-    @FXML
-    private Label notification_label;
 
-    /**
-     * Inizializza la schermata disabilitando la selezione di date future nel DatePicker.
-     */
+    @FXML private TextField name;
+    @FXML private TextField surname;
+    @FXML private TextField username;
+    @FXML private TextField latitude;
+    @FXML private TextField longitude;
+
+    @FXML private PasswordField password;
+    @FXML private PasswordField confirm_password;
+
+    @FXML private DatePicker birth_date;
+
+    @FXML private CheckBox is_restaurateur;
+
+    @FXML private Label notification_label;
+
+
     @FXML
     private void initialize() {
-        //to disable the days after today in the birth date selection
         birth_date.setDayCellFactory(d ->
-           new DateCell() {
-               @Override public void updateItem(LocalDate item, boolean empty) {
-                   super.updateItem(item, empty);
-                   setDisable(item.isAfter(LocalDate.now()));
-               }});
+            new DateCell() {
+                @Override
+                public void updateItem(LocalDate item, boolean empty) {
+                    super.updateItem(item, empty);
+                    setDisable(item.isAfter(LocalDate.now()));
+                }
+            }
+        );
     }
 
-    /**
-     * Torna alla schermata principale dell'applicazione.
-     *
-     * @throws IOException se la scena non può essere caricata
-     */
     @FXML
     private void goBack() throws IOException {
         SceneManager.changeScene("App");
     }
 
-    /**
-     * Esegue la registrazione dell'utente.
-     * Valida i campi, invia i dati al server e gestisce la risposta.
-     * Mostra notifiche in caso di errore o conferma in caso di successo.
-     *
-     * @throws IOException se si verifica un errore nella comunicazione o nel cambio scena
-     */
     @FXML
     private void register() throws IOException {
-        //checks if the two passwords inserted correspond
+
+        // controllo password lato client
         String pwd = password.getText();
-        String confirmPwd=confirm_password.getText();
-        if(!pwd.equals(confirmPwd)){
+        String confirmPwd = confirm_password.getText();
+
+        if (!pwd.equals(confirmPwd)) {
             setNotification("Le password inserite non corrispondono");
             return;
         }
-    // Match server-side rules: 8-32 chars, lower, upper, digit, and at least one non-alphanumeric non-space char
-    Pattern PASSWORD_PATTERN = Pattern.compile(
-    "^(?=.{8,32}$)(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^\\p{Alnum}\\s]).*$"
-    );
 
-         try{
-                Communicator.sendStream("register");
-                Communicator.sendStream(name.getText());
-                Communicator.sendStream(surname.getText());
-                Communicator.sendStream(username.getText());
-                Communicator.sendStream(pwd);
-                Communicator.sendStream(
-                birth_date.getValue() == null
-                    ? "-"
-                    : birth_date.getValue().toString()
-                );
-                Communicator.sendStream(latitude.getText());
-                Communicator.sendStream(longitude.getText());
-                Communicator.sendStream(is_restaurateur.isSelected() ? "y" : "n");
-                switch(Communicator.readStream()){
-                    case "ok":
+        Pattern PASSWORD_PATTERN = Pattern.compile(
+            "^(?=.{8,32}$)(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^\\p{Alnum}\\s]).*$"
+        );
+
+        if (!PASSWORD_PATTERN.matcher(pwd).matches()) {
+            setNotification("La password non rispetta i requisiti:\n"
+                    + "- 8-32 caratteri\n"
+                    + "- almeno una maiuscola\n"
+                    + "- almeno una minuscola\n"
+                    + "- almeno un numero\n"
+                    + "- almeno un carattere speciale");
+            return;
+        }
+
+        try {
+
+            // invia comando al server
+            Communicator.send("register");
+            Communicator.send(name.getText());
+            Communicator.send(surname.getText());
+            Communicator.send(username.getText());
+            Communicator.send(pwd);
+            Communicator.send(
+                    birth_date.getValue() == null
+                            ? "-"
+                            : birth_date.getValue().toString()
+            );
+            Communicator.send(latitude.getText());
+            Communicator.send(longitude.getText());
+            Communicator.send(is_restaurateur.isSelected() ? "y" : "n");
+
+            String response = Communicator.read();
+
+            switch (response) {
+
+                case "ok":
                     SceneManager.setAppAlert("Registrazione avvenuta con successo");
                     SceneManager.changeScene("App");
-                    break;
+                    return;
+
                 case "missing":
                     setNotification("Devi inserire tutti i campi obbligatori");
-                    break;
+                    return;
+
                 case "password":
-                        if(!PASSWORD_PATTERN.matcher(pwd).matches()){
-                            setNotification( "La password non rispetta i requisiti. Verificare che abbia \n" +
-                            "almeno 8 caratteri | " +
-                            "almeno una maiuscola | " +
-                            "almeno una minuscola | " +
-                            "almeno un numero \n" +
-                            "| almeno un carattere speciale");
-                        return;
-                    }
-                    break;
+                    setNotification("La password non rispetta i requisiti di sicurezza");
+                    return;
+
                 case "credentials":
                     setNotification("Username già esistente");
-                    break;
-                default:
-                    setNotification("Errore imprevisto dal server");
-                }
+                    return;
 
-            }catch(IOException e){
-            setNotification("Errore di comunicazione: "+e.getMessage());
+                default:
+                    setNotification("Errore imprevisto dal server: " + response);
+            }
+
+        } catch (IOException e) {
+            setNotification("Errore di comunicazione col server");
         }
     }
 
-    /**
-     * Mostra un messaggio di notifica nella schermata corrente.
-     *
-     * @param text il messaggio da visualizzare
-     */
+
     private void setNotification(String text) {
         notification_label.setVisible(true);
         notification_label.setText(text);

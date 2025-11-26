@@ -22,76 +22,60 @@ import javafx.scene.control.TextField;
  * @author Erica Faccio 751654 VA
  * @author Giovanni Isgrò 753536 VA
  */
+
 public class ViewRestaurants {
-    /** If true, when the ViewRestaurants scene initializes it will show only favourites. */
+
     private static boolean startFavoritesMode = false;
 
-    /** Open the ViewRestaurants scene and force it to show only favourites on load. */
     public static void openFavoritesFromApp() throws IOException {
         startFavoritesMode = true;
         SceneManager.changeScene("ViewRestaurants");
     }
 
-    /** ID dei ristoranti visualizzati nella pagina corrente. */
     private String[] restaurants_ids;
-
-    /** Nomi dei ristoranti visualizzati nella pagina corrente. */
     private String[] restaurants_names;
 
-    /** Numero totale di pagine disponibili. */
     private int pages;
-
-    /** Pagina attualmente visualizzata. */
     private int current_page;
 
-    /** Coordinate geografiche e parametri di filtro. */
     private String latitude = "-",
-    longitude = "-",
-    range_km = "-",
-    price_min = "-",
-    price_max = "-",
-    has_delivery = "n",
-    has_online = "n",
-    stars_min = "-",
-    stars_max = "-",
-    only_favourites = "n",
-    near_me = "n",
-    category = null;
+            longitude = "-",
+            range_km = "-",
+            price_min = "-",
+            price_max = "-",
+            has_delivery = "n",
+            has_online = "n",
+            stars_min = "-",
+            stars_max = "-",
+            only_favourites = "n",
+            category = null;
 
-    /** Etichetta per notifiche di errore o messaggi informativi. */
     @FXML private Label notification_label;
-
-    /** Etichetta mostrata se non ci sono ristoranti da visualizzare. */
     @FXML private Label no_restaurants_label;
-
-    /** Etichetta che mostra la pagina corrente e il totale. */
     @FXML private Label pages_label;
-    /** Campi di input per i filtri di ricerca. */
-    @FXML
-    private TextField latitude_field, longitude_field, range_km_field, price_min_field, price_max_field, stars_min_field, stars_max_field, category_field;
-    /** Checkbox per filtri booleani. */
-    @FXML
-    private CheckBox delivery_check, online_check, favourites_check, near_me_check;
-    /** Lista dei ristoranti trovati. */
-    @FXML
-    private ListView<String> restaurants_listview;
-    /** Pulsanti per navigazione e visualizzazione dettagli. */
-    @FXML
-    private Button prev_btn, next_btn, view_info_btn, clear_btn;
-    /**
-     * Inizializza la schermata, resetta lo stato del ristorante in modifica
-     * e avvia la ricerca iniziale.
-     *
-     * @throws IOException se si verifica un errore nella comunicazione
-     */
+
+    @FXML private TextField latitude_field, longitude_field, range_km_field,
+            price_min_field, price_max_field, stars_min_field, stars_max_field,
+            category_field;
+
+    @FXML private CheckBox delivery_check, online_check, favourites_check, near_me_check;
+
+    @FXML private ListView<String> restaurants_listview;
+
+    @FXML private Button prev_btn, next_btn, view_info_btn, clear_btn;
+
+
     @FXML
     private void initialize() throws IOException {
+
+        // Reset ristorante in modifica
         EditingRestaurant.reset();
-        if(User.getInfo() != null) {
+
+        if (User.getInfo() != null) {
             favourites_check.setVisible(true);
             near_me_check.setVisible(true);
         }
-        // if launched to show favorites only, set the checkbox and reset the flag
+
         if (startFavoritesMode) {
             only_favourites = "y";
             favourites_check.setSelected(true);
@@ -101,50 +85,39 @@ public class ViewRestaurants {
         searchPage(0);
     }
 
-    /**
-     * Restituisce "-" se la stringa è vuota, altrimenti la stringa stessa.
-     *
-     * @param s stringa da verificare
-     * @return "-" oppure la stringa originale
-     */    
+
     private String filledOrDash(String s) {
         return s.isEmpty() ? "-" : s;
     }
 
-    /**
-     * Aggiorna i filtri di ricerca in base ai valori inseriti dall'utente
-     * e avvia una nuova ricerca.
-     *
-     * @throws IOException se si verifica un errore nella comunicazione
-     */
+
     @FXML
     private void updateFilters() throws IOException {
-        //updates the filters to be used in the search
+
         hideNotification();
 
-        String latText = latitude_field.getText().trim();
-        String lonText = longitude_field.getText().trim();
-        String rangeText = range_km_field.getText().trim();
+        String lat = latitude_field.getText().trim();
+        String lon = longitude_field.getText().trim();
+        String range = range_km_field.getText().trim();
 
-        // If near_me is selected, ignore manual coordinates and let the server use user's position
-        if(near_me_check.isSelected()) {
+        if (near_me_check.isSelected()) {
             latitude = "-";
             longitude = "-";
-            range_km = rangeText.isEmpty() ? "-" : rangeText;
+            range_km = range.isEmpty() ? "-" : range;
         } else {
-            // If both empty, treat as no place filter
-            if(latText.isEmpty() && lonText.isEmpty()) {
+
+            if (lat.isEmpty() && lon.isEmpty()) {
                 latitude = "-";
                 longitude = "-";
                 range_km = "-";
-            } else if(latText.isEmpty() || lonText.isEmpty() || rangeText.isEmpty()) {
-                // partial coordinates or missing range is invalid
-                setNotification("Inserisci latitudine, longitudine e raggio di ricerca oppure lascia tutti vuoti");
+            }
+            else if (lat.isEmpty() || lon.isEmpty() || range.isEmpty()) {
+                setNotification("Inserisci latitudine, longitudine e raggio, oppure lascia tutto vuoto");
                 return;
             } else {
-                latitude = latText;
-                longitude = lonText;
-                range_km = rangeText;
+                latitude = lat;
+                longitude = lon;
+                range_km = range;
             }
         }
 
@@ -156,177 +129,172 @@ public class ViewRestaurants {
         stars_max = filledOrDash(stars_max_field.getText());
         only_favourites = favourites_check.isSelected() ? "y" : "n";
         category = category_field.getText().isEmpty() ? null : category_field.getText();
-        near_me = near_me_check.isSelected() ? "y" : "n";
+
         searchPage(0);
     }
 
-    /**
-     * Esegue la ricerca dei ristoranti per la pagina specificata,
-     * applicando i filtri correnti.
-     *
-     * @param page numero della pagina da visualizzare
-     * @throws IOException se si verifica un errore nella comunicazione
-     */
+
     private void searchPage(int page) throws IOException {
+
         current_page = page;
         no_restaurants_label.setVisible(false);
+
         prev_btn.setDisable(true);
         next_btn.setDisable(true);
+
         restaurants_listview.getItems().clear();
         pages_label.setText("-/-");
-        
 
-        Communicator.sendStream("getRestaurants");
-        Communicator.sendStream(Integer.toString(page));
-        Communicator.sendStream(latitude);
-        Communicator.sendStream(longitude);
-        Communicator.sendStream(range_km);
-        Communicator.sendStream(price_min);
-        Communicator.sendStream(price_max);
-        Communicator.sendStream(has_delivery);
-        Communicator.sendStream(has_online);
-        Communicator.sendStream(stars_min);
-        Communicator.sendStream(stars_max);
-        if(category == null)
-            Communicator.sendStream("n");
-        else {
-            Communicator.sendStream("y");
-            Communicator.sendStream(category);
+        // ==============================
+        //  INVIO COMANDO AL SERVER
+        // ==============================
+        Communicator.send("getRestaurants");
+        Communicator.send(Integer.toString(page));
+        Communicator.send(latitude);
+        Communicator.send(longitude);
+        Communicator.send(range_km);
+        Communicator.send(price_min);
+        Communicator.send(price_max);
+        Communicator.send(has_delivery);
+        Communicator.send(has_online);
+        Communicator.send(stars_min);
+        Communicator.send(stars_max);
+        Communicator.send(only_favourites);
+
+        if (category == null) {
+            Communicator.send("n");
+        } else {
+            Communicator.send("y");
+            Communicator.send(category);
         }
-        Communicator.sendStream(near_me);
 
+        // ==============================
+        //  LETTURA RISPOSTA
+        // ==============================
+        String response = Communicator.read();
 
-        if(User.getInfo() != null)
-            Communicator.sendStream(only_favourites);
-        
-        String response = Communicator.readStream();
         if (response == null) {
             SceneManager.setAppWarning("Il server non è raggiungibile");
             SceneManager.changeScene("App");
             return;
         }
-        switch(response) {
+
+        switch (response) {
+
             case "ok":
-                String pagesStr = Communicator.readStream();
-                if (pagesStr == null) { SceneManager.setAppWarning("Il server non è raggiungibile"); SceneManager.changeScene("App"); return; }
+
+                String pagesStr = Communicator.read();
+                if (pagesStr == null) { fallBackToApp(); return; }
                 pages = Integer.parseInt(pagesStr);
-                if(pages < 1) {
+
+                if (pages < 1) {
                     no_restaurants_label.setVisible(true);
-                    Communicator.readStream();
+                    Communicator.read(); // il server manda una linea vuota
                     break;
                 }
 
-                if(page > 0)
-                    prev_btn.setDisable(false);
-                if(page + 1 < pages)
-                    next_btn.setDisable(false);
+                if (page > 0) prev_btn.setDisable(false);
+                if (page + 1 < pages) next_btn.setDisable(false);
 
-                pages_label.setText(Integer.toString(page + 1) + '/' + pages);
-                String sizeStr = Communicator.readStream();
-                if (sizeStr == null) { SceneManager.setAppWarning("Il server non è raggiungibile"); SceneManager.changeScene("App"); return; }
+                pages_label.setText((page + 1) + "/" + pages);
+
+                String sizeStr = Communicator.read();
+                if (sizeStr == null) { fallBackToApp(); return; }
+
                 int size = Integer.parseInt(sizeStr);
                 restaurants_ids = new String[size];
                 restaurants_names = new String[size];
 
-                for(int i = 0; i < size; i++) {
-                    restaurants_ids[i] = Communicator.readStream();
-                    restaurants_names[i] = Communicator.readStream();
+                for (int i = 0; i < size; i++) {
+                    restaurants_ids[i] = Communicator.read();
+                    restaurants_names[i] = Communicator.read();
                 }
 
                 restaurants_listview.getItems().setAll(restaurants_names);
                 break;
+
             case "coordinates":
-                setNotification("Le coordinate non sono state inserite nel modo corretto");
+                setNotification("Coordinate non valide");
                 break;
+
             case "price":
-                setNotification("Il range di prezzo non è stato inserito nel modo corretto");
+                setNotification("Range di prezzo non valido");
                 break;
+
             case "stars":
-                setNotification("Il range di stelle non è stato inserito nel modo corretto");
+                setNotification("Range di stelle non valido");
                 break;
+
+            default:
+                setNotification("Errore imprevisto dal server: " + response);
         }
-        
+
         checkSelected();
     }
 
-    /**
-     * Abilita o disabilita i campi delle coordinate
-     * in base allo stato del checkbox "vicino a me".
-     */
-    @FXML
-    private void handleCoordinates() {
-        //enables/disables the coordinates input box based on the "near me" check box value
-        latitude_field.setDisable(near_me_check.isSelected());
-        longitude_field.setDisable(near_me_check.isSelected());
+
+    private void fallBackToApp() throws IOException {
+        SceneManager.setAppWarning("Il server non è raggiungibile");
+        SceneManager.changeScene("App");
     }
 
-    /**
-     * Mostra un messaggio di notifica all'utente.
-     *
-     * @param msg messaggio da visualizzare
-     */
+
+    @FXML
+    private void handleCoordinates() {
+        boolean disable = near_me_check.isSelected();
+        latitude_field.setDisable(disable);
+        longitude_field.setDisable(disable);
+    }
+
+
     private void setNotification(String msg) {
         notification_label.setText(msg);
         notification_label.setVisible(true);
     }
 
-    /** Nasconde la notifica attualmente visibile. */
     private void hideNotification() {
         notification_label.setVisible(false);
     }
 
-    /**
-     * Passa alla pagina precedente dei risultati.
-     *
-     * @throws IOException se si verifica un errore nella comunicazione
-     */
+
     @FXML
     private void prevPage() throws IOException {
         searchPage(--current_page);
     }
-    /**
-     * Passa alla pagina successiva dei risultati.
-     *
-     * @throws IOException se si verifica un errore nella comunicazione
-     */
+
     @FXML
     private void nextPage() throws IOException {
         searchPage(++current_page);
     }
-    /**
-     * Controlla se un ristorante è selezionato nella lista
-     * e abilita/disabilita il pulsante di visualizzazione.
-     */
+
+
     @FXML
     private void checkSelected() {
-        int index = restaurants_listview.getSelectionModel().getSelectedIndex();
-        boolean disable_buttons = index < 0;
-        
-        view_info_btn.setDisable(disable_buttons);
+        boolean disable = restaurants_listview.getSelectionModel().getSelectedIndex() < 0;
+        view_info_btn.setDisable(disable);
     }
-    /**
-     * Apre la schermata con le informazioni dettagliate del ristorante selezionato.
-     *
-     * @throws IOException se si verifica un errore nel cambio scena
-     */
+
+
     @FXML
     private void viewRestaurantInfo() throws IOException {
-        int restaurant_id = Integer.parseInt(restaurants_ids[restaurants_listview.getSelectionModel().getSelectedIndex()]);
+        int index = restaurants_listview.getSelectionModel().getSelectedIndex();
+        int restaurant_id = Integer.parseInt(restaurants_ids[index]);
+
         EditingRestaurant.setEditing(restaurant_id);
+
         SceneManager.changeScene("ViewRestaurantInfo");
     }
-    /**
-     * Torna alla schermata principale dell'applicazione.
-     *
-     * @throws IOException se si verifica un errore nel cambio scena
-     */
+
+
     @FXML
     private void goBack() throws IOException {
         SceneManager.changeScene("App");
     }
 
+
     @FXML
-    private void clearFilters() throws IOException{
+    private void clearFilters() throws IOException {
+
         latitude_field.clear();
         longitude_field.clear();
         range_km_field.clear();
@@ -343,7 +311,7 @@ public class ViewRestaurants {
 
         latitude = longitude = range_km = "-";
         price_min = price_max = stars_min = stars_max = "-";
-        has_delivery = has_online = only_favourites = near_me = "n";
+        has_delivery = has_online = only_favourites = "n";
         category = null;
 
         hideNotification();

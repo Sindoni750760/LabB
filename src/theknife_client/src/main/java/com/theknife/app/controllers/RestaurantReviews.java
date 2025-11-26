@@ -22,112 +22,92 @@ import javafx.scene.control.ListView;
  * @author Erica Faccio 751654 VA
  * @author Giovanni Isgrò 753536 VA
  */
-public class RestaurantReviews {
-    /** Indica se l'utente è loggato. */
-    private static boolean is_logged;
 
-    /** Indica se l'utente loggato è un ristoratore. */
+import java.io.IOException;
+
+public class RestaurantReviews {
+
+    private static boolean is_logged;
     private static boolean is_restaurateur;
 
-    /** Array contenente gli ID delle recensioni visualizzate. */
     private static String[] reviews_ids;
 
-    /** Numero totale di pagine disponibili per le recensioni. */
     private static int total_pages;
-
-    /** Pagina attualmente visualizzata. */
     private static int current_page;
-    /** Etichetta mostrata se non ci sono recensioni disponibili. */
+
     @FXML private Label no_reviews_label;
-
-    /** Etichetta che mostra la pagina corrente e il totale delle pagine. */
     @FXML private Label page_label;
-
-    /** Etichetta che mostra il numero totale di recensioni ricevute. */
     @FXML private Label reviews_label;
-
-    /** Etichetta che mostra la valutazione media in stelle. */
     @FXML private Label stars_label;
-
-    /** Pulsante per passare alla pagina precedente. */
     @FXML private Button prev_btn;
-
-    /** Pulsante per passare alla pagina successiva. */
     @FXML private Button next_btn;
-
-    /** Pulsante per aggiungere o modificare una recensione. */
     @FXML private Button add_review_btn;
-
-    /** ListView che mostra le recensioni in formato compatto. */
     @FXML private ListView<String> reviews_listview;
 
-    /**
-     * Inizializza la schermata delle recensioni.
-     * Determina il ruolo dell'utente, imposta il comportamento del pulsante di recensione,
-     * e carica le recensioni del ristorante selezionato.
-     *
-     * @throws IOException se si verifica un errore nella comunicazione con il server
-     */
     @FXML
     private void initialize() throws IOException {
-        // Make initialization resilient: if any communication fails, keep UI responsive and allow user to go back
+
         prev_btn.setDisable(true);
         next_btn.setDisable(true);
         no_reviews_label.setVisible(false);
+        add_review_btn.setDisable(true);
         current_page = 0;
 
         try {
             String[] user_info = User.getInfo();
             is_logged = user_info != null;
 
-            if(is_logged) {
+            if (is_logged) {
                 add_review_btn.setVisible(true);
                 is_restaurateur = user_info[2].equals("y");
 
-                if(is_restaurateur) {
-                    add_review_btn.setDisable(true);
-                    add_review_btn.setText("Rispondi/modifica risposta");
+                if (is_restaurateur) {
+                    add_review_btn.setText("Rispondi / modifica risposta");
                 } else {
-                    //checks if the user has set a review
-                    Communicator.sendStream("getMyReview");
-                    Communicator.sendStream(Integer.toString(EditingRestaurant.getId()));
+                    Communicator.send("getMyReview");
+                    Communicator.send(Integer.toString(EditingRestaurant.getId()));
 
-                    String starsStr = Communicator.readStream();
+                    String starsStr = Communicator.read();
                     if (starsStr == null) throw new IOException("server unreachable");
                     int stars = Integer.parseInt(starsStr);
-                    if (Communicator.readStream() == null) throw new IOException("server unreachable");
 
-                    if(stars > 0)
+                    Communicator.read(); // discard review text or marker
+
+                    if (stars > 0)
                         add_review_btn.setText("Modifica recensione");
                 }
+            } else {
+                add_review_btn.setVisible(false);
             }
 
             String[] restaurant_info = EditingRestaurant.getInfo();
-            reviews_label.setText("Recensioni ricevute: " + restaurant_info[10]);
-            String stars_text = restaurant_info[9];
-            stars_label.setText("Valutazione media (stelle): " + (stars_text.equals("0") ? "-" : stars_text));
+            reviews_label.setText("Recensioni: " + restaurant_info[10]);
 
-            Communicator.sendStream("getReviewsPages");
-            Communicator.sendStream(Integer.toString(EditingRestaurant.getId()));
-            String totalPagesStr = Communicator.readStream();
-            if (totalPagesStr == null) throw new IOException("server unreachable");
-            total_pages = Integer.parseInt(totalPagesStr);
+            String avgStars = restaurant_info[9];
+            stars_label.setText("Valutazione media: " + (avgStars.equals("0") ? "-" : avgStars));
 
-            if(total_pages > 0)
+            Communicator.send("getReviewsPages");
+            Communicator.send(Integer.toString(EditingRestaurant.getId()));
+
+            String pagesStr = Communicator.read();
+            if (pagesStr == null) throw new IOException("server unreachable");
+
+            total_pages = Integer.parseInt(pagesStr);
+
+            if (total_pages > 0)
                 changePage(0);
             else
                 no_reviews_label.setVisible(true);
-        } catch(Exception e) {
-            // log and keep UI responsive; user can still go back to previous scene
+
+        } catch (Exception e) {
             System.err.println("[RestaurantReviews] init error: " + e.getMessage());
             no_reviews_label.setVisible(true);
             add_review_btn.setVisible(false);
         }
 
-        //function used to wrap the text for every cell of the listview
         reviews_listview.setCellFactory(lv -> new ListCell<String>() {
             {
-                setPrefWidth(0); // forces the cell to size itself based on the ListView
+                setPrefWidth(0);
             }
 
             @Override
@@ -136,121 +116,105 @@ public class RestaurantReviews {
 
                 if (empty || item == null) {
                     setText(null);
-                    setGraphic(null);
                 } else {
                     setText(item);
-                    setWrapText(true); // the magic line
+                    setWrapText(true);
                 }
             }
         });
     }
 
-    /**
-     * Cambia la pagina visualizzata delle recensioni.
-     * Aggiorna la lista e lo stato dei pulsanti di navigazione.
-     *
-     * @param page numero della pagina da visualizzare
-     * @throws IOException se si verifica un errore nella comunicazione con il server
-     */    
+
     private void changePage(int page) throws IOException {
-        page_label.setText(Integer.toString(page + 1) + '/' + total_pages);
+
+        page_label.setText((page + 1) + "/" + total_pages);
+
         prev_btn.setDisable(page < 1);
         next_btn.setDisable(page + 1 >= total_pages);
 
-        
-        Communicator.sendStream("getReviews");
-        Communicator.sendStream(Integer.toString(EditingRestaurant.getId()));
-        Communicator.sendStream(Integer.toString(page));
+        Communicator.send("getReviews");
+        Communicator.send(Integer.toString(EditingRestaurant.getId()));
+        Communicator.send(Integer.toString(page));
 
-    String sizeStr = Communicator.readStream();
-    if (sizeStr == null) { SceneManager.setAppWarning("Il server non è raggiungibile"); SceneManager.changeScene("App"); return; }
-    int size = Integer.parseInt(sizeStr);
-        String[] reviews_stars = new String[size];
-        String[] reviews_texts = new String[size];
-        String[] reviews_reply = new String[size];
+        String sizeStr = Communicator.read();
+        if (sizeStr == null) fallback();
+        int size = Integer.parseInt(sizeStr);
+
+        String[] stars = new String[size];
+        String[] texts = new String[size];
+        String[] replies = new String[size];
         reviews_ids = new String[size];
 
-        for(int i = 0; i < size; i++) {
-            reviews_ids[i] = Communicator.readStream();
-            reviews_stars[i] = Communicator.readStream();
-            reviews_texts[i] = Communicator.readStream();
+        for (int i = 0; i < size; i++) {
+            reviews_ids[i] = Communicator.read();
+            stars[i] = Communicator.read();
+            texts[i] = Communicator.read();
 
-            if(Communicator.readStream().equals("y"))
-                reviews_reply[i] = Communicator.readStream();
-            else
-                reviews_reply[i] = null;
+            String hasReply = Communicator.read();
+            if (hasReply.equals("y"))
+                replies[i] = Communicator.read();
         }
 
-        String[] review_compact = new String[size];
-        for(int i = 0; i < size; i++)
-            review_compact[i] = reviews_stars[i] + "/5 " + reviews_texts[i] + (reviews_reply[i] == null ? "" : "\nRisposta del ristoratore: " + reviews_reply[i]);
-        
-        reviews_listview.getItems().setAll(review_compact);
+        String[] compact = new String[size];
+        for (int i = 0; i < size; i++) {
+            compact[i] = stars[i] + "/5 " + texts[i] +
+                    (replies[i] == null ? "" : "\nRisposta: " + replies[i]);
+        }
+
+        reviews_listview.getItems().setAll(compact);
+        add_review_btn.setDisable(false);
     }
 
-    /**
-     * Passa alla pagina precedente delle recensioni.
-     *
-     * @throws IOException se si verifica un errore nella comunicazione
-     */
+
+    private void fallback() throws IOException {
+        SceneManager.setAppWarning("Il server non è raggiungibile");
+        SceneManager.changeScene("App");
+    }
+
+
     @FXML
     private void prevPage() throws IOException {
         changePage(--current_page);
     }
 
-    /**
-     * Passa alla pagina successiva delle recensioni.
-     *
-     * @throws IOException se si verifica un errore nella comunicazione
-     */
     @FXML
     private void nextPage() throws IOException {
         changePage(++current_page);
     }
 
-    /**
-     * Apre la schermata per scrivere o modificare una recensione.
-     * Se l'utente è un ristoratore, imposta l'ID della recensione da gestire.
-     *
-     * @throws IOException se si verifica un errore nel cambio scena
-     */
+
     @FXML
     private void addReview() throws IOException {
-        if(is_restaurateur) {
-            //sets the id of the review to reply to (restaurator)
-            int review_id = Integer.parseInt(reviews_ids[reviews_listview.getSelectionModel().getSelectedIndex()]);
-            EditingRestaurant.setReviewId(review_id);
+
+        if (is_restaurateur) {
+            int index = reviews_listview.getSelectionModel().getSelectedIndex();
+            if (index >= 0)
+                EditingRestaurant.setReviewId(Integer.parseInt(reviews_ids[index]));
         }
+
         SceneManager.changeScene("WriteReview");
     }
 
-    /**
-     * Abilita o disabilita il pulsante di recensione in base alla selezione corrente.
-     */
+
     @FXML
     private void checkSelected() {
-        add_review_btn.setDisable(reviews_listview.getSelectionModel().getSelectedIndex() < 0);
+        add_review_btn.setDisable(
+                reviews_listview.getSelectionModel().getSelectedIndex() < 0
+        );
     }
 
-    /**
-     * Torna alla schermata precedente in base al ruolo dell'utente.
-     *
-     * @throws IOException se la scena non può essere caricata
-     */
+
     @FXML
     private void goBack() throws IOException {
-        try {
-            //changes page based on the role
-            if(!is_logged){
-                SceneManager.changeScene("ViewRestaurants");
-            }
-            else if(is_restaurateur)
-                SceneManager.changeScene("MyRestaurants");
-            else
-                SceneManager.changeScene("ViewRestaurantInfo");
-        } catch(IOException e) {
-            // fallback to main restaurants view to ensure user can always navigate away
+
+        if (!is_logged) {
             SceneManager.changeScene("ViewRestaurants");
+            return;
         }
+
+        if (is_restaurateur)
+            SceneManager.changeScene("MyRestaurants");
+        else
+            SceneManager.changeScene("ViewRestaurantInfo");
     }
 }

@@ -9,76 +9,100 @@ import java.io.IOException;
  * @author Mattia Sindoni 750760 VA
  * @author Erica Faccio 751654 VA
  * @author Giovanni Isgrò 753536 VA
- */
+*/
+
 public class User {
-    /** Nome dell'utente loggato. */
+
     private static String name;
-
-    /** Cognome dell'utente loggato. */
     private static String surname;
+    private static boolean loggedIn = false;
+    private static boolean isRestaurateur = false;
 
-    /** Indica se l'utente è attualmente loggato. */
-    private static boolean logged_in = false;
-
-    /** Indica se l'utente loggato è un ristoratore. */
-    private static boolean is_restaurateur;
-
+    private static int userId = -1;
 
     /**
-     * Effettua il login dell'utente sul client e sul server.
-     * Se le credenziali sono corrette, recupera le informazioni dell'utente.
-     *
-     * @param username nome utente
-     * @param password password
-     * @return "ok" se il login ha successo, altrimenti un messaggio di errore
-     * @throws IOException se si verifica un errore nella comunicazione
+     * Login utente tramite protocollo testuale
      */
-    public static String login(String username, String password) throws IOException {        
-        Communicator.sendStream("login");
-        Communicator.sendStream(username);
-        Communicator.sendStream(password);
+    public static String login(String username, String password) throws IOException {
 
-        String response = Communicator.readStream();
+        // invio comando login
+        Communicator.send("login");
+        Communicator.send(username);
+        Communicator.send(password);
 
-        if(response.equals("ok")) {
-            Communicator.sendStream("getUserInfo");
-            name = Communicator.readStream();
-            surname = Communicator.readStream();
-            is_restaurateur = Communicator.readStream().equals("y");
-            logged_in = true;
+        // risposta del server
+        String response = Communicator.read();
+
+        if (response == null) {
+            panic();
+            return "error";
+        }
+
+        if (response.equals("ok")) {
+
+            // login riuscito: salva ID interno
+            // NON viene inviato l’ID qui → server lo salva nella sessione del socket, non lo manda
+            // per semplicità, NON memorizziamo userId lato client (non lo usa)
+            // se vuoi recuperarlo, aggiungo un comando al server
+
+            // ora servono le info utente
+            Communicator.send("getUserInfo");
+
+            name = Communicator.read();
+            surname = Communicator.read();
+            isRestaurateur = Communicator.read().equals("y");
+
+            loggedIn = true;
         }
 
         return response;
     }
 
     /**
-     * Effettua il logout dell'utente sia sul client che sul server.
-     * Se il logout ha successo, aggiorna lo stato interno.
-     *
-     * @throws IOException se si verifica un errore nella comunicazione
+     * Logout locale + server
      */
     public static void logout() throws IOException {
-        Communicator.sendStream("logout");
-        if(Communicator.readStream().equals("ok"))
-            logged_in = false;
+        Communicator.send("logout");
+        String res = Communicator.read();
+
+        if (res != null && res.equals("ok")) {
+            loggedIn = false;
+            userId = -1;
+            name = null;
+            surname = null;
+            isRestaurateur = false;
+        }
     }
 
     /**
-     * Disconnette forzatamente l'utente in caso di errore di comunicazione.
-     * Utilizzato per gestire situazioni critiche.
+     * Reset di sicurezza
      */
     public static void panic() {
-        logged_in = false;
+        loggedIn = false;
+        userId = -1;
+        name = null;
+        surname = null;
+        isRestaurateur = false;
     }
 
     /**
-     * Restituisce le informazioni dell'utente attualmente loggato.
-     *
-     * @return array contenente nome, cognome e ruolo ("y" se ristoratore), oppure {@code null} se non loggato
+     * Informazioni utente attualmente loggato
      */
     public static String[] getInfo() {
-        if(!logged_in)
-            return null;
-        return new String[]{name, surname, is_restaurateur ? "y" : "n"};
+        if (!loggedIn) return null;
+
+        return new String[]{
+                name,
+                surname,
+                isRestaurateur ? "y" : "n"
+        };
+    }
+
+    public static boolean isLoggedIn() {
+        return loggedIn;
+    }
+
+    public static boolean isRestaurateur() {
+        return isRestaurateur;
     }
 }

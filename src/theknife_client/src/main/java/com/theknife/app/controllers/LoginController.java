@@ -18,60 +18,58 @@ import javafx.scene.control.TextField;
  * @author Giovanni Isgrò 753536 VA
  */
 public class LoginController {
-    /** Campo di testo per l'inserimento del nome utente. */
+
     @FXML
     private TextField username;
-    /** Campo password per l'inserimento della password. */
+
     @FXML
     private PasswordField password;
-    /** Etichetta per mostrare notifiche o messaggi di errore. */
+
     @FXML
     private Label notification_label;
 
-    /**
-     * Torna alla schermata principale dell'applicazione.
-     *
-     * @throws IOException se la scena non può essere caricata
-     */
     @FXML
     private void goBack() throws IOException {
         SceneManager.changeScene("App");
     }
 
-    /**
-     * Esegue il login dell'utente verificando le credenziali.
-     * Se l'utente è un ristoratore, viene reindirizzato alla schermata "MyRestaurants".
-     * Altrimenti, torna alla schermata principale con una conferma.
-     * Mostra notifiche in caso di errore.
-     *
-     * @throws IOException se si verifica un errore nel cambio scena
-     */
     @FXML
     private void login() throws IOException {
-        switch(User.login(username.getText(), password.getText())) {
+
+        String response;
+        try {
+            response = User.login(username.getText(), password.getText());
+        } catch (IOException e) {
+            setNotification("Errore di comunicazione col server");
+            return;
+        }
+
+        switch (response) {
             case "ok":
-                //if the user is a restaurateur, changes the scene to MyRestaurants
-                if(User.getInfo()[2].equals("y")) {
+                String[] info = User.getInfo();
+
+                if (info != null && info[2].equals("y")) {
                     SceneManager.changeScene("MyRestaurants");
-                    break;
+                    return;
                 }
+
                 SceneManager.setAppAlert("Login effettuato con successo");
                 SceneManager.changeScene("App");
-                break;
+                return;
+
             case "username":
                 setNotification("Utente inesistente");
-                break;
+                return;
+
             case "password":
                 setNotification("Password errata");
-                break;
+                return;
+
+            default:
+                setNotification("Errore imprevisto: " + response);
         }
     }
 
-    /**
-     * Mostra un messaggio di notifica nella schermata corrente.
-     *
-     * @param text il messaggio da visualizzare
-     */
     private void setNotification(String text) {
         notification_label.setVisible(true);
         notification_label.setText(text);
