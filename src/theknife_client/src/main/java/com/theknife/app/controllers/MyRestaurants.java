@@ -2,6 +2,7 @@ package com.theknife.app.controllers;
 
 import java.io.IOException;
 
+import com.theknife.app.ClientLogger;
 import com.theknife.app.Communicator;
 import com.theknife.app.EditingRestaurant;
 import com.theknife.app.SceneManager;
@@ -16,12 +17,12 @@ import javafx.scene.control.ListView;
  * Controller per la schermata "MyRestaurants".
  * Gestisce la visualizzazione, modifica, aggiunta e rimozione dei ristoranti dell'utente.
  * Supporta la paginazione e la navigazione tra le recensioni.
- * @author Mattia Sindoni 750760 VA
- * @author Erica Faccio 751654 VA
- * @author Giovanni Isgrò 753536 VA
+ *
+ * Implementa OnlineChecker per gestione centralizzata del fallback.
+ *
+ * @author ...
  */
-
-public class MyRestaurants {
+public class MyRestaurants implements OnlineChecker {
 
     @FXML private ListView<String> restaurants_container;
     @FXML private Label no_restaurants_label;
@@ -36,14 +37,24 @@ public class MyRestaurants {
 
     @FXML
     private void initialize() throws IOException {
+        ClientLogger.getInstance().info("MyRestaurants initialized");
         EditingRestaurant.reset();
 
         prev_btn.setDisable(true);
         next_btn.setDisable(true);
 
+        if (!checkOnline()) {
+            no_restaurants_label.setVisible(true);
+            no_restaurants_label.setText("Il server non è raggiungibile");
+            return;
+        }
+
         Communicator.send("getMyRestaurantsPages");
         String pagesStr = Communicator.read();
-        if (pagesStr == null) { fallback(); return; }
+        if (pagesStr == null) {
+            fallback();
+            return;
+        }
 
         total_pages = Integer.parseInt(pagesStr);
 
@@ -54,6 +65,10 @@ public class MyRestaurants {
     }
 
     private void changePage(int page) throws IOException {
+        if (!checkOnline()) {
+            return;
+        }
+
         current_page = page;
 
         page_label.setText((page + 1) + "/" + total_pages);
@@ -65,7 +80,10 @@ public class MyRestaurants {
         Communicator.send(Integer.toString(page));
 
         String sizeStr = Communicator.read();
-        if (sizeStr == null) { fallback(); return; }
+        if (sizeStr == null) {
+            fallback();
+            return;
+        }
 
         int size = Integer.parseInt(sizeStr);
 
@@ -76,7 +94,10 @@ public class MyRestaurants {
             String idStr = Communicator.read();
             String nameStr = Communicator.read();
 
-            if (idStr == null || nameStr == null) { fallback(); return; }
+            if (idStr == null || nameStr == null) {
+                fallback();
+                return;
+            }
 
             restaurants_ids[i] = Integer.parseInt(idStr);
             restaurants_names[i] = nameStr;
@@ -84,11 +105,6 @@ public class MyRestaurants {
 
         restaurants_container.getItems().setAll(restaurants_names);
         checkSelected();
-    }
-
-    private void fallback() throws IOException {
-        SceneManager.setAppWarning("Il server non è raggiungibile");
-        SceneManager.changeScene("App");
     }
 
     @FXML
@@ -132,7 +148,15 @@ public class MyRestaurants {
 
     @FXML
     private void addRestaurant() throws IOException {
-        EditingRestaurant.reset(); // important to ensure new entry mode
+        EditingRestaurant.reset();
         SceneManager.changeScene("EditRestaurant");
+    }
+
+    @Override
+    public javafx.scene.Node[] getInteractiveNodes() {
+        return new javafx.scene.Node[]{
+                restaurants_container,
+                edit_btn, reviews_btn, prev_btn, next_btn
+        };
     }
 }

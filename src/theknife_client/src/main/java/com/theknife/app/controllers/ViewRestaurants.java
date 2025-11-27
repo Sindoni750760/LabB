@@ -2,11 +2,13 @@ package com.theknife.app.controllers;
 
 import java.io.IOException;
 
+import com.theknife.app.ClientLogger;
 import com.theknife.app.Communicator;
 import com.theknife.app.EditingRestaurant;
 import com.theknife.app.SceneManager;
 import com.theknife.app.User;
 
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
@@ -18,12 +20,10 @@ import javafx.scene.control.TextField;
  * Controller per la schermata di visualizzazione dei ristoranti.
  * Permette agli utenti di cercare ristoranti applicando vari filtri,
  * navigare tra le pagine dei risultati e visualizzare informazioni dettagliate.
- * @author Mattia Sindoni 750760 VA
- * @author Erica Faccio 751654 VA
- * @author Giovanni Isgrò 753536 VA
+ *
+ * Implementa OnlineChecker per gestione unificata dei casi di server offline.
  */
-
-public class ViewRestaurants {
+public class ViewRestaurants implements OnlineChecker {
 
     private static boolean startFavoritesMode = false;
 
@@ -64,11 +64,10 @@ public class ViewRestaurants {
 
     @FXML private Button prev_btn, next_btn, view_info_btn, clear_btn;
 
-
     @FXML
     private void initialize() throws IOException {
+        ClientLogger.getInstance().info("ViewRestaurants initialized");
 
-        // Reset ristorante in modifica
         EditingRestaurant.reset();
 
         if (User.getInfo() != null) {
@@ -82,18 +81,23 @@ public class ViewRestaurants {
             startFavoritesMode = false;
         }
 
-        searchPage(0);
+        Platform.runLater(() -> {
+            try {
+                searchPage(0);
+            } catch (IOException e) {
+                ClientLogger.getInstance().error(
+                        "Error loading restaurants in initialize: " + e.getMessage()
+                );
+            }
+        });
     }
-
 
     private String filledOrDash(String s) {
         return s.isEmpty() ? "-" : s;
     }
 
-
     @FXML
     private void updateFilters() throws IOException {
-
         hideNotification();
 
         String lat = latitude_field.getText().trim();
@@ -110,8 +114,7 @@ public class ViewRestaurants {
                 latitude = "-";
                 longitude = "-";
                 range_km = "-";
-            }
-            else if (lat.isEmpty() || lon.isEmpty() || range.isEmpty()) {
+            } else if (lat.isEmpty() || lon.isEmpty() || range.isEmpty()) {
                 setNotification("Inserisci latitudine, longitudine e raggio, oppure lascia tutto vuoto");
                 return;
             } else {
@@ -133,8 +136,10 @@ public class ViewRestaurants {
         searchPage(0);
     }
 
-
     private void searchPage(int page) throws IOException {
+        if (!checkOnline()) {
+            return;
+        }
 
         current_page = page;
         no_restaurants_label.setVisible(false);
@@ -145,9 +150,6 @@ public class ViewRestaurants {
         restaurants_listview.getItems().clear();
         pages_label.setText("-/-");
 
-        // ==============================
-        //  INVIO COMANDO AL SERVER
-        // ==============================
         Communicator.send("getRestaurants");
         Communicator.send(Integer.toString(page));
         Communicator.send(latitude);
@@ -168,14 +170,11 @@ public class ViewRestaurants {
             Communicator.send(category);
         }
 
-        // ==============================
-        //  LETTURA RISPOSTA
-        // ==============================
         String response = Communicator.read();
 
         if (response == null) {
-            SceneManager.setAppWarning("Il server non è raggiungibile");
-            SceneManager.changeScene("App");
+            ClientLogger.getInstance().error("Server unreachable: failed to retrieve restaurants");
+            fallback();
             return;
         }
 
@@ -184,12 +183,15 @@ public class ViewRestaurants {
             case "ok":
 
                 String pagesStr = Communicator.read();
-                if (pagesStr == null) { fallBackToApp(); return; }
+                if (pagesStr == null) {
+                    fallback();
+                    return;
+                }
                 pages = Integer.parseInt(pagesStr);
 
                 if (pages < 1) {
                     no_restaurants_label.setVisible(true);
-                    Communicator.read(); // il server manda una linea vuota
+                    Communicator.read(); // linea vuota inviata dal server
                     break;
                 }
 
@@ -199,7 +201,10 @@ public class ViewRestaurants {
                 pages_label.setText((page + 1) + "/" + pages);
 
                 String sizeStr = Communicator.read();
-                if (sizeStr == null) { fallBackToApp(); return; }
+                if (sizeStr == null) {
+                    fallback();
+                    return;
+                }
 
                 int size = Integer.parseInt(sizeStr);
                 restaurants_ids = new String[size];
@@ -208,6 +213,11 @@ public class ViewRestaurants {
                 for (int i = 0; i < size; i++) {
                     restaurants_ids[i] = Communicator.read();
                     restaurants_names[i] = Communicator.read();
+
+                    if (restaurants_ids[i] == null || restaurants_names[i] == null) {
+                        fallback();
+                        return;
+                    }
                 }
 
                 restaurants_listview.getItems().setAll(restaurants_names);
@@ -232,20 +242,12 @@ public class ViewRestaurants {
         checkSelected();
     }
 
-
-    private void fallBackToApp() throws IOException {
-        SceneManager.setAppWarning("Il server non è raggiungibile");
-        SceneManager.changeScene("App");
-    }
-
-
     @FXML
     private void handleCoordinates() {
         boolean disable = near_me_check.isSelected();
         latitude_field.setDisable(disable);
         longitude_field.setDisable(disable);
     }
-
 
     private void setNotification(String msg) {
         notification_label.setText(msg);
@@ -255,7 +257,6 @@ public class ViewRestaurants {
     private void hideNotification() {
         notification_label.setVisible(false);
     }
-
 
     @FXML
     private void prevPage() throws IOException {
@@ -267,13 +268,11 @@ public class ViewRestaurants {
         searchPage(++current_page);
     }
 
-
     @FXML
     private void checkSelected() {
         boolean disable = restaurants_listview.getSelectionModel().getSelectedIndex() < 0;
         view_info_btn.setDisable(disable);
     }
-
 
     @FXML
     private void viewRestaurantInfo() throws IOException {
@@ -285,16 +284,13 @@ public class ViewRestaurants {
         SceneManager.changeScene("ViewRestaurantInfo");
     }
 
-
     @FXML
     private void goBack() throws IOException {
         SceneManager.changeScene("App");
     }
 
-
     @FXML
     private void clearFilters() throws IOException {
-
         latitude_field.clear();
         longitude_field.clear();
         range_km_field.clear();
@@ -317,5 +313,17 @@ public class ViewRestaurants {
         hideNotification();
 
         searchPage(0);
+    }
+
+    @Override
+    public javafx.scene.Node[] getInteractiveNodes() {
+        return new javafx.scene.Node[]{
+                latitude_field, longitude_field, range_km_field,
+                price_min_field, price_max_field, stars_min_field, stars_max_field,
+                category_field,
+                delivery_check, online_check, favourites_check, near_me_check,
+                restaurants_listview,
+                prev_btn, next_btn, view_info_btn, clear_btn
+        };
     }
 }

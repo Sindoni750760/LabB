@@ -11,19 +11,18 @@ import java.io.IOException;
  * @author Giovanni Isgrò 753536 VA
 */
 
-public class User {
+public class User{
 
     private static String name;
     private static String surname;
     private static boolean loggedIn = false;
     private static boolean isRestaurateur = false;
 
-    private static int userId = -1;
-
     /**
      * Login utente tramite protocollo testuale
      */
     public static String login(String username, String password) throws IOException {
+        ClientLogger.getInstance().info("User.login() - Sending login command for user: " + username);
 
         // invio comando login
         Communicator.send("login");
@@ -32,27 +31,41 @@ public class User {
 
         // risposta del server
         String response = Communicator.read();
+        ClientLogger.getInstance().info("User.login() - Server response: " + response);
 
         if (response == null) {
+            ClientLogger.getInstance().error("User.login() - Server returned null");
             panic();
             return "error";
         }
 
         if (response.equals("ok")) {
+            ClientLogger.getInstance().info("User.login() - Login OK, requesting user info");
 
             // login riuscito: salva ID interno
-            // NON viene inviato l’ID qui → server lo salva nella sessione del socket, non lo manda
+            // NON viene inviato l'ID qui → server lo salva nella sessione del socket, non lo manda
             // per semplicità, NON memorizziamo userId lato client (non lo usa)
             // se vuoi recuperarlo, aggiungo un comando al server
 
             // ora servono le info utente
             Communicator.send("getUserInfo");
 
+            ClientLogger.getInstance().info("User.login() - Waiting for user info");
+
             name = Communicator.read();
+            ClientLogger.getInstance().info("User.login() - Received name: " + name);
+            
             surname = Communicator.read();
-            isRestaurateur = Communicator.read().equals("y");
+            ClientLogger.getInstance().info("User.login() - Received surname: " + surname);
+            
+            String isRest = Communicator.read();
+            ClientLogger.getInstance().info("User.login() - Received isRestaurateur: " + isRest);
+            isRestaurateur = isRest.equals("y");
 
             loggedIn = true;
+            ClientLogger.getInstance().info("User.login() - Login completed successfully");
+        } else {
+            ClientLogger.getInstance().warning("User.login() - Login failed with response: " + response);
         }
 
         return response;
@@ -62,15 +75,20 @@ public class User {
      * Logout locale + server
      */
     public static void logout() throws IOException {
+        ClientLogger.getInstance().info("User.logout() - Sending logout command");
         Communicator.send("logout");
         String res = Communicator.read();
+        
+        ClientLogger.getInstance().info("User.logout() - Server response: " + res);
 
         if (res != null && res.equals("ok")) {
             loggedIn = false;
-            userId = -1;
             name = null;
             surname = null;
             isRestaurateur = false;
+            ClientLogger.getInstance().info("User.logout() - Logout completed successfully");
+        } else {
+            ClientLogger.getInstance().warning("User.logout() - Logout failed with response: " + res);
         }
     }
 
@@ -79,7 +97,6 @@ public class User {
      */
     public static void panic() {
         loggedIn = false;
-        userId = -1;
         name = null;
         surname = null;
         isRestaurateur = false;

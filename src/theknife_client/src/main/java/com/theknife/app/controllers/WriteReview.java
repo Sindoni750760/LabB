@@ -2,6 +2,7 @@ package com.theknife.app.controllers;
 
 import java.io.IOException;
 
+import com.theknife.app.ClientLogger;
 import com.theknife.app.Communicator;
 import com.theknife.app.EditingRestaurant;
 import com.theknife.app.SceneManager;
@@ -9,22 +10,22 @@ import com.theknife.app.User;
 
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
-import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 
 /**
- * Controller per la schermata di scrittura o modifica di una recensione.
- * Gestisce sia le recensioni degli utenti che le risposte dei ristoratori.
- * Permette di aggiungere, modificare o eliminare contenuti testuali e valutazioni in stelle.
- * @author Mattia Sindoni 750760 VA
- * @author Erica Faccio 751654 VA
- * @author Giovanni Isgrò 753536 VA
+ * Controller per la schermata di scrittura/modifica recensione o risposta.
+ * Gestisce:
+ * - modalità utente (recensione con stelle)
+ * - modalità ristoratore (risposta alla recensione)
+ * - limite caratteri
+ * - pubblicazione / eliminazione
+ *
+ * Implementa OnlineChecker per fallback unificato in caso di server offline.
  */
-
-public class WriteReview {
+public class WriteReview implements OnlineChecker {
 
     private static int stars;
     private static boolean is_restaurateur;
@@ -37,11 +38,16 @@ public class WriteReview {
 
     @FXML
     private void initialize() throws IOException {
+        ClientLogger.getInstance().info("WriteReview initialized");
 
         stars = 0;
         is_editing = false;
 
         is_restaurateur = User.getInfo() != null && User.getInfo()[2].equals("y");
+
+        if (!checkOnline()) {
+            return;
+        }
 
         if (is_restaurateur) {
             setupRestaurateurMode();
@@ -49,8 +55,6 @@ public class WriteReview {
             setupUserMode();
         }
     }
-
-    /* ---------------------- MODALITÀ RISTORATORE ---------------------- */
 
     private void setupRestaurateurMode() throws IOException {
 
@@ -65,11 +69,17 @@ public class WriteReview {
         Communicator.send(Integer.toString(EditingRestaurant.getReviewId()));
 
         String resp = Communicator.read();
-        if (resp == null) { fallback(); return; }
+        if (resp == null) {
+            fallback();
+            return;
+        }
 
         if (resp.equals("ok")) {
             String text = Communicator.read();
-            if (text == null) { fallback(); return; }
+            if (text == null) {
+                fallback();
+                return;
+            }
 
             text_area.setText(text);
             checkTextBox();
@@ -80,21 +90,24 @@ public class WriteReview {
         }
     }
 
-
-    /* ---------------------- MODALITÀ UTENTE ---------------------- */
-
     private void setupUserMode() throws IOException {
 
         Communicator.send("getMyReview");
         Communicator.send(Integer.toString(EditingRestaurant.getId()));
 
         String starsStr = Communicator.read();
-        if (starsStr == null) { fallback(); return; }
+        if (starsStr == null) {
+            fallback();
+            return;
+        }
 
         stars = Integer.parseInt(starsStr);
 
         String text = Communicator.read();
-        if (text == null) { fallback(); return; }
+        if (text == null) {
+            fallback();
+            return;
+        }
 
         text_area.setText(text);
         checkTextBox();
@@ -109,8 +122,6 @@ public class WriteReview {
     }
 
 
-    /* ---------------------- INPUT LIMITS ---------------------- */
-
     @FXML
     private void checkTextBox() {
         String text = text_area.getText();
@@ -124,10 +135,12 @@ public class WriteReview {
     }
 
 
-    /* ---------------------- PUBBLICAZIONE ---------------------- */
-
     @FXML
     private void publish() throws IOException {
+
+        if (!checkOnline()) {
+            return;
+        }
 
         if (is_restaurateur) {
             sendRestaurateurReview();
@@ -137,27 +150,33 @@ public class WriteReview {
         sendUserReview();
     }
 
-
     private void sendRestaurateurReview() throws IOException {
         Communicator.send(is_editing ? "editResponse" : "addResponse");
         Communicator.send(Integer.toString(EditingRestaurant.getReviewId()));
         Communicator.send(text_area.getText());
 
-        Communicator.read();
+        String resp = Communicator.read();
+        if (resp == null) {
+            fallback();
+            return;
+        }
+
         goBack();
     }
-
 
     private void sendUserReview() throws IOException {
 
         if (!is_editing && (stars < 1 || stars > 5)) {
+            ClientLogger.getInstance().warning("Review submission failed: invalid star rating");
             setNotification("Devi dare un voto in stelle!");
             return;
         }
 
         if (is_editing) {
+            ClientLogger.getInstance().info("Editing user review for restaurant: " + EditingRestaurant.getId());
             Communicator.send("editReview");
         } else {
+            ClientLogger.getInstance().info("Adding new user review for restaurant: " + EditingRestaurant.getId());
             Communicator.send("addReview");
         }
 
@@ -165,15 +184,22 @@ public class WriteReview {
         Communicator.send(Integer.toString(stars));
         Communicator.send(text_area.getText());
 
-        Communicator.read();
+        String resp = Communicator.read();
+        if (resp == null) {
+            fallback();
+            return;
+        }
+
         goBack();
     }
 
 
-    /* ---------------------- ELIMINAZIONE ---------------------- */
-
     @FXML
     private void delete() throws IOException {
+
+        if (!checkOnline()) {
+            return;
+        }
 
         String msg = is_restaurateur
                 ? "Sei sicuro di voler eliminare questa risposta?"
@@ -193,12 +219,15 @@ public class WriteReview {
             Communicator.send(Integer.toString(EditingRestaurant.getId()));
         }
 
-        Communicator.read();
+        String resp = Communicator.read();
+        if (resp == null) {
+            fallback();
+            return;
+        }
+
         goBack();
     }
 
-
-    /* ---------------------- STAR SELECT ---------------------- */
 
     private void setStar(int num) {
         stars = num;
@@ -212,20 +241,22 @@ public class WriteReview {
     @FXML private void setStar5() { setStar(5); }
 
 
-    /* ---------------------- UTIL ---------------------- */
-
     private void setNotification(String msg) {
         notification_label.setVisible(true);
         notification_label.setText(msg);
     }
 
-    private void fallback() throws IOException {
-        SceneManager.setAppWarning("Il server non è raggiungibile");
-        SceneManager.changeScene("App");
-    }
-
     @FXML
     private void goBack() throws IOException {
         SceneManager.changeScene("RestaurantReviews");
+    }
+
+    @Override
+    public javafx.scene.Node[] getInteractiveNodes() {
+        return new javafx.scene.Node[]{
+                stars_1_btn, stars_2_btn, stars_3_btn, stars_4_btn, stars_5_btn,
+                publish_btn, delete_btn,
+                text_area, notification_label
+        };
     }
 }
