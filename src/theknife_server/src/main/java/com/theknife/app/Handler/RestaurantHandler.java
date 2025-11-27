@@ -1,414 +1,616 @@
 package com.theknife.app.Handler;
 
-import java.util.List;
-
 import com.theknife.app.Server.DBHandler;
-import com.theknife.app.Server.QueryRestaurant;
 
+import java.io.IOException;
+import java.sql.SQLException;
+
+/**
+ * Handler singleton per i comandi relativi ai ristoranti.
+ * Gestisce le operazioni CRUD per ristoranti, recensioni, risposte ai commenti e preferiti.
+ * Responsabile di delegare al DBHandler per l'accesso ai dati.
+ * 
+ * @author Mattia Sindoni 750760 VA
+ * @author Erica Faccio 751654 VA
+ * @author Giovanni Isgrò 753536 VA
+ */
 public class RestaurantHandler implements CommandHandler {
 
+    /** Istanza singleton del RestaurantHandler. */
     private static RestaurantHandler instance = null;
-    private final QueryRestaurant db;
 
-    private RestaurantHandler() {
-        this.db = (QueryRestaurant) DBHandler.getInstance();
-    }
-
+    /**
+     * Restituisce l'istanza singleton del RestaurantHandler.
+     *
+     * @return istanza singleton
+     */
     public static synchronized RestaurantHandler getInstance() {
-        if (instance == null) instance = new RestaurantHandler();
+        if (instance == null)
+            instance = new RestaurantHandler();
         return instance;
     }
 
+    /** Handler per le operazioni sul database. */
+    private final DBHandler db = DBHandler.getInstance();
+
+    /**
+     * Costruttore privato per il pattern singleton.
+     */
+    private RestaurantHandler() {}
+
+    /**
+     * Gestisce i comandi relativi ai ristoranti: add, edit, delete, get,
+     * e le operazioni su recensioni, risposte e preferiti.
+     *
+     * @param cmd comando da gestire
+     * @param ctx contesto della sessione client
+     * @return true se il comando era riconosciuto, false altrimenti
+     * @throws IOException se si verifica un errore di I/O
+     * @throws SQLException se si verifica un errore di database
+     * @throws InterruptedException se il thread viene interrotto
+     */
     @Override
-    public boolean handle(String cmd, ClientContext ctx) {
-        try{
-            switch (cmd) {
+    public boolean handle(String cmd, ClientContext ctx)
+            throws IOException, SQLException, InterruptedException {
 
-            // RISTORANTI
-            case "getRestaurants"       -> handleGetRestaurants(ctx);
-            case "getRestaurantInfo"    -> handleGetRestaurantInfo(ctx);
+        switch (cmd) {
 
-            // CRUD RISTORANTI (solo ristoratore)
-            case "addRestaurant"        -> handleAddRestaurant(ctx);
-            case "editRestaurant"       -> handleEditRestaurant(ctx);
-            case "deleteRestaurant"     -> handleDeleteRestaurant(ctx);
+            case "addRestaurant"          -> handleAddRestaurant(ctx);
+            case "editRestaurant"         -> handleEditRestaurant(ctx);
+            case "deleteRestaurant"       -> handleDeleteRestaurant(ctx);
 
-            // MIO RISTORANTI
-            case "getMyRestaurants"     -> handleGetMyRestaurants(ctx);
-            case "getMyRestaurantsPages" -> handleGetMyRestaurantsPages(ctx);
+            case "getRestaurants"         -> handleGetRestaurants(ctx);
+            case "getRestaurantInfo"      -> handleGetRestaurantInfo(ctx);
 
-            // RECENSIONI
-            case "getReviewsPages"      -> handleGetReviewsPages(ctx);
-            case "getReviews"           -> handleGetReviews(ctx);
-            case "addReview"            -> handleAddReview(ctx);
-            case "editReview"           -> handleEditReview(ctx);
-            case "removeReview"         -> handleRemoveReview(ctx);
-            case "getMyReview"          -> handleGetMyReview(ctx);
-            case "getMyReviewsPages"    -> handleGetMyReviewsPages(ctx);
-            case "getMyReviews"         -> handleGetMyReviews(ctx);
+            case "getMyRestaurantsPages"  -> handleGetMyRestaurantsPages(ctx);
+            case "getMyRestaurants"       -> handleGetMyRestaurants(ctx);
 
-            // RISPOSTE RISTORATORE
-            case "getResponse"          -> handleGetResponse(ctx);
-            case "addResponse"          -> handleAddResponse(ctx);
-            case "editResponse"         -> handleEditResponse(ctx);
-            case "removeResponse"       -> handleRemoveResponse(ctx);
+            // pagine recensioni ristorante (il client usa "getReviewsPages")
+            case "getReviewsPages"        -> handleGetReviewsPages(ctx);
+            case "getReviewsPageCount"    -> handleGetReviewsPages(ctx); // alias compatibilità
 
-            // PREFERITI
-            case "isFavourite"          -> handleIsFavourite(ctx);
-            case "addFavourite"         -> handleAddFavourite(ctx);
-            case "removeFavourite"      -> handleRemoveFavourite(ctx);
+            case "getReviews"             -> handleGetReviews(ctx);
+            case "getMyReview"            -> handleGetMyReview(ctx);
+            case "addReview"              -> handleAddReview(ctx);
+            case "editReview"             -> handleEditReview(ctx);
+            case "removeReview"           -> handleRemoveReview(ctx);
+
+            case "getResponse"            -> handleGetResponse(ctx);
+            case "addResponse"            -> handleAddResponse(ctx);
+            case "editResponse"           -> handleEditResponse(ctx);
+            case "removeResponse"         -> handleRemoveResponse(ctx);
+
+            case "isFavourite"            -> handleIsFavourite(ctx);
+            case "addFavourite"           -> handleAddFavourite(ctx);
+            case "removeFavourite"        -> handleRemoveFavourite(ctx);
+
+            // le mie recensioni (MyReviews controller)
+            case "getMyReviewsPages"      -> handleGetMyReviewsPages(ctx);
+            case "getMyReviews"           -> handleGetMyReviews(ctx);
 
             default -> { return false; }
         }
-        } catch (Exception e) {
-            return false;
-        }
+
         return true;
     }
 
-    // =====================================================================
-    //                               GET RESTAURANTS
-    // =====================================================================
+    
+    private void handleAddRestaurant(ClientContext ctx)
+            throws IOException, SQLException, InterruptedException {
 
-    private void handleGetRestaurants(ClientContext ctx) throws Exception {
+        int userId = ctx.getLoggedUserId();
+
+        String name    = ctx.read();
+        String nation  = ctx.read();
+        String city    = ctx.read();
+        String address = ctx.read();
+        String latStr  = ctx.read();
+        String lonStr  = ctx.read();
+        String priceStr = ctx.read();
+        String categories = ctx.read();
+        String deliveryStr = ctx.read();
+        String onlineStr   = ctx.read();
+
+        // campi obbligatori lato server
+        if (isBlank(name) || isBlank(nation) || isBlank(city) ||
+            isBlank(address) || isBlank(priceStr)) {
+            ctx.write("missing");
+            return;
+        }
+
+        double lat, lon;
+        try {
+            lat = Double.parseDouble(latStr);
+            lon = Double.parseDouble(lonStr);
+        } catch (NumberFormatException e) {
+            ctx.write("coordinates");
+            return;
+        }
+
+        int price;
+        try {
+            price = Integer.parseInt(priceStr);
+        } catch (NumberFormatException e) {
+            ctx.write("price_format");
+            return;
+        }
+
+        if (price < 0) {
+            ctx.write("price_negative");
+            return;
+        }
+
+        boolean delivery = "y".equals(deliveryStr);
+        boolean online   = "y".equals(onlineStr);
+
+        boolean ok = db.addRestaurant(
+                userId,
+                name, nation, city, address,
+                lat, lon,
+                price,
+                categories,
+                delivery, online
+        );
+
+        ctx.write(ok ? "ok" : "error");
+    }
+
+    private void handleEditRestaurant(ClientContext ctx)
+            throws IOException, SQLException, InterruptedException {
+
+        int restId = Integer.parseInt(ctx.read());
+        int userId = ctx.getLoggedUserId();
+
+        if (!db.hasAccess(userId, restId)) {
+            ctx.write("denied");
+            return;
+        }
+
+        String name    = ctx.read();
+        String nation  = ctx.read();
+        String city    = ctx.read();
+        String address = ctx.read();
+        String latStr  = ctx.read();
+        String lonStr  = ctx.read();
+        String priceStr = ctx.read();
+        String categories = ctx.read();
+        String deliveryStr = ctx.read();
+        String onlineStr   = ctx.read();
+
+        if (isBlank(name) || isBlank(nation) || isBlank(city) ||
+            isBlank(address) || isBlank(priceStr)) {
+            ctx.write("missing");
+            return;
+        }
+
+        double lat, lon;
+        try {
+            lat = Double.parseDouble(latStr);
+            lon = Double.parseDouble(lonStr);
+        } catch (NumberFormatException e) {
+            ctx.write("coordinates");
+            return;
+        }
+
+        int price;
+        try {
+            price = Integer.parseInt(priceStr);
+        } catch (NumberFormatException e) {
+            ctx.write("price_format");
+            return;
+        }
+
+        if (price < 0) {
+            ctx.write("price_negative");
+            return;
+        }
+
+        boolean delivery = "y".equals(deliveryStr);
+        boolean online   = "y".equals(onlineStr);
+
+        boolean ok = db.editRestaurant(
+                restId,
+                name, nation, city, address,
+                lat, lon,
+                price,
+                categories,
+                delivery, online
+        );
+
+        ctx.write(ok ? "ok" : "error");
+    }
+
+    private void handleDeleteRestaurant(ClientContext ctx)
+            throws IOException, SQLException, InterruptedException {
+
+        int restId = Integer.parseInt(ctx.read());
+        int userId = ctx.getLoggedUserId();
+
+        if (!db.hasAccess(userId, restId)) {
+            ctx.write("denied");
+            return;
+        }
+
+        boolean ok = db.deleteRestaurant(restId);
+        ctx.write(ok ? "ok" : "error");
+    }
+
+    private void handleGetRestaurants(ClientContext ctx)
+            throws IOException, SQLException, InterruptedException {
 
         int page = Integer.parseInt(ctx.read());
 
-        String lat        = ctx.read();
-        String lon        = ctx.read();
-        String rangeKm    = ctx.read();
-        String priceMin   = ctx.read();
-        String priceMax   = ctx.read();
-        String hasDelivery = ctx.read();
-        String hasOnline   = ctx.read();
-        String starsMin    = ctx.read();
-        String starsMax    = ctx.read();
+        String latStr    = ctx.read();
+        String lonStr    = ctx.read();
+        String rangeStr  = ctx.read();
+
+        String priceMinStr = ctx.read();
+        String priceMaxStr = ctx.read();
+
+        String deliveryStr = ctx.read();
+        String onlineStr   = ctx.read();
+
+        String starsMinStr = ctx.read();
+        String starsMaxStr = ctx.read();
+
         String onlyFavStr  = ctx.read();
-        String hasCuisine  = ctx.read();
 
-        boolean onlyFavourites = "y".equals(onlyFavStr);
-
+        String hasCategory = ctx.read();
         String category = null;
-        if ("y".equals(hasCuisine)) {
+        if ("y".equals(hasCategory)) {
             category = ctx.read();
         }
 
-        Integer userId = ctx.getLoggedUserId();
-        if (userId <= 0) userId = null;
+        //COORDINATE / NEAR ME
+        Double lat = null, lon = null, rangeKm = null;
 
-        List<String[]> data = db.listRestaurants(
+        if (!"-".equals(rangeStr)) {
+            try {
+                rangeKm = Double.parseDouble(rangeStr);
+            } catch (NumberFormatException e) {
+                ctx.write("coordinates");
+                return;
+            }
+            if (rangeKm <= 0) {
+                ctx.write("coordinates");
+                return;
+            }
+
+            if ("-".equals(latStr) && "-".equals(lonStr)) {
+                // modalità "vicino a me": uso le coordinate dell'utente
+                double[] pos = db.getUserPosition(ctx.getLoggedUserId());
+                if (pos == null) {
+                    ctx.write("coordinates");
+                    return;
+                }
+                lat = pos[0];
+                lon = pos[1];
+            } else {
+                try {
+                    lat = Double.parseDouble(latStr);
+                    lon = Double.parseDouble(lonStr);
+                } catch (NumberFormatException e) {
+                    ctx.write("coordinates");
+                    return;
+                }
+            }
+        }
+
+        Integer priceMin = null, priceMax = null;
+        try {
+            if (!"-".equals(priceMinStr)) priceMin = Integer.parseInt(priceMinStr);
+            if (!"-".equals(priceMaxStr)) priceMax = Integer.parseInt(priceMaxStr);
+        } catch (NumberFormatException e) {
+            ctx.write("price");
+            return;
+        }
+        if (priceMin != null && priceMin < 0) {
+            ctx.write("price");
+            return;
+        }
+        if (priceMax != null && priceMax < 0) {
+            ctx.write("price");
+            return;
+        }
+        if (priceMin != null && priceMax != null && priceMin > priceMax) {
+            ctx.write("price");
+            return;
+        }
+
+        Double starsMin = null, starsMax = null;
+        try {
+            if (!"-".equals(starsMinStr)) starsMin = Double.parseDouble(starsMinStr);
+            if (!"-".equals(starsMaxStr)) starsMax = Double.parseDouble(starsMaxStr);
+        } catch (NumberFormatException e) {
+            ctx.write("stars");
+            return;
+        }
+        if (starsMin != null && (starsMin < 0 || starsMin > 5)) {
+            ctx.write("stars");
+            return;
+        }
+        if (starsMax != null && (starsMax < 0 || starsMax > 5)) {
+            ctx.write("stars");
+            return;
+        }
+        if (starsMin != null && starsMax != null && starsMin > starsMax) {
+            ctx.write("stars");
+            return;
+        }
+
+        boolean delivery = "y".equals(deliveryStr);
+        boolean online   = "y".equals(onlineStr);
+
+        boolean onlyFav = "y".equals(onlyFavStr);
+        int favUserId = onlyFav ? ctx.getLoggedUserId() : -1;
+
+        String[][] data = db.getRestaurantsWithFilter(
                 page,
                 lat, lon, rangeKm,
                 priceMin, priceMax,
-                hasDelivery, hasOnline,
+                delivery, online,
                 starsMin, starsMax,
-                category,
-                "-",             // nearMe (non usato)
-                userId,
-                onlyFavourites
+                favUserId,
+                category
         );
 
-        // data.get(0) = ["pages", "count"]
         ctx.write("ok");
-        ctx.write(data.get(0)[0]);   // numero pagine
-        ctx.write(data.get(0)[1]);   // numero risultati in questa pagina
+        ctx.write(data[0][0]); 
+        ctx.write(data[0][1]); 
 
-        for (int i = 1; i < data.size(); i++) {
-            ctx.write(data.get(i)[0]);    // id
-            ctx.write(data.get(i)[1]);    // nome
+        for (int i = 1; i < data.length; i++) {
+            ctx.write(data[i][0]);
+            ctx.write(data[i][1]);
         }
     }
 
-    // =====================================================================
-    //                           INFO RISTORANTE
-    // =====================================================================
+    private void handleGetRestaurantInfo(ClientContext ctx)
+            throws IOException, SQLException, InterruptedException {
 
-    private void handleGetRestaurantInfo(ClientContext ctx) throws Exception {
+        int restId = Integer.parseInt(ctx.read());
 
-        int id = Integer.parseInt(ctx.read());
-
-        String[] info = db.getRestaurantInfo(id);
+        String[] info = db.getRestaurantInfo(restId);
 
         if (info == null) {
-            ctx.write("err");
+            for (int i = 0; i < 12; i++) ctx.write("");
             return;
         }
 
-        ctx.write("ok");
-
-        for (String s : info) {
+        for (String s : info)
             ctx.write(s);
-        }
     }
 
-    // =====================================================================
-    //                       CRUD RISTORANTE (RISTORATORE)
-    // =====================================================================
+    private void handleGetMyRestaurantsPages(ClientContext ctx)
+            throws IOException, SQLException, InterruptedException {
 
-    private void handleAddRestaurant(ClientContext ctx) throws Exception {
-        int owner = ctx.getLoggedUserId();
-
-        String nome   = ctx.read();
-        String naz    = ctx.read();
-        String citta  = ctx.read();
-        String ind    = ctx.read();
-        double lat    = Double.parseDouble(ctx.read());
-        double lon    = Double.parseDouble(ctx.read());
-        int prezzo    = Integer.parseInt(ctx.read());
-        boolean deliv = "y".equals(ctx.read());
-        boolean onl   = "y".equals(ctx.read());
-        String cucina = ctx.read();
-
-        boolean ok = db.addRestaurant(owner, nome, naz, citta, ind, lat, lon, prezzo, deliv, onl, cucina);
-
-        ctx.write(ok ? "ok" : "err");
-    }
-
-    private void handleEditRestaurant(ClientContext ctx) throws Exception {
-
-        int id      = Integer.parseInt(ctx.read());
-        String nome = ctx.read();
-        String naz  = ctx.read();
-        String citta = ctx.read();
-        String ind   = ctx.read();
-        double lat   = Double.parseDouble(ctx.read());
-        double lon   = Double.parseDouble(ctx.read());
-        int prezzo   = Integer.parseInt(ctx.read());
-        boolean deliv = "y".equals(ctx.read());
-        boolean onl   = "y".equals(ctx.read());
-        String cucina = ctx.read();
-
-        boolean ok = db.editRestaurant(id, nome, naz, citta, ind, lat, lon, prezzo, deliv, onl, cucina);
-
-        ctx.write(ok ? "ok" : "err");
-    }
-
-    private void handleDeleteRestaurant(ClientContext ctx) throws Exception {
-
-        int id = Integer.parseInt(ctx.read());
-
-        boolean ok = db.deleteRestaurant(id);
-
-        ctx.write(ok ? "ok" : "err");
-    }
-
-    private void handleGetMyRestaurantsPages(ClientContext ctx) throws Exception {
-
-        int userId = ctx.getLoggedUserId();
-
-        // Verifica che l'utente sia loggato e sia un ristoratore
-        if (userId <= 0) {
-            ctx.write("unauthorized");
-            return;
-        }
-
-        int pages = db.getMyRestaurantsPageCount(userId);
-
+        int pages = db.getUserRestaurantsPages(ctx.getLoggedUserId());
         ctx.write(Integer.toString(pages));
     }
 
-    private void handleGetMyRestaurants(ClientContext ctx) throws Exception {
-
-        int userId = ctx.getLoggedUserId();
-
-        // Verifica che l'utente sia loggato
-        if (userId <= 0) {
-            ctx.write("0");
-            return;
-        }
+    private void handleGetMyRestaurants(ClientContext ctx)
+            throws IOException, SQLException, InterruptedException {
 
         int page = Integer.parseInt(ctx.read());
+        int userId = ctx.getLoggedUserId();
 
-        List<String[]> list = db.getMyRestaurants(userId, page);
+        String[][] list = db.getUserRestaurants(userId, page);
 
-        ctx.write(Integer.toString(list.size()));
-
+        ctx.write(Integer.toString(list.length));
         for (String[] r : list) {
             ctx.write(r[0]); // id
             ctx.write(r[1]); // nome
         }
     }
 
-    // =====================================================================
-    //                           RECENSIONI
-    // =====================================================================
-
-    private void handleGetReviewsPages(ClientContext ctx) throws Exception {
+    private void handleGetReviewsPages(ClientContext ctx)
+            throws IOException, SQLException, InterruptedException {
 
         int restId = Integer.parseInt(ctx.read());
-
         int pages = db.getReviewsPageCount(restId);
-
         ctx.write(Integer.toString(pages));
     }
 
-    private void handleGetReviews(ClientContext ctx) throws Exception {
+    private void handleGetReviews(ClientContext ctx)
+            throws IOException, SQLException, InterruptedException {
 
         int restId = Integer.parseInt(ctx.read());
         int page   = Integer.parseInt(ctx.read());
 
-        List<String[]> list = db.getReviews(restId, page);
+        String[][] reviews = db.getReviews(restId, page);
 
-        ctx.write(Integer.toString(list.size()));
+        ctx.write(Integer.toString(reviews.length));
 
-        for (String[] r : list) {
-            ctx.write(r[0]); // id
-            ctx.write(r[1]); // stelle
-            ctx.write(r[2]); // testo
-            ctx.write(r[3] == null ? "-" : r[3]); // risposta
+        for (String[] r : reviews) {
+            String id     = r[0];
+            String stars  = r[1];
+            String text   = r[2];
+            String reply  = r[3];
+
+            ctx.write(id);
+            ctx.write(stars);
+            ctx.write(text);
+
+            if (reply == null || reply.isEmpty()) {
+                ctx.write("n");
+            } else {
+                ctx.write("y");
+                ctx.write(reply);
+            }
         }
     }
 
-    private void handleAddReview(ClientContext ctx) throws Exception {
+    private void handleGetMyReview(ClientContext ctx)
+            throws IOException, SQLException, InterruptedException {
 
+        int restId = Integer.parseInt(ctx.read());
         int userId = ctx.getLoggedUserId();
+
+        String[] r = db.getMyReview(userId, restId);
+
+        // Il client si aspetta SEMPRE 2 righe:
+        // stelle (int) e testo (anche vuoto).
+        if (r == null) {
+            ctx.write("0");
+            ctx.write("");
+        } else {
+            ctx.write(r[0]); // stelle
+            ctx.write(r[1]); // testo
+        }
+    }
+
+    private void handleAddReview(ClientContext ctx)
+            throws IOException, SQLException, InterruptedException {
+
         int restId = Integer.parseInt(ctx.read());
         int stars  = Integer.parseInt(ctx.read());
         String text = ctx.read();
 
-        boolean ok = db.addReview(userId, restId, stars, text);
-
-        ctx.write(ok ? "ok" : "err");
+        boolean ok = db.addReview(ctx.getLoggedUserId(), restId, stars, text);
+        ctx.write(ok ? "ok" : "error");
     }
 
-    private void handleEditReview(ClientContext ctx) throws Exception {
+    private void handleEditReview(ClientContext ctx)
+            throws IOException, SQLException, InterruptedException {
 
-        int userId = ctx.getLoggedUserId();
         int restId = Integer.parseInt(ctx.read());
         int stars  = Integer.parseInt(ctx.read());
         String text = ctx.read();
 
-        boolean ok = db.editReview(userId, restId, stars, text);
-
-        ctx.write(ok ? "ok" : "err");
+        boolean ok = db.editReview(ctx.getLoggedUserId(), restId, stars, text);
+        ctx.write(ok ? "ok" : "error");
     }
 
-    private void handleRemoveReview(ClientContext ctx) throws Exception {
+    private void handleRemoveReview(ClientContext ctx)
+            throws IOException, SQLException, InterruptedException {
 
-        int userId = ctx.getLoggedUserId();
         int restId = Integer.parseInt(ctx.read());
+        boolean ok = db.removeReview(ctx.getLoggedUserId(), restId);
 
-        boolean ok = db.removeReview(userId, restId);
-
-        ctx.write(ok ? "ok" : "err");
+        ctx.write(ok ? "ok" : "error");
     }
 
-    private void handleGetMyReview(ClientContext ctx) throws Exception {
+    private void handleGetResponse(ClientContext ctx)
+            throws IOException, SQLException, InterruptedException {
 
-        int userId = ctx.getLoggedUserId();
-        int restId = Integer.parseInt(ctx.read());
+        int reviewId = Integer.parseInt(ctx.read());
+        String resp = db.getResponse(reviewId);
 
-        String[] data = db.getMyReview(userId, restId);
-
-        if (data == null) {
+        // Il client si aspetta:
+        //   "ok" + testo      se esiste
+        //   qualsiasi altra cosa se non esiste
+        if (resp == null) {
             ctx.write("none");
+        } else {
+            ctx.write("ok");
+            ctx.write(resp);
+        }
+    }
+
+    private void handleAddResponse(ClientContext ctx)
+            throws IOException, SQLException, InterruptedException {
+
+        int reviewId = Integer.parseInt(ctx.read());
+        String text  = ctx.read();
+
+        if (!db.canRespond(ctx.getLoggedUserId(), reviewId)) {
+            ctx.write("denied");
             return;
         }
 
-        ctx.write("ok");
-        ctx.write(data[0]); // stelle
-        ctx.write(data[1]); // testo
-    }
-
-    private void handleGetMyReviewsPages(ClientContext ctx) throws Exception {
-
-        int userId = ctx.getLoggedUserId();
-
-        int pages = db.getMyReviewsPageCount(userId);
-
-        ctx.write("ok");
-        ctx.write(Integer.toString(pages));
-    }
-
-    private void handleGetMyReviews(ClientContext ctx) throws Exception {
-
-        int userId = ctx.getLoggedUserId();
-        int page   = Integer.parseInt(ctx.read());
-
-        List<String[]> list = db.getMyReviews(userId, page);
-
-        ctx.write(Integer.toString(list.size()));
-
-        for (String[] r : list) {
-            ctx.write(r[1]); // nome ristorante
-            ctx.write(r[2]); // stelle
-            ctx.write(r[3]); // testo
-        }
-    }
-
-    // =====================================================================
-    //                              RISPOSTE
-    // =====================================================================
-
-    private void handleGetResponse(ClientContext ctx) throws Exception {
-
-        int reviewId = Integer.parseInt(ctx.read());
-
-        String text = db.getResponse(reviewId);
-
-        ctx.write(text == null ? "-" : text);
-    }
-
-    private void handleAddResponse(ClientContext ctx) throws Exception {
-
-        int reviewId = Integer.parseInt(ctx.read());
-        String text  = ctx.read();
-
         boolean ok = db.addResponse(reviewId, text);
-
-        ctx.write(ok ? "ok" : "err");
+        ctx.write(ok ? "ok" : "error");
     }
 
-    private void handleEditResponse(ClientContext ctx) throws Exception {
+    private void handleEditResponse(ClientContext ctx)
+            throws IOException, SQLException, InterruptedException {
 
         int reviewId = Integer.parseInt(ctx.read());
         String text  = ctx.read();
+
+        if (!db.canRespond(ctx.getLoggedUserId(), reviewId)) {
+            ctx.write("denied");
+            return;
+        }
 
         boolean ok = db.editResponse(reviewId, text);
-
-        ctx.write(ok ? "ok" : "err");
+        ctx.write(ok ? "ok" : "error");
     }
 
-    private void handleRemoveResponse(ClientContext ctx) throws Exception {
+    private void handleRemoveResponse(ClientContext ctx)
+            throws IOException, SQLException, InterruptedException {
 
         int reviewId = Integer.parseInt(ctx.read());
 
-        boolean ok = db.removeResponse(reviewId);
+        if (!db.canRespond(ctx.getLoggedUserId(), reviewId)) {
+            ctx.write("denied");
+            return;
+        }
 
-        ctx.write(ok ? "ok" : "err");
+        boolean ok = db.removeResponse(reviewId);
+        ctx.write(ok ? "ok" : "error");
     }
 
-    // =====================================================================
-    //                              PREFERITI
-    // =====================================================================
+    private void handleIsFavourite(ClientContext ctx)
+            throws IOException, SQLException, InterruptedException {
 
-    private void handleIsFavourite(ClientContext ctx) throws Exception {
-
-        int userId = ctx.getLoggedUserId();
         int restId = Integer.parseInt(ctx.read());
-
-        boolean fav = db.isFavourite(userId, restId);
+        boolean fav = db.isFavourite(ctx.getLoggedUserId(), restId);
 
         ctx.write(fav ? "y" : "n");
     }
 
-    private void handleAddFavourite(ClientContext ctx) throws Exception {
+    private void handleAddFavourite(ClientContext ctx)
+            throws IOException, SQLException, InterruptedException {
 
-        int userId = ctx.getLoggedUserId();
         int restId = Integer.parseInt(ctx.read());
+        boolean ok = db.addFavourite(ctx.getLoggedUserId(), restId);
 
-        boolean ok = db.addFavourite(userId, restId);
-
-        ctx.write(ok ? "ok" : "err");
+        ctx.write(ok ? "ok" : "error");
     }
 
-    private void handleRemoveFavourite(ClientContext ctx) throws Exception {
+    private void handleRemoveFavourite(ClientContext ctx)
+            throws IOException, SQLException, InterruptedException {
+
+        int restId = Integer.parseInt(ctx.read());
+        boolean ok = db.removeFavourite(ctx.getLoggedUserId(), restId);
+
+        ctx.write(ok ? "ok" : "error");
+    }
+
+    private void handleGetMyReviewsPages(ClientContext ctx)
+            throws IOException, SQLException, InterruptedException {
 
         int userId = ctx.getLoggedUserId();
-        int restId = Integer.parseInt(ctx.read());
+        int pages = db.getUserReviewsPages(userId);
 
-        boolean ok = db.removeFavourite(userId, restId);
+        // Il client si aspetta:
+        //   "ok"
+        //   pages
+        ctx.write("ok");
+        ctx.write(Integer.toString(pages));
+    }
 
-        ctx.write(ok ? "ok" : "err");
+    private void handleGetMyReviews(ClientContext ctx)
+            throws IOException, SQLException, InterruptedException {
+
+        int page   = Integer.parseInt(ctx.read());
+        int userId = ctx.getLoggedUserId();
+
+        String[][] data = db.getUserReviews(userId, page);
+
+        // Il client si aspetta:
+        //   size
+        //   per ogni review: nome_ristorante, stelle, testo
+        ctx.write(Integer.toString(data.length));
+
+        for (String[] r : data) {
+            ctx.write(r[0]); // nome ristorante
+            ctx.write(r[1]); // stelle
+            ctx.write(r[2]); // testo
+        }
+    }
+
+    private boolean isBlank(String s) {
+        return s == null || s.trim().isEmpty();
     }
 }

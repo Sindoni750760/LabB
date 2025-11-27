@@ -6,37 +6,61 @@ import java.util.List;
 
 import com.theknife.app.ConnectionManager;
 
+/**
+ * Handler singleton per l'accesso al database.
+ * Gestisce tutte le operazioni CRUD per utenti, ristoranti, recensioni e preferiti.
+ * Utilizza prepared statements per prevenire SQL injection e ConnectionManager per la gestione delle connessioni.
+ * 
+ * @author Mattia Sindoni 750760 VA
+ * @author Erica Faccio 751654 VA
+ * @author Giovanni Isgrò 753536 VA
+ */
+public class DBHandler{
 
-public class DBHandler implements QueryRestaurant, QueryUser {
-
-
+    /** Istanza singleton dell'handler database. */
     private static DBHandler instance = null;
+    
+    /** Manager per la gestione delle connessioni al database. */
     private final ConnectionManager connMgr = ConnectionManager.getInstance();
 
+    /**
+     * Costruttore privato per il pattern singleton.
+     */
     private DBHandler() {}
 
+    /**
+     * Restituisce l'istanza singleton dell'handler database.
+     *
+     * @return istanza singleton di DBHandler
+     */
     public static synchronized DBHandler getInstance() {
         if (instance == null) instance = new DBHandler();
         return instance;
     }
 
-    // ============================================================
-    //                        UTENTI
-    // ============================================================
-
-    public boolean addUser(
-            String nome,
-            String cognome,
-            String username,
-            String hashPassword,
-            long birth,
-            double lat,
-            double lon,
-            boolean isRist) throws SQLException, InterruptedException {
+    /**
+     * Inserisce un nuovo utente nel database.
+     *
+     * @param nome nome dell'utente
+     * @param cognome cognome dell'utente
+     * @param username username univoco
+     * @param hashPassword hash bcrypt della password
+     * @param birth timestamp della data di nascita (-1 se non specificata)
+     * @param lat latitudine del domicilio
+     * @param lon longitudine del domicilio
+     * @param isRist true se l'utente è un ristoratore
+     * @return true se l'inserimento ha successo, false altrimenti
+     * @throws SQLException se si verifica un errore di database
+     * @throws InterruptedException se il thread viene interrotto
+     */
+    public boolean addUser(String nome, String cognome, String username, String hashPassword,
+                           long birth, double lat, double lon, boolean isRist)
+            throws SQLException, InterruptedException {
 
         String sql = """
-            INSERT INTO utenti (nome, cognome, username, password, data_nascita,
-                                latitudine_domicilio, longitudine_domicilio, is_ristoratore)
+            INSERT INTO utenti
+                (nome, cognome, username, password, data_nascita,
+                 latitudine_domicilio, longitudine_domicilio, is_ristoratore)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """;
 
@@ -49,7 +73,7 @@ public class DBHandler implements QueryRestaurant, QueryUser {
             ps.setString(4, hashPassword);
 
             if (birth <= 0) {
-                ps.setNull(5, Types.DATE);
+                ps.setDate(5, null);
             } else {
                 ps.setDate(5, new java.sql.Date(birth));
             }
@@ -62,8 +86,15 @@ public class DBHandler implements QueryRestaurant, QueryUser {
         }
     }
 
-    public String[] getUserLoginInfo(String username)
-            throws SQLException, InterruptedException {
+    /**
+     * Recupera le credenziali di login per un utente.
+     *
+     * @param username username dell'utente
+     * @return array contenente [id, hashPassword], oppure null se l'utente non esiste
+     * @throws SQLException se si verifica un errore di database
+     * @throws InterruptedException se il thread viene interrotto
+     */
+    public String[] getUserLoginInfo(String username) throws SQLException, InterruptedException {
 
         String sql = """
             SELECT id, password
@@ -87,8 +118,10 @@ public class DBHandler implements QueryRestaurant, QueryUser {
         }
     }
 
-    public String[] getUserInfo(int userId)
-            throws SQLException, InterruptedException {
+    /**
+     * Ritorna [nome, cognome, "y"/"n" is_ristoratore]
+     */
+    public String[] getUserInfo(int userId) throws SQLException, InterruptedException {
 
         String sql = """
             SELECT nome, cognome, is_ristoratore
@@ -114,29 +147,39 @@ public class DBHandler implements QueryRestaurant, QueryUser {
         }
     }
 
-    // ============================================================
-    //                RISTORANTI — CRUD COMPLETO
-    // ============================================================
+    public double[] getUserPosition(int userId) throws SQLException, InterruptedException {
 
-    public boolean addRestaurant(
-            int ownerId,
-            String nome,
-            String nazione,
-            String citta,
-            String indirizzo,
-            double lat,
-            double lon,
-            int fasciaPrezzo,
-            String tipoCucina,
-            boolean delivery,
-            boolean online
-    ) throws SQLException, InterruptedException {
+        String sql = """
+            SELECT latitudine_domicilio, longitudine_domicilio
+            FROM utenti
+            WHERE id = ?
+        """;
+
+        try (Connection conn = connMgr.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, userId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) return null;
+
+                return new double[]{ rs.getDouble(1), rs.getDouble(2) };
+            }
+        }
+    }
+
+
+    public boolean addRestaurant(int ownerId, String name, String nation, String city,
+                                 String address, double lat, double lon,
+                                 int price, String tipoCucina,
+                                 boolean delivery, boolean online)
+            throws SQLException, InterruptedException {
 
         String sql = """
             INSERT INTO "RistorantiTheKnife"
-                (proprietario, nome, nazione, citta, indirizzo, latitudine,
-                 longitudine, fascia_prezzo, servizio_delivery,
-                 prenotazione_online, tipo_cucina)
+                (proprietario, nome, nazione, citta, indirizzo,
+                 latitudine, longitudine, fascia_prezzo,
+                 tipo_cucina, servizio_delivery, prenotazione_online)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
 
@@ -144,34 +187,26 @@ public class DBHandler implements QueryRestaurant, QueryUser {
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setInt(1, ownerId);
-            ps.setString(2, nome);
-            ps.setString(3, nazione);
-            ps.setString(4, citta);
-            ps.setString(5, indirizzo);
+            ps.setString(2, name);
+            ps.setString(3, nation);
+            ps.setString(4, city);
+            ps.setString(5, address);
             ps.setDouble(6, lat);
             ps.setDouble(7, lon);
-            ps.setInt(8, fasciaPrezzo);
-            ps.setBoolean(9, delivery);
-            ps.setBoolean(10, online);
-            ps.setString(11, tipoCucina);
+            ps.setInt(8, price);
+            ps.setString(9, tipoCucina);
+            ps.setBoolean(10, delivery);
+            ps.setBoolean(11, online);
 
             return ps.executeUpdate() == 1;
         }
     }
 
-    public boolean editRestaurant(
-            int id,
-            String nome,
-            String nazione,
-            String citta,
-            String indirizzo,
-            double lat,
-            double lon,
-            int fasciaPrezzo,
-            String tipoCucina,
-            boolean delivery,
-            boolean online
-    ) throws SQLException, InterruptedException {
+    public boolean editRestaurant(int restId, String name, String nation, String city,
+                                  String address, double lat, double lon,
+                                  int price, String tipoCucina,
+                                  boolean delivery, boolean online)
+            throws SQLException, InterruptedException {
 
         String sql = """
             UPDATE "RistorantiTheKnife"
@@ -184,24 +219,23 @@ public class DBHandler implements QueryRestaurant, QueryUser {
         try (Connection conn = connMgr.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
-            ps.setString(1, nome);
-            ps.setString(2, nazione);
-            ps.setString(3, citta);
-            ps.setString(4, indirizzo);
+            ps.setString(1, name);
+            ps.setString(2, nation);
+            ps.setString(3, city);
+            ps.setString(4, address);
             ps.setDouble(5, lat);
             ps.setDouble(6, lon);
-            ps.setInt(7, fasciaPrezzo);
+            ps.setInt(7, price);
             ps.setString(8, tipoCucina);
             ps.setBoolean(9, delivery);
             ps.setBoolean(10, online);
-            ps.setInt(11, id);
+            ps.setInt(11, restId);
 
             return ps.executeUpdate() == 1;
         }
     }
 
-    public boolean deleteRestaurant(int id)
-            throws SQLException, InterruptedException {
+    public boolean deleteRestaurant(int restId) throws SQLException, InterruptedException {
 
         String sql = """
             DELETE FROM "RistorantiTheKnife"
@@ -211,13 +245,12 @@ public class DBHandler implements QueryRestaurant, QueryUser {
         try (Connection conn = connMgr.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
-            ps.setInt(1, id);
+            ps.setInt(1, restId);
             return ps.executeUpdate() == 1;
         }
     }
 
-    public boolean hasAccess(int userId, int restId)
-            throws SQLException, InterruptedException {
+    public boolean hasAccess(int userId, int restId) throws SQLException, InterruptedException {
 
         String sql = """
             SELECT 1
@@ -237,28 +270,25 @@ public class DBHandler implements QueryRestaurant, QueryUser {
         }
     }
 
-    public String[] getRestaurantInfo(int id)
-            throws SQLException, InterruptedException {
+    public String[] getRestaurantInfo(int restId) throws SQLException, InterruptedException {
 
         String sql = """
-            SELECT
-             nome, nazione, citta, indirizzo,
-             latitudine, longitudine,
-             fascia_prezzo, tipo_cucina,
-             servizio_delivery, prenotazione_online,
-             COALESCE((SELECT AVG(stelle) FROM recensioni WHERE id_ristorante = r.id), 0),
-             COALESCE((SELECT COUNT(*) FROM recensioni WHERE id_ristorante = r.id), 0)
+            SELECT r.nome, r.nazione, r.citta, r.indirizzo,
+                   r.latitudine, r.longitudine,
+                   r.fascia_prezzo, r.tipo_cucina,
+                   r.servizio_delivery, r.prenotazione_online,
+                   COALESCE((SELECT AVG(stelle) FROM recensioni WHERE id_ristorante = r.id), 0),
+                   COALESCE((SELECT COUNT(*) FROM recensioni WHERE id_ristorante = r.id), 0)
             FROM "RistorantiTheKnife" r
-            WHERE id = ?
+            WHERE r.id = ?
         """;
 
         try (Connection conn = connMgr.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
-            ps.setInt(1, id);
+            ps.setInt(1, restId);
 
             try (ResultSet rs = ps.executeQuery()) {
-
                 if (!rs.next()) return null;
 
                 return new String[]{
@@ -279,260 +309,306 @@ public class DBHandler implements QueryRestaurant, QueryUser {
         }
     }
 
-    @Override
-    public List<String[]> listRestaurants(int page, String lat, String lon, String rangeKm, String priceMin,
-            String priceMax, String hasDelivery, String hasOnline, String starsMin, String starsMax, String category,
-            String nearMe, Integer userId, boolean onlyFavourites) throws SQLException {
-        
-        try {
-            // Converti i parametri String ai tipi appropriati
-            Double latitude = (lat == null || lat.equals("-")) ? null : Double.parseDouble(lat);
-            Double longitude = (lon == null || lon.equals("-")) ? null : Double.parseDouble(lon);
-            Double range = (rangeKm == null || rangeKm.equals("-")) ? null : Double.parseDouble(rangeKm);
-            Integer priceMinInt = (priceMin == null || priceMin.equals("-")) ? null : Integer.parseInt(priceMin);
-            Integer priceMaxInt = (priceMax == null || priceMax.equals("-")) ? null : Integer.parseInt(priceMax);
-            Double starsMinDouble = (starsMin == null || starsMin.equals("-")) ? null : Double.parseDouble(starsMin);
-            Double starsMaxDouble = (starsMax == null || starsMax.equals("-")) ? null : Double.parseDouble(starsMax);
-            
-            boolean delivery = "y".equals(hasDelivery);
-            boolean online = "y".equals(hasOnline);
-            
-            int favUserId = (userId != null && onlyFavourites) ? userId : -1;
-            
-            String[][] result = getRestaurantsWithFilter(
-                    page,
-                    latitude, longitude, range,
-                    priceMinInt, priceMaxInt,
-                    delivery, online,
-                    starsMinDouble, starsMaxDouble,
-                    favUserId,
-                    category
-            );
-            
-            // Converti il result da String[][] a List<String[]>
-            List<String[]> list = new ArrayList<>();
-            for (String[] row : result) {
-                list.add(row);
+
+    public int getUserRestaurantsPages(int userId) throws SQLException, InterruptedException {
+
+        String sql = """
+            SELECT COUNT(*)
+            FROM "RistorantiTheKnife"
+            WHERE proprietario = ?
+        """;
+
+        try (Connection conn = connMgr.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, userId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) return 0;
+                int total = rs.getInt(1);
+                return (int) Math.ceil(total / 10.0);
             }
-            return list;
-        } catch (NumberFormatException e) {
-            // Se c'è un errore nel parsing, restituisci una lista vuota con i numeri di pagina
-            List<String[]> list = new ArrayList<>();
-            list.add(new String[]{"0", "0"});
-            return list;
-        } catch (InterruptedException e) {
-            throw new SQLException("Interrupted during query", e);
         }
     }
 
-    // ============================================================
-    //             LISTE E FILTRI (CON NUOVO SCHEMA)
+    public String[][] getUserRestaurants(int userId, int page) throws SQLException, InterruptedException {
 
-    public String[][] getRestaurantsWithFilter(
-            int page,
-            Double lat, Double lon, Double rangeKm,
-            Integer priceMin, Integer priceMax,
-            boolean delivery, boolean online,
-            Double starsMin, Double starsMax,
-            int favouriteUserId,
-            String tipoCucina
-    ) throws SQLException, InterruptedException {
+            String sql = """
+                SELECT id, nome
+                FROM "RistorantiTheKnife"
+                WHERE proprietario = ?
+                ORDER BY nome
+                LIMIT 10 OFFSET ?
+            """;
+
+            try (Connection conn = connMgr.getConnection();
+                PreparedStatement ps = conn.prepareStatement(sql)) {
+
+                ps.setInt(1, userId);
+                ps.setInt(2, page * 10);
+
+                List<String[]> out = new ArrayList<>();
+
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        out.add(new String[]{
+                                Integer.toString(rs.getInt("id")),
+                                rs.getString("nome")
+                        });
+                    }
+                }
+
+                return out.toArray(new String[0][]);
+            }
+        }
+
+        public String[][] getRestaurantsWithFilter(int page,
+                                            Double lat, Double lon, Double rangeKm,
+                                            Integer priceMin, Integer priceMax,
+                                            boolean delivery, boolean online,
+                                            Double starsMin, Double starsMax,
+                                            int favouriteUserId,
+                                            String category)
+            throws SQLException, InterruptedException {
 
         StringBuilder sql = new StringBuilder("""
-            SELECT id, nome
-            FROM "RistorantiTheKnife"
-            WHERE 1=1
+            SELECT r.id, r.nome
+            FROM "RistorantiTheKnife" r
         """);
 
-        if (lat != null && lon != null && rangeKm != null) {
-            sql.append("""
-                AND earth_distance(
-                        ll_to_earth(latitudine, longitudine),
-                        ll_to_earth(?, ?)
-                    ) <= ?
-            """);
-        }
-
-        if (priceMin != null) sql.append(" AND fascia_prezzo >= ?");
-        if (priceMax != null) sql.append(" AND fascia_prezzo <= ?");
-
-        if (delivery) sql.append(" AND servizio_delivery = TRUE");
-        if (online) sql.append(" AND prenotazione_online = TRUE");
-
-        if (starsMin != null) {
-            sql.append("""
-                AND (SELECT AVG(stelle) FROM recensioni
-                     WHERE id_ristorante = "RistorantiTheKnife".id) >= ?
-            """);
-        }
-
-        if (starsMax != null) {
-            sql.append("""
-                AND (SELECT AVG(stelle) FROM recensioni
-                     WHERE id_ristorante = "RistorantiTheKnife".id) <= ?
-            """);
-        }
+        List<Object> params = new ArrayList<>();
+        List<Integer> paramTypes = new ArrayList<>(); // 1=int, 2=double, 3=string
 
         if (favouriteUserId > 0) {
             sql.append("""
-                AND id IN (
-                    SELECT id_ristorante FROM preferiti
-                    WHERE id_utente = ?
-                )
+                JOIN preferiti p ON p.id_ristorante = r.id
+                WHERE p.id_utente = ?
             """);
+            params.add(favouriteUserId);
+            paramTypes.add(1);
+        } else {
+            sql.append(" WHERE 1 = 1");
         }
 
-        if (tipoCucina != null) sql.append(" AND tipo_cucina LIKE ?");
+        if (lat != null && lon != null && rangeKm != null && rangeKm > 0) {
 
-        sql.append(" ORDER BY nome LIMIT 10 OFFSET ?");
+            double rangeDegree = rangeKm / 111.0;
+
+            sql.append("""
+                AND SQRT(
+                        (r.latitudine - ?) * (r.latitudine - ?) +
+                        (r.longitudine - ?) * (r.longitudine - ?)
+                    ) <= ?
+            """);
+
+            params.add(lat);
+            paramTypes.add(2);
+
+            params.add(lat);
+            paramTypes.add(2);
+
+            params.add(lon);
+            paramTypes.add(2);
+
+            params.add(lon);
+            paramTypes.add(2);
+
+            params.add(rangeDegree);
+            paramTypes.add(2);
+        }
+
+        if (priceMin != null) {
+            sql.append(" AND r.fascia_prezzo >= ?");
+            params.add(priceMin);
+            paramTypes.add(1);
+        }
+
+        if (priceMax != null) {
+            sql.append(" AND r.fascia_prezzo <= ?");
+            params.add(priceMax);
+            paramTypes.add(1);
+        }
+
+        if (delivery) sql.append(" AND r.servizio_delivery = TRUE");
+        if (online)   sql.append(" AND r.prenotazione_online = TRUE");
+
+        String starsSubquery = "(SELECT AVG(stelle) FROM recensioni WHERE id_ristorante = r.id)";
+
+        if (starsMin != null && starsMin > 0) {
+            sql.append(" AND ").append(starsSubquery).append(" >= ?");
+            params.add(starsMin);
+            paramTypes.add(2);
+        }
+
+        if (starsMax != null && starsMax > 0) {
+            sql.append(" AND ").append(starsSubquery).append(" <= ?");
+            params.add(starsMax);
+            paramTypes.add(2);
+        }
+
+        if (category != null) {
+            sql.append(" AND LOWER(r.tipo_cucina) LIKE LOWER(?)");
+            params.add("%" + category + "%");
+            paramTypes.add(3);
+        }
+
+        sql.append(" ORDER BY r.nome LIMIT 10 OFFSET ?");
+
+        params.add(page * 10);
+        paramTypes.add(1);
 
         try (Connection conn = connMgr.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+            PreparedStatement ps = conn.prepareStatement(sql.toString())) {
 
+            // Set dei parametri
             int idx = 1;
-
-            if (lat != null && lon != null && rangeKm != null) {
-                ps.setDouble(idx++, lat);
-                ps.setDouble(idx++, lon);
-                ps.setDouble(idx++, rangeKm * 1000);
+            for (int i = 0; i < params.size(); i++) {
+                switch (paramTypes.get(i)) {
+                    case 1 -> ps.setInt(idx++, (int) params.get(i));
+                    case 2 -> ps.setDouble(idx++, (double) params.get(i));
+                    case 3 -> ps.setString(idx++, (String) params.get(i));
+                }
             }
 
-            if (priceMin != null) ps.setInt(idx++, priceMin);
-            if (priceMax != null) ps.setInt(idx++, priceMax);
+            List<String[]> results = new ArrayList<>();
 
-            if (starsMin != null) ps.setDouble(idx++, starsMin);
-            if (starsMax != null) ps.setDouble(idx++, starsMax);
-
-            if (favouriteUserId > 0) ps.setInt(idx++, favouriteUserId);
-
-            if (tipoCucina != null) ps.setString(idx++, "%" + tipoCucina + "%");
-
-            ps.setInt(idx++, page * 10);
-
-            List<String[]> out = new ArrayList<>();
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    out.add(new String[]{
-                            Integer.toString(rs.getInt(1)),
-                            rs.getString(2)
+                    results.add(new String[]{
+                            Integer.toString(rs.getInt("id")),
+                            rs.getString("nome")
                     });
                 }
             }
 
+            // Conteggio totale con gli stessi filtri
             int total = countRestaurantsWithFilter(
                     lat, lon, rangeKm,
                     priceMin, priceMax,
                     delivery, online,
                     starsMin, starsMax,
                     favouriteUserId,
-                    tipoCucina
+                    category
             );
 
             int pages = (int) Math.ceil(total / 10.0);
 
-            String[][] result = new String[out.size() + 1][2];
-            result[0][0] = Integer.toString(pages);
-            result[0][1] = Integer.toString(out.size());
+            String[][] out = new String[results.size() + 1][2];
+            out[0][0] = Integer.toString(pages);
+            out[0][1] = Integer.toString(results.size());
 
-            for (int i = 0; i < out.size(); i++)
-                result[i + 1] = out.get(i);
+            for (int i = 0; i < results.size(); i++) {
+                out[i + 1] = results.get(i);
+            }
 
-            return result;
+            return out;
         }
     }
 
-    private int countRestaurantsWithFilter(
-            Double lat, Double lon, Double rangeKm,
-            Integer priceMin, Integer priceMax,
-            boolean delivery, boolean online,
-            Double starsMin, Double starsMax,
-            int favouriteUserId,
-            String tipoCucina
-    ) throws SQLException, InterruptedException {
+    private int countRestaurantsWithFilter(Double lat, Double lon, Double rangeKm,
+                                       Integer priceMin, Integer priceMax,
+                                       boolean delivery, boolean online,
+                                       Double starsMin, Double starsMax,
+                                       int favouriteUserId,
+                                       String category)
+            throws SQLException {
 
         StringBuilder sql = new StringBuilder("""
-            SELECT COUNT(*)
-            FROM "RistorantiTheKnife"
-            WHERE 1=1
+            SELECT COUNT(*) AS total
+            FROM "RistorantiTheKnife" r
         """);
 
-        if (lat != null && lon != null && rangeKm != null) {
-            sql.append("""
-                AND earth_distance(
-                        ll_to_earth(latitudine, longitudine),
-                        ll_to_earth(?, ?)
-                    ) <= ?
-            """);
-        }
+        List<Object> params = new ArrayList<>();
+        List<Integer> types = new ArrayList<>();
 
-        if (priceMin != null) sql.append(" AND fascia_prezzo >= ?");
-        if (priceMax != null) sql.append(" AND fascia_prezzo <= ?");
-
-        if (delivery) sql.append(" AND servizio_delivery = TRUE");
-        if (online) sql.append(" AND prenotazione_online = TRUE");
-
-        if (starsMin != null) {
-            sql.append("""
-                AND (SELECT AVG(stelle)
-                     FROM recensioni
-                     WHERE id_ristorante = "RistorantiTheKnife".id) >= ?
-            """);
-        }
-
-        if (starsMax != null) {
-            sql.append("""
-                AND (SELECT AVG(stelle)
-                     FROM recensioni
-                     WHERE id_ristorante = "RistorantiTheKnife".id) <= ?
-            """);
-        }
-
+        // --------------------------
+        // Preferiti
+        // --------------------------
         if (favouriteUserId > 0) {
             sql.append("""
-                AND id IN (
-                    SELECT id_ristorante
-                    FROM preferiti
-                    WHERE id_utente = ?
-                )
+                JOIN preferiti p ON p.id_ristorante = r.id
+                WHERE p.id_utente = ?
             """);
+            params.add(favouriteUserId);
+            types.add(1);
+        } else {
+            sql.append(" WHERE 1 = 1");
         }
 
-        if (tipoCucina != null) sql.append(" AND tipo_cucina LIKE ?");
+        // --------------------------
+        // Distanza (euclidea)
+        // --------------------------
+        if (lat != null && lon != null && rangeKm != null && rangeKm > 0) {
+            double rangeDegree = rangeKm / 111.0;
+            sql.append("""
+                AND SQRT(
+                        (r.latitudine - ?) * (r.latitudine - ?) +
+                        (r.longitudine - ?) * (r.longitudine - ?)
+                    ) <= ?
+            """);
+
+            params.add(lat);  types.add(2);
+            params.add(lat);  types.add(2);
+            params.add(lon);  types.add(2);
+            params.add(lon);  types.add(2);
+            params.add(rangeDegree); types.add(2);
+        }
+
+        if (priceMin != null) {
+            sql.append(" AND r.fascia_prezzo >= ?");
+            params.add(priceMin);
+            types.add(1);
+        }
+
+        if (priceMax != null) {
+            sql.append(" AND r.fascia_prezzo <= ?");
+            params.add(priceMax);
+            types.add(1);
+        }
+
+        if (delivery) sql.append(" AND r.servizio_delivery = TRUE");
+        if (online)   sql.append(" AND r.prenotazione_online = TRUE");
+
+        String starsSub = "(SELECT AVG(stelle) FROM recensioni WHERE id_ristorante = r.id)";
+        if (starsMin != null && starsMin > 0) {
+            sql.append(" AND ").append(starsSub).append(" >= ?");
+            params.add(starsMin);
+            types.add(2);
+        }
+        if (starsMax != null && starsMax > 0) {
+            sql.append(" AND ").append(starsSub).append(" <= ?");
+            params.add(starsMax);
+            types.add(2);
+        }
+
+        if (category != null) {
+            sql.append(" AND LOWER(r.tipo_cucina) LIKE LOWER(?)");
+            params.add("%" + category + "%");
+            types.add(3);
+        }
 
         try (Connection conn = connMgr.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+            PreparedStatement ps = conn.prepareStatement(sql.toString())) {
 
             int idx = 1;
-
-            if (lat != null && lon != null && rangeKm != null) {
-                ps.setDouble(idx++, lat);
-                ps.setDouble(idx++, lon);
-                ps.setDouble(idx++, rangeKm * 1000);
+            for (int i = 0; i < params.size(); i++) {
+                switch (types.get(i)) {
+                    case 1 -> ps.setInt(idx++, (int) params.get(i));
+                    case 2 -> ps.setDouble(idx++, (double) params.get(i));
+                    case 3 -> ps.setString(idx++, (String) params.get(i));
+                }
             }
-
-            if (priceMin != null) ps.setInt(idx++, priceMin);
-            if (priceMax != null) ps.setInt(idx++, priceMax);
-
-            if (starsMin != null) ps.setDouble(idx++, starsMin);
-            if (starsMax != null) ps.setDouble(idx++, starsMax);
-
-            if (favouriteUserId > 0) ps.setInt(idx++, favouriteUserId);
-
-            if (tipoCucina != null) ps.setString(idx++, "%" + tipoCucina + "%");
 
             try (ResultSet rs = ps.executeQuery()) {
                 rs.next();
-                return rs.getInt(1);
+                return rs.getInt("total");
             }
         }
     }
 
-    // ============================================================
-    //                    RECENSIONI
-    // ============================================================
 
-    public int getReviewsPageCount(int restId)
-            throws SQLException, InterruptedException {
+
+    public int getReviewsPageCount(int restId) throws SQLException, InterruptedException {
 
         String sql = """
             SELECT COUNT(*)
@@ -546,19 +622,24 @@ public class DBHandler implements QueryRestaurant, QueryUser {
             ps.setInt(1, restId);
 
             try (ResultSet rs = ps.executeQuery()) {
-                rs.next();
+                if (!rs.next()) return 0;
                 int total = rs.getInt(1);
                 return (int) Math.ceil(total / 10.0);
             }
         }
     }
 
-    public List<String[]> getReviews(int restId, int page)
-            throws SQLException, InterruptedException {
+    public String[][] getReviews(int restId, int page) throws SQLException, InterruptedException {
 
         String sql = """
             SELECT r.id, r.stelle, r.testo,
-                   (SELECT testo FROM risposte WHERE id_recensione = r.id LIMIT 1)
+                   COALESCE(
+                       (SELECT testo
+                        FROM risposte
+                        WHERE id_recensione = r.id
+                        LIMIT 1),
+                       NULL
+                   ) AS risposta
             FROM recensioni r
             WHERE r.id_ristorante = ?
             ORDER BY r.id DESC
@@ -575,21 +656,21 @@ public class DBHandler implements QueryRestaurant, QueryUser {
 
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
+                    String reply = rs.getString("risposta");
                     out.add(new String[]{
-                            Integer.toString(rs.getInt(1)),
-                            Integer.toString(rs.getInt(2)),
-                            rs.getString(3),
-                            rs.getString(4) == null ? "-" : rs.getString(4)
+                            Integer.toString(rs.getInt("id")),
+                            Integer.toString(rs.getInt("stelle")),
+                            rs.getString("testo"),
+                            reply
                     });
                 }
             }
 
-            return out;
+            return out.toArray(new String[0][]);
         }
     }
 
-    public String[] getMyReview(int userId, int restId)
-            throws SQLException, InterruptedException {
+    public String[] getMyReview(int userId, int restId) throws SQLException, InterruptedException {
 
         String sql = """
             SELECT stelle, testo
@@ -608,8 +689,8 @@ public class DBHandler implements QueryRestaurant, QueryUser {
                 if (!rs.next()) return null;
 
                 return new String[]{
-                        Integer.toString(rs.getInt(1)),
-                        rs.getString(2)
+                        Integer.toString(rs.getInt("stelle")),
+                        rs.getString("testo")
                 };
             }
         }
@@ -656,8 +737,7 @@ public class DBHandler implements QueryRestaurant, QueryUser {
         }
     }
 
-    public boolean removeReview(int userId, int restId)
-            throws SQLException, InterruptedException {
+    public boolean removeReview(int userId, int restId) throws SQLException, InterruptedException {
 
         String sql = """
             DELETE FROM recensioni
@@ -674,12 +754,29 @@ public class DBHandler implements QueryRestaurant, QueryUser {
         }
     }
 
-    // ============================================================
-    //                      RISPOSTE
-    // ============================================================
 
-    public String getResponse(int reviewId)
-            throws SQLException, InterruptedException {
+    public boolean canRespond(int userId, int reviewId) throws SQLException, InterruptedException {
+
+        String sql = """
+            SELECT 1
+            FROM recensioni r
+            JOIN "RistorantiTheKnife" t ON r.id_ristorante = t.id
+            WHERE r.id = ? AND t.proprietario = ?
+        """;
+
+        try (Connection conn = connMgr.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, reviewId);
+            ps.setInt(2, userId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
+    public String getResponse(int reviewId) throws SQLException, InterruptedException {
 
         String sql = """
             SELECT testo
@@ -694,14 +791,12 @@ public class DBHandler implements QueryRestaurant, QueryUser {
             ps.setInt(1, reviewId);
 
             try (ResultSet rs = ps.executeQuery()) {
-                if (!rs.next()) return null;
-                return rs.getString(1);
+                return rs.next() ? rs.getString(1) : null;
             }
         }
     }
 
-    public boolean addResponse(int reviewId, String text)
-            throws SQLException, InterruptedException {
+    public boolean addResponse(int reviewId, String text) throws SQLException, InterruptedException {
 
         String sql = """
             INSERT INTO risposte (id_recensione, testo)
@@ -718,8 +813,7 @@ public class DBHandler implements QueryRestaurant, QueryUser {
         }
     }
 
-    public boolean editResponse(int reviewId, String text)
-            throws SQLException, InterruptedException {
+    public boolean editResponse(int reviewId, String text) throws SQLException, InterruptedException {
 
         String sql = """
             UPDATE risposte
@@ -737,8 +831,7 @@ public class DBHandler implements QueryRestaurant, QueryUser {
         }
     }
 
-    public boolean removeResponse(int reviewId)
-            throws SQLException, InterruptedException {
+    public boolean removeResponse(int reviewId) throws SQLException, InterruptedException {
 
         String sql = """
             DELETE FROM risposte
@@ -749,16 +842,13 @@ public class DBHandler implements QueryRestaurant, QueryUser {
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setInt(1, reviewId);
+
             return ps.executeUpdate() == 1;
         }
     }
 
-    // ============================================================
-    //                      PREFERITI
-    // ============================================================
 
-    public boolean isFavourite(int userId, int restId)
-            throws SQLException, InterruptedException {
+    public boolean isFavourite(int userId, int restId) throws SQLException, InterruptedException {
 
         String sql = """
             SELECT 1
@@ -778,8 +868,7 @@ public class DBHandler implements QueryRestaurant, QueryUser {
         }
     }
 
-    public boolean addFavourite(int userId, int restId)
-            throws SQLException, InterruptedException {
+    public boolean addFavourite(int userId, int restId) throws SQLException, InterruptedException {
 
         String sql = """
             INSERT INTO preferiti (id_utente, id_ristorante)
@@ -796,8 +885,7 @@ public class DBHandler implements QueryRestaurant, QueryUser {
         }
     }
 
-    public boolean removeFavourite(int userId, int restId)
-            throws SQLException, InterruptedException {
+    public boolean removeFavourite(int userId, int restId) throws SQLException, InterruptedException {
 
         String sql = """
             DELETE FROM preferiti
@@ -814,12 +902,7 @@ public class DBHandler implements QueryRestaurant, QueryUser {
         }
     }
 
-    // ============================================================
-    //                  LE MIE RECENSIONI
-    // ============================================================
-
-    public int getUserReviewsPages(int userId)
-            throws SQLException, InterruptedException {
+    public int getUserReviewsPages(int userId) throws SQLException, InterruptedException {
 
         String sql = """
             SELECT COUNT(*)
@@ -833,20 +916,19 @@ public class DBHandler implements QueryRestaurant, QueryUser {
             ps.setInt(1, userId);
 
             try (ResultSet rs = ps.executeQuery()) {
-                rs.next();
+                if (!rs.next()) return 0;
                 int total = rs.getInt(1);
                 return (int) Math.ceil(total / 10.0);
             }
         }
     }
 
-    public String[][] getUserReviews(int userId, int page)
-            throws SQLException, InterruptedException {
+    public String[][] getUserReviews(int userId, int page) throws SQLException, InterruptedException {
 
         String sql = """
-            SELECT t.nome, r.stelle, r.testo
+            SELECT r2.nome, r.stelle, r.testo
             FROM recensioni r
-            JOIN "RistorantiTheKnife" t ON r.id_ristorante = t.id
+            JOIN "RistorantiTheKnife" r2 ON r.id_ristorante = r2.id
             WHERE r.id_utente = ?
             ORDER BY r.id DESC
             LIMIT 10 OFFSET ?
@@ -872,102 +954,5 @@ public class DBHandler implements QueryRestaurant, QueryUser {
 
             return out.toArray(new String[0][]);
         }
-    }
-
-    // ============================================================
-    //                  METODI PER I RISTORANTI DELL'UTENTE
-    // ============================================================
-
-    public int getMyRestaurantsPageCount(int userId)
-            throws SQLException, InterruptedException {
-
-        String sql = """
-            SELECT COUNT(*)
-            FROM "RistorantiTheKnife"
-            WHERE id_ristoratore = ?
-        """;
-
-        try (Connection conn = connMgr.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-
-            ps.setInt(1, userId);
-
-            try (ResultSet rs = ps.executeQuery()) {
-                rs.next();
-                int total = rs.getInt(1);
-                return (int) Math.ceil(total / 10.0);
-            }
-        }
-    }
-
-    public List<String[]> getMyRestaurants(int userId, int page)
-            throws SQLException, InterruptedException {
-
-        String sql = """
-            SELECT id, nome
-            FROM "RistorantiTheKnife"
-            WHERE id_ristoratore = ?
-            ORDER BY nome
-            LIMIT 10 OFFSET ?
-        """;
-
-        try (Connection conn = connMgr.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-
-            ps.setInt(1, userId);
-            ps.setInt(2, page * 10);
-
-            List<String[]> out = new ArrayList<>();
-
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    out.add(new String[]{
-                            Integer.toString(rs.getInt(1)),
-                            rs.getString(2)
-                    });
-                }
-            }
-
-            return out;
-        }
-    }
-
-    // Stub per metodi non implementati
-    @Override
-    public boolean addUser(String nome, String cognome, String username, String passwordHashed, Date dataNascita,
-            double lat, double lon, boolean isRistoratore) throws SQLException, InterruptedException {
-        throw new UnsupportedOperationException("Unimplemented method 'addUser'");
-    }
-
-    @Override
-    public boolean userExists(String username) throws SQLException, InterruptedException {
-        throw new UnsupportedOperationException("Unimplemented method 'userExists'");
-    }
-
-    @Override
-    public String[] getUserInfoById(int id) throws SQLException, InterruptedException {
-        throw new UnsupportedOperationException("Unimplemented method 'getUserInfoById'");
-    }
-
-    @Override
-    public boolean addRestaurant(int ownerId, String nome, String nazione, String citta, String indirizzo, double lat,
-            double lon, int fasciaPrezzo, boolean delivery, boolean online, String tipoCucina) throws SQLException {
-        throw new UnsupportedOperationException("Unimplemented method 'addRestaurant'");
-    }
-
-    @Override
-    public boolean editRestaurant(int id, String nome, String nazione, String citta, String indirizzo, double lat,
-            double lon, int fasciaPrezzo, boolean delivery, boolean online, String tipoCucina) throws SQLException {
-        throw new UnsupportedOperationException("Unimplemented method 'editRestaurant'");
-    }
-
-    @Override
-    public int getMyReviewsPageCount(int userId) throws SQLException, InterruptedException {
-        throw new UnsupportedOperationException("Unimplemented method 'getMyReviewsPageCount'");
-    }
-
-    @Override
-    public List<String[]> getMyReviews(int userId, int page) throws SQLException, InterruptedException {
-        throw new UnsupportedOperationException("Unimplemented method 'getMyReviews'");
     }
 }
