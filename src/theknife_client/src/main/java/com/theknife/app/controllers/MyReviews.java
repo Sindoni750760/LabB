@@ -5,6 +5,7 @@ import java.io.IOException;
 import com.theknife.app.ClientLogger;
 import com.theknife.app.Communicator;
 import com.theknife.app.SceneManager;
+import com.theknife.app.User;
 
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
@@ -34,6 +35,12 @@ public class MyReviews implements OnlineChecker {
 
     @FXML
     private void initialize() throws IOException {
+        if(!checkOnline()) return;
+        if(!User.isLoggedIn()){
+            SceneManager.setAppWarning("Devi effettuare il login per poter vedere le recensioni");
+            SceneManager.changeScene("App");
+            return;
+        }
         ClientLogger.getInstance().info("MyReviews initialized");
         current_page = 0;
 
@@ -101,9 +108,7 @@ public class MyReviews implements OnlineChecker {
     }
 
     private void changePage(int page) throws IOException {
-        if (!checkOnline()) {
-            return;
-        }
+        if (!checkOnline()) return;
 
         current_page = page;
 
