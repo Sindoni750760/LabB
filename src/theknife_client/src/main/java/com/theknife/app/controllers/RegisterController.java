@@ -62,9 +62,7 @@ public class RegisterController implements OnlineChecker {
 
     @FXML
     private void register() throws IOException {
-        if (!checkOnline()) {
-            return;
-        }
+        if (!checkOnline()) return;
 
         ClientLogger.getInstance().info("Attempting registration for user: " + username.getText());
 

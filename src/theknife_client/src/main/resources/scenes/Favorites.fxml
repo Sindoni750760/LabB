@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.layout.AnchorPane?>
+
+<AnchorPane prefWidth="600.0" prefHeight="400.0"
+            xmlns="http://javafx.com/javafx/19"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.theknife.app.controllers.FavouriteController"
+            stylesheets="/styles/style.css">
+
+    <children>
+
+        <Button layoutX="14" layoutY="14"
+                text="← Indietro"
+                onAction="#goBack"/>
+
+        <ListView fx:id="favourites_list"
+                  layoutX="50" layoutY="50"
+                  prefWidth="500" prefHeight="250"
+                  onMouseClicked="#checkSelected"
+                  onKeyPressed="#checkSelected"/>
+
+        <Button fx:id="remove_btn"
+                layoutX="50" layoutY="320"
+                text="Rimuovi dai preferiti"
+                disable="true"
+                onAction="#removeFavourite"/>
+
+        <Button fx:id="view_btn"
+                layoutX="230" layoutY="320"
+                text="Vedi ristorante"
+                disable="true"
+                onAction="#viewRestaurant"/>
+
+        <Label fx:id="notification_label"
+               layoutX="200" layoutY="350"
+               visible="false"
+               textFill="red"
+               text="Errore"/>
+
+    </children>
+</AnchorPane>

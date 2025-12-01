@@ -1,20 +1,15 @@
 package com.theknife.app.controllers;
 
-import java.io.IOException;
-
 import com.theknife.app.ClientLogger;
 import com.theknife.app.Communicator;
 import com.theknife.app.EditingRestaurant;
 import com.theknife.app.SceneManager;
 import com.theknife.app.User;
-
-import javafx.application.Platform;
 import javafx.fxml.FXML;
-import javafx.scene.control.Button;
-import javafx.scene.control.CheckBox;
-import javafx.scene.control.Label;
-import javafx.scene.control.ListView;
-import javafx.scene.control.TextField;
+import javafx.scene.Node;
+import javafx.scene.control.*;
+
+import java.io.IOException;
 
 /**
  * Controller per la schermata di visualizzazione dei ristoranti.
@@ -23,14 +18,8 @@ import javafx.scene.control.TextField;
  *
  * Implementa OnlineChecker per gestione unificata dei casi di server offline.
  */
+
 public class ViewRestaurants implements OnlineChecker {
-
-    private static boolean startFavoritesMode = false;
-
-    public static void openFavoritesFromApp() throws IOException {
-        startFavoritesMode = true;
-        SceneManager.changeScene("ViewRestaurants");
-    }
 
     private String[] restaurants_ids;
     private String[] restaurants_names;
@@ -38,58 +27,74 @@ public class ViewRestaurants implements OnlineChecker {
     private int pages;
     private int current_page;
 
-    private String latitude = "-",
-            longitude = "-",
-            range_km = "-",
-            price_min = "-",
-            price_max = "-",
-            has_delivery = "n",
-            has_online = "n",
-            stars_min = "-",
-            stars_max = "-",
-            only_favourites = "n",
-            category = null;
+    // Filtri logici
+    private String nation = "-";
+    private String city = "-";
+    private String price_min = "-";
+    private String price_max = "-";
+    private String stars_min = "-";
+    private String stars_max = "-";
+    private String category = null;
+    private String has_delivery = "n";
+    private String has_online = "n";
+    private String only_favourites = "n";
+    private String latitude = "-";
+    private String longitude = "-";
+    private String range_km = "-";
 
     @FXML private Label notification_label;
     @FXML private Label no_restaurants_label;
     @FXML private Label pages_label;
 
-    @FXML private TextField latitude_field, longitude_field, range_km_field,
-            price_min_field, price_max_field, stars_min_field, stars_max_field,
-            category_field;
+    @FXML private TextField nation_field;
+    @FXML private TextField city_field;
 
-    @FXML private CheckBox delivery_check, online_check, favourites_check, near_me_check;
+    @FXML private TextField latitude_field;
+    @FXML private TextField longitude_field;
+    @FXML private TextField range_km_field;
+
+    @FXML private TextField price_min_field;
+    @FXML private TextField price_max_field;
+
+    @FXML private TextField stars_min_field;
+    @FXML private TextField stars_max_field;
+
+    @FXML private TextField category_field;
+
+    @FXML private CheckBox delivery_check;
+    @FXML private CheckBox online_check;
+    @FXML private CheckBox favourites_check;
+    @FXML private CheckBox near_me_check;
 
     @FXML private ListView<String> restaurants_listview;
 
-    @FXML private Button prev_btn, next_btn, view_info_btn, clear_btn;
+    @FXML private Button prev_btn;
+    @FXML private Button next_btn;
+    @FXML private Button view_info_btn;
+    @FXML private Button clear_btn;
 
     @FXML
-    private void initialize() throws IOException {
+    private void initialize() {
         ClientLogger.getInstance().info("ViewRestaurants initialized");
 
         EditingRestaurant.reset();
 
+        // I filtri "solo preferiti" e "vicino a me" hanno senso solo da loggato
         if (User.getInfo() != null) {
             favourites_check.setVisible(true);
             near_me_check.setVisible(true);
+        } else {
+            favourites_check.setVisible(false);
+            near_me_check.setVisible(false);
         }
 
-        if (startFavoritesMode) {
-            only_favourites = "y";
-            favourites_check.setSelected(true);
-            startFavoritesMode = false;
-        }
-
-        Platform.runLater(() -> {
-            try {
-                searchPage(0);
-            } catch (IOException e) {
-                ClientLogger.getInstance().error(
-                        "Error loading restaurants in initialize: " + e.getMessage()
-                );
-            }
-        });
+        // All’avvio NON facciamo ricerche automatiche:
+        // l’utente deve prima inserire nazione + città e cliccare "Filtra".
+        pages_label.setText("-/-");
+        no_restaurants_label.setVisible(false);
+        view_info_btn.setDisable(true);
+        prev_btn.setDisable(true);
+        next_btn.setDisable(true);
     }
 
     private String filledOrDash(String s) {
@@ -100,38 +105,55 @@ public class ViewRestaurants implements OnlineChecker {
     private void updateFilters() throws IOException {
         hideNotification();
 
-        String lat = latitude_field.getText().trim();
-        String lon = longitude_field.getText().trim();
+        // Nazione + città obbligatorie (per le ricerche normali)
+        nation = nation_field.getText().trim();
+        city   = city_field.getText().trim();
+
+        if (nation.isEmpty() || city.isEmpty()) {
+            setNotification("Inserisci NAZIONE e CITTÀ per effettuare la ricerca.");
+            return;
+        }
+
+        // Gestione coordinate / raggio
+        String lat   = latitude_field.getText().trim();
+        String lon   = longitude_field.getText().trim();
         String range = range_km_field.getText().trim();
 
         if (near_me_check.isSelected()) {
-            latitude = "-";
+            latitude = "-";               // saranno prese dal profilo utente lato server
             longitude = "-";
             range_km = range.isEmpty() ? "-" : range;
         } else {
-
-            if (lat.isEmpty() && lon.isEmpty()) {
+            if (range.isEmpty()) {
+                // Nessun filtro di distanza
                 latitude = "-";
                 longitude = "-";
                 range_km = "-";
-            } else if (lat.isEmpty() || lon.isEmpty() || range.isEmpty()) {
-                setNotification("Inserisci latitudine, longitudine e raggio, oppure lascia tutto vuoto");
-                return;
             } else {
+                // Raggio presente → richiedo anche lat/lon
+                if (lat.isEmpty() || lon.isEmpty()) {
+                    setNotification("Per usare il raggio inserisci latitudine e longitudine, oppure lascia tutti e 3 i campi vuoti.");
+                    return;
+                }
                 latitude = lat;
                 longitude = lon;
                 range_km = range;
             }
         }
 
-        price_min = filledOrDash(price_min_field.getText());
-        price_max = filledOrDash(price_max_field.getText());
+        price_min = filledOrDash(price_min_field.getText().trim());
+        price_max = filledOrDash(price_max_field.getText().trim());
+
         has_delivery = delivery_check.isSelected() ? "y" : "n";
-        has_online = online_check.isSelected() ? "y" : "n";
-        stars_min = filledOrDash(stars_min_field.getText());
-        stars_max = filledOrDash(stars_max_field.getText());
+        has_online   = online_check.isSelected()   ? "y" : "n";
+
+        stars_min = filledOrDash(stars_min_field.getText().trim());
+        stars_max = filledOrDash(stars_max_field.getText().trim());
+
         only_favourites = favourites_check.isSelected() ? "y" : "n";
-        category = category_field.getText().isEmpty() ? null : category_field.getText();
+
+        String cat = category_field.getText().trim();
+        category = cat.isEmpty() ? null : cat;
 
         searchPage(0);
     }
@@ -143,32 +165,38 @@ public class ViewRestaurants implements OnlineChecker {
 
         current_page = page;
         no_restaurants_label.setVisible(false);
-
-        prev_btn.setDisable(true);
-        next_btn.setDisable(true);
-
         restaurants_listview.getItems().clear();
         pages_label.setText("-/-");
+        prev_btn.setDisable(true);
+        next_btn.setDisable(true);
+        view_info_btn.setDisable(true);
 
-        Communicator.send("getRestaurants");
-        Communicator.send(Integer.toString(page));
-        Communicator.send(latitude);
-        Communicator.send(longitude);
-        Communicator.send(range_km);
-        Communicator.send(price_min);
-        Communicator.send(price_max);
-        Communicator.send(has_delivery);
-        Communicator.send(has_online);
-        Communicator.send(stars_min);
-        Communicator.send(stars_max);
-        Communicator.send(only_favourites);
-
-        if (category == null) {
-            Communicator.send("n");
-        } else {
-            Communicator.send("y");
-            Communicator.send(category);
+        // Per la ricerca normale (non "solo preferiti") nazione + città sono obbligatorie
+        if (!"y".equals(only_favourites)) {
+            if (nation == null || nation.isBlank() ||
+                city == null   || city.isBlank()) {
+                setNotification("Inserisci NAZIONE e CITTÀ per effettuare la ricerca.");
+                return;
+            }
         }
+
+        // Invio del nuovo protocollo
+        Communicator.send("getRestaurants");
+        Communicator.send(Integer.toString(page));                  // page
+        Communicator.send(nation);                                  // nation
+        Communicator.send(city);                                    // city
+        Communicator.send(price_min);                               // priceMin
+        Communicator.send(price_max);                               // priceMax
+        Communicator.send(category == null ? "-" : category);       // category
+        Communicator.send(has_delivery);                            // delivery
+        Communicator.send(has_online);                              // online
+        Communicator.send(stars_min);                               // starsMin
+        Communicator.send(stars_max);                               // starsMax
+        Communicator.send(near_me_check.isSelected() ? "y" : "n");  // nearMe
+        Communicator.send(latitude);                                // lat
+        Communicator.send(longitude);                               // lon
+        Communicator.send(range_km);                                // rangeKm
+        Communicator.send(only_favourites);                         // onlyFav
 
         String response = Communicator.read();
 
@@ -179,9 +207,7 @@ public class ViewRestaurants implements OnlineChecker {
         }
 
         switch (response) {
-
-            case "ok":
-
+            case "ok" -> {
                 String pagesStr = Communicator.read();
                 if (pagesStr == null) {
                     fallback();
@@ -191,11 +217,12 @@ public class ViewRestaurants implements OnlineChecker {
 
                 if (pages < 1) {
                     no_restaurants_label.setVisible(true);
-                    Communicator.read(); // linea vuota inviata dal server
-                    break;
+                    // il server invia comunque una riga (che ignoriamo)
+                    Communicator.read();
+                    return;
                 }
 
-                if (page > 0) prev_btn.setDisable(false);
+                if (page > 0)         prev_btn.setDisable(false);
                 if (page + 1 < pages) next_btn.setDisable(false);
 
                 pages_label.setText((page + 1) + "/" + pages);
@@ -207,11 +234,11 @@ public class ViewRestaurants implements OnlineChecker {
                 }
 
                 int size = Integer.parseInt(sizeStr);
-                restaurants_ids = new String[size];
+                restaurants_ids   = new String[size];
                 restaurants_names = new String[size];
 
                 for (int i = 0; i < size; i++) {
-                    restaurants_ids[i] = Communicator.read();
+                    restaurants_ids[i]   = Communicator.read();
                     restaurants_names[i] = Communicator.read();
 
                     if (restaurants_ids[i] == null || restaurants_names[i] == null) {
@@ -221,25 +248,14 @@ public class ViewRestaurants implements OnlineChecker {
                 }
 
                 restaurants_listview.getItems().setAll(restaurants_names);
-                break;
-
-            case "coordinates":
-                setNotification("Coordinate non valide");
-                break;
-
-            case "price":
-                setNotification("Range di prezzo non valido");
-                break;
-
-            case "stars":
-                setNotification("Range di stelle non valido");
-                break;
-
-            default:
-                setNotification("Errore imprevisto dal server: " + response);
+                checkSelected();
+            }
+            case "coordinates" -> setNotification("Coordinate / raggio non validi.");
+            case "price"       -> setNotification("Range di prezzo non valido.");
+            case "stars"       -> setNotification("Range di stelle non valido.");
+            case "location"    -> setNotification("Nazione e città sono obbligatorie per la ricerca.");
+            default            -> setNotification("Errore imprevisto dal server: " + response);
         }
-
-        checkSelected();
     }
 
     @FXML
@@ -260,12 +276,16 @@ public class ViewRestaurants implements OnlineChecker {
 
     @FXML
     private void prevPage() throws IOException {
-        searchPage(--current_page);
+        if (current_page > 0) {
+            searchPage(--current_page);
+        }
     }
 
     @FXML
     private void nextPage() throws IOException {
-        searchPage(++current_page);
+        if (current_page + 1 < pages) {
+            searchPage(++current_page);
+        }
     }
 
     @FXML
@@ -277,10 +297,12 @@ public class ViewRestaurants implements OnlineChecker {
     @FXML
     private void viewRestaurantInfo() throws IOException {
         int index = restaurants_listview.getSelectionModel().getSelectedIndex();
-        int restaurant_id = Integer.parseInt(restaurants_ids[index]);
+        if (index < 0) return;
 
+        int restaurant_id = Integer.parseInt(restaurants_ids[index]);
         EditingRestaurant.setEditing(restaurant_id);
 
+        SceneManager.setPreviousNavigation("ViewRestaurants");
         SceneManager.changeScene("ViewRestaurantInfo");
     }
 
@@ -290,7 +312,8 @@ public class ViewRestaurants implements OnlineChecker {
     }
 
     @FXML
-    private void clearFilters() throws IOException {
+    private void clearFilters() {
+        // NON azzero nazione/città: restano il contesto della ricerca
         latitude_field.clear();
         longitude_field.clear();
         range_km_field.clear();
@@ -304,22 +327,31 @@ public class ViewRestaurants implements OnlineChecker {
         online_check.setSelected(false);
         favourites_check.setSelected(false);
         near_me_check.setSelected(false);
+        handleCoordinates(); // riabilita i campi coord
 
         latitude = longitude = range_km = "-";
-        price_min = price_max = stars_min = stars_max = "-";
-        has_delivery = has_online = only_favourites = "n";
+        price_min = price_max = "-";
+        stars_min = stars_max = "-";
+        has_delivery = has_online = "n";
+        only_favourites = "n";
         category = null;
 
         hideNotification();
-
-        searchPage(0);
+        restaurants_listview.getItems().clear();
+        pages_label.setText("-/-");
+        no_restaurants_label.setVisible(false);
+        prev_btn.setDisable(true);
+        next_btn.setDisable(true);
+        view_info_btn.setDisable(true);
     }
 
     @Override
-    public javafx.scene.Node[] getInteractiveNodes() {
-        return new javafx.scene.Node[]{
+    public Node[] getInteractiveNodes() {
+        return new Node[]{
+                nation_field, city_field,
                 latitude_field, longitude_field, range_km_field,
-                price_min_field, price_max_field, stars_min_field, stars_max_field,
+                price_min_field, price_max_field,
+                stars_min_field, stars_max_field,
                 category_field,
                 delivery_check, online_check, favourites_check, near_me_check,
                 restaurants_listview,

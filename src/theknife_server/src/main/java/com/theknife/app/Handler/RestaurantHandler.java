@@ -221,48 +221,60 @@ public class RestaurantHandler implements CommandHandler {
     }
 
     private void handleDeleteRestaurant(ClientContext ctx)
-            throws IOException, SQLException, InterruptedException {
+                throws IOException, SQLException, InterruptedException {
 
-        int restId = Integer.parseInt(ctx.read());
-        int userId = ctx.getLoggedUserId();
+            int restId = Integer.parseInt(ctx.read());
+            int userId = ctx.getLoggedUserId();
 
-        if (!db.hasAccess(userId, restId)) {
-            ctx.write("denied");
-            return;
+            if (!db.hasAccess(userId, restId)) {
+                ctx.write("denied");
+                return;
+            }
+
+            boolean ok = db.deleteRestaurant(restId);
+            ctx.write(ok ? "ok" : "error");
         }
 
-        boolean ok = db.deleteRestaurant(restId);
-        ctx.write(ok ? "ok" : "error");
-    }
-
-    private void handleGetRestaurants(ClientContext ctx)
+        private void handleGetRestaurants(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
 
         int page = Integer.parseInt(ctx.read());
 
-        String latStr    = ctx.read();
-        String lonStr    = ctx.read();
-        String rangeStr  = ctx.read();
-
+        String nation      = ctx.read();
+        String city        = ctx.read();
         String priceMinStr = ctx.read();
         String priceMaxStr = ctx.read();
-
+        String categoryStr = ctx.read();
         String deliveryStr = ctx.read();
         String onlineStr   = ctx.read();
-
         String starsMinStr = ctx.read();
         String starsMaxStr = ctx.read();
-
+        String nearMeStr   = ctx.read();
+        String latStr      = ctx.read();
+        String lonStr      = ctx.read();
+        String rangeStr    = ctx.read();
         String onlyFavStr  = ctx.read();
 
-        String hasCategory = ctx.read();
-        String category = null;
-        if ("y".equals(hasCategory)) {
-            category = ctx.read();
+        boolean onlyFav = "y".equals(onlyFavStr);
+        int favUserId   = onlyFav ? ctx.getLoggedUserId() : -1;
+
+        if (!onlyFav) {
+            if ((nation == null || nation.isBlank() || "-".equals(nation)) &&
+                (city == null || city.isBlank() || "-".equals(city))) {
+                nation = null;
+                city = null;
+            }
+        } else {
+            if (nation == null || nation.isBlank() || "-".equals(nation)) {
+                nation = null;
+            }
+            if (city == null || city.isBlank() || "-".equals(city)) {
+                city = null;
+            }
         }
 
-        //COORDINATE / NEAR ME
         Double lat = null, lon = null, rangeKm = null;
+        boolean nearMe = "y".equals(nearMeStr);
 
         if (!"-".equals(rangeStr)) {
             try {
@@ -276,8 +288,7 @@ public class RestaurantHandler implements CommandHandler {
                 return;
             }
 
-            if ("-".equals(latStr) && "-".equals(lonStr)) {
-                // modalità "vicino a me": uso le coordinate dell'utente
+            if (nearMe) {
                 double[] pos = db.getUserPosition(ctx.getLoggedUserId());
                 if (pos == null) {
                     ctx.write("coordinates");
@@ -286,6 +297,10 @@ public class RestaurantHandler implements CommandHandler {
                 lat = pos[0];
                 lon = pos[1];
             } else {
+                if ("-".equals(latStr) || "-".equals(lonStr)) {
+                    ctx.write("coordinates");
+                    return;
+                }
                 try {
                     lat = Double.parseDouble(latStr);
                     lon = Double.parseDouble(lonStr);
@@ -296,6 +311,7 @@ public class RestaurantHandler implements CommandHandler {
             }
         }
 
+        // Prezzo
         Integer priceMin = null, priceMax = null;
         try {
             if (!"-".equals(priceMinStr)) priceMin = Integer.parseInt(priceMinStr);
@@ -317,6 +333,7 @@ public class RestaurantHandler implements CommandHandler {
             return;
         }
 
+        // Stelle
         Double starsMin = null, starsMax = null;
         try {
             if (!"-".equals(starsMinStr)) starsMin = Double.parseDouble(starsMinStr);
@@ -341,11 +358,14 @@ public class RestaurantHandler implements CommandHandler {
         boolean delivery = "y".equals(deliveryStr);
         boolean online   = "y".equals(onlineStr);
 
-        boolean onlyFav = "y".equals(onlyFavStr);
-        int favUserId = onlyFav ? ctx.getLoggedUserId() : -1;
+        String category = null;
+        if (categoryStr != null && !categoryStr.isBlank() && !"-".equals(categoryStr)) {
+            category = categoryStr;
+        }
 
         String[][] data = db.getRestaurantsWithFilter(
                 page,
+                nation, city,
                 lat, lon, rangeKm,
                 priceMin, priceMax,
                 delivery, online,
@@ -355,14 +375,15 @@ public class RestaurantHandler implements CommandHandler {
         );
 
         ctx.write("ok");
-        ctx.write(data[0][0]); 
-        ctx.write(data[0][1]); 
+        ctx.write(data[0][0]); // pages
+        ctx.write(data[0][1]); // size
 
         for (int i = 1; i < data.length; i++) {
-            ctx.write(data[i][0]);
-            ctx.write(data[i][1]);
+            ctx.write(data[i][0]); // id
+            ctx.write(data[i][1]); // nome
         }
     }
+
 
     private void handleGetRestaurantInfo(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {

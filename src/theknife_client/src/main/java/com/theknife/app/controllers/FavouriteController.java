@@ -109,7 +109,6 @@ public class FavouriteController implements OnlineChecker {
             return;
         }
 
-        // aggiorna cache locale senza nuova query
         List<String> names = new ArrayList<>(Arrays.asList(fav_names));
         List<String> ids = new ArrayList<>(Arrays.asList(fav_ids));
         names.remove(index);

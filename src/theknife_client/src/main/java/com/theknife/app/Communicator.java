@@ -73,16 +73,17 @@ public class Communicator {
     /**
      * Invia una riga al server.
      */
-    public static void send(String msg) throws IOException {
+    public static boolean send(String msg){
         try {
             ClientLogger.getInstance().info("Communicator.send() - Sending: " + msg);
             writer.write(msg + "\n");
             writer.flush();
+            return true;
 
         } catch (IOException e) {
             ClientLogger.getInstance().error("Communicator.send() - Error: " + e.getMessage());
             serverReachable = false;
-            throw e;
+            return false;
         }
     }
 
@@ -90,7 +91,7 @@ public class Communicator {
      * Legge una riga dal server.
      * Se arriva null, significa che il server si è disconnesso.
      */
-    public static String read() throws IOException {
+    public static String read(){
         try {
             String msg = reader.readLine();
             ClientLogger.getInstance().info("Communicator.read() - Received: " + msg);
@@ -107,7 +108,7 @@ public class Communicator {
             ClientLogger.getInstance().error("Communicator.read() - Error: " + e.getMessage());
             serverReachable = false;
             close();
-            throw e;
+            return null;
         }
     }
 

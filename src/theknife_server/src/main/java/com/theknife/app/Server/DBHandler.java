@@ -362,250 +362,254 @@ public class DBHandler{
             }
         }
 
-        public String[][] getRestaurantsWithFilter(int page,
-                                            Double lat, Double lon, Double rangeKm,
-                                            Integer priceMin, Integer priceMax,
-                                            boolean delivery, boolean online,
-                                            Double starsMin, Double starsMax,
-                                            int favouriteUserId,
-                                            String category)
-            throws SQLException, InterruptedException {
+        public String[][] getRestaurantsWithFilter(
+                int page,
+                String nation,
+                String city,
+                Double lat, Double lon, Double rangeKm,
+                Integer priceMin, Integer priceMax,
+                boolean delivery, boolean online,
+                Double starsMin, Double starsMax,
+                int favouriteUserId,
+                String category
+        ) throws SQLException, InterruptedException {
 
-        StringBuilder sql = new StringBuilder("""
-            SELECT r.id, r.nome
-            FROM "RistorantiTheKnife" r
-        """);
-
-        List<Object> params = new ArrayList<>();
-        List<Integer> paramTypes = new ArrayList<>(); // 1=int, 2=double, 3=string
-
-        if (favouriteUserId > 0) {
-            sql.append("""
-                JOIN preferiti p ON p.id_ristorante = r.id
-                WHERE p.id_utente = ?
-            """);
-            params.add(favouriteUserId);
-            paramTypes.add(1);
-        } else {
-            sql.append(" WHERE 1 = 1");
-        }
-
-        if (lat != null && lon != null && rangeKm != null && rangeKm > 0) {
-
-            double rangeDegree = rangeKm / 111.0;
-
-            sql.append("""
-                AND SQRT(
-                        (r.latitudine - ?) * (r.latitudine - ?) +
-                        (r.longitudine - ?) * (r.longitudine - ?)
-                    ) <= ?
+            StringBuilder sql = new StringBuilder("""
+                SELECT r.id, r.nome
+                FROM "RistorantiTheKnife" r
             """);
 
-            params.add(lat);
-            paramTypes.add(2);
+            List<Object> params = new ArrayList<>();
+            List<Integer> types = new ArrayList<>(); // 1=int, 2=double, 3=string
 
-            params.add(lat);
-            paramTypes.add(2);
+            if (favouriteUserId > 0) {
+                sql.append("""
+                    JOIN preferiti p ON p.id_ristorante = r.id
+                    WHERE p.id_utente = ?
+                """);
+                params.add(favouriteUserId);
+                types.add(1);
+            } else {
+                sql.append(" WHERE 1 = 1");
+            }
 
-            params.add(lon);
-            paramTypes.add(2);
+            // Filtri per nazione/città, se presenti
+            if (nation != null && !nation.isBlank()) {
+                sql.append(" AND LOWER(r.nazione) = LOWER(?)");
+                params.add(nation);
+                types.add(3);
+            }
+            if (city != null && !city.isBlank()) {
+                sql.append(" AND LOWER(r.citta) = LOWER(?)");
+                params.add(city);
+                types.add(3);
+            }
 
-            params.add(lon);
-            paramTypes.add(2);
+            // Distanza
+            if (lat != null && lon != null && rangeKm != null && rangeKm > 0) {
+                double rangeDegree = rangeKm / 111.0;
+                sql.append("""
+                    AND SQRT(
+                            (r.latitudine - ?) * (r.latitudine - ?) +
+                            (r.longitudine - ?) * (r.longitudine - ?)
+                        ) <= ?
+                """);
+                params.add(lat);  types.add(2);
+                params.add(lat);  types.add(2);
+                params.add(lon);  types.add(2);
+                params.add(lon);  types.add(2);
+                params.add(rangeDegree); types.add(2);
+            }
 
-            params.add(rangeDegree);
-            paramTypes.add(2);
+            if (priceMin != null) {
+                sql.append(" AND r.fascia_prezzo >= ?");
+                params.add(priceMin);
+                types.add(1);
+            }
+            if (priceMax != null) {
+                sql.append(" AND r.fascia_prezzo <= ?");
+                params.add(priceMax);
+                types.add(1);
+            }
+
+            if (delivery) sql.append(" AND r.servizio_delivery = TRUE");
+            if (online)   sql.append(" AND r.prenotazione_online = TRUE");
+
+            String starsSubquery = "(SELECT AVG(stelle) FROM recensioni WHERE id_ristorante = r.id)";
+            if (starsMin != null && starsMin > 0) {
+                sql.append(" AND ").append(starsSubquery).append(" >= ?");
+                params.add(starsMin);
+                types.add(2);
+            }
+            if (starsMax != null && starsMax > 0) {
+                sql.append(" AND ").append(starsSubquery).append(" <= ?");
+                params.add(starsMax);
+                types.add(2);
+            }
+
+            if (category != null) {
+                sql.append(" AND LOWER(r.tipo_cucina) LIKE LOWER(?)");
+                params.add("%" + category + "%");
+                types.add(3);
+            }
+
+            sql.append(" ORDER BY r.nome LIMIT 10 OFFSET ?");
+            params.add(page * 10);
+            types.add(1);
+
+            try (Connection conn = connMgr.getConnection();
+                PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+
+                int idx = 1;
+                for (int i = 0; i < params.size(); i++) {
+                    switch (types.get(i)) {
+                        case 1 -> ps.setInt(idx++, (int) params.get(i));
+                        case 2 -> ps.setDouble(idx++, (double) params.get(i));
+                        case 3 -> ps.setString(idx++, (String) params.get(i));
+                    }
+                }
+
+                List<String[]> results = new ArrayList<>();
+
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        results.add(new String[]{
+                                Integer.toString(rs.getInt("id")),
+                                rs.getString("nome")
+                        });
+                    }
+                }
+
+                int total = countRestaurantsWithFilter(
+                        nation, city,
+                        lat, lon, rangeKm,
+                        priceMin, priceMax,
+                        delivery, online,
+                        starsMin, starsMax,
+                        favouriteUserId,
+                        category
+                );
+
+                int pages = (int) Math.ceil(total / 10.0);
+
+                String[][] out = new String[results.size() + 1][2];
+                out[0][0] = Integer.toString(pages);
+                out[0][1] = Integer.toString(results.size());
+
+                for (int i = 0; i < results.size(); i++) {
+                    out[i + 1] = results.get(i);
+                }
+
+                return out;
+            }
         }
 
-        if (priceMin != null) {
-            sql.append(" AND r.fascia_prezzo >= ?");
-            params.add(priceMin);
-            paramTypes.add(1);
-        }
+        private int countRestaurantsWithFilter(
+                String nation,
+                String city,
+                Double lat, Double lon, Double rangeKm,
+                Integer priceMin, Integer priceMax,
+                boolean delivery, boolean online,
+                Double starsMin, Double starsMax,
+                int favouriteUserId,
+                String category
+        ) throws SQLException {
 
-        if (priceMax != null) {
-            sql.append(" AND r.fascia_prezzo <= ?");
-            params.add(priceMax);
-            paramTypes.add(1);
-        }
+            StringBuilder sql = new StringBuilder("""
+                SELECT COUNT(*) AS total
+                FROM "RistorantiTheKnife" r
+            """);
 
-        if (delivery) sql.append(" AND r.servizio_delivery = TRUE");
-        if (online)   sql.append(" AND r.prenotazione_online = TRUE");
+            List<Object> params = new ArrayList<>();
+            List<Integer> types = new ArrayList<>();
 
-        String starsSubquery = "(SELECT AVG(stelle) FROM recensioni WHERE id_ristorante = r.id)";
+            if (favouriteUserId > 0) {
+                sql.append("""
+                    JOIN preferiti p ON p.id_ristorante = r.id
+                    WHERE p.id_utente = ?
+                """);
+                params.add(favouriteUserId);
+                types.add(1);
+            } else {
+                sql.append(" WHERE 1 = 1");
+            }
 
-        if (starsMin != null && starsMin > 0) {
-            sql.append(" AND ").append(starsSubquery).append(" >= ?");
-            params.add(starsMin);
-            paramTypes.add(2);
-        }
+            if (nation != null && !nation.isBlank()) {
+                sql.append(" AND LOWER(r.nazione) = LOWER(?)");
+                params.add(nation);
+                types.add(3);
+            }
+            if (city != null && !city.isBlank()) {
+                sql.append(" AND LOWER(r.citta) = LOWER(?)");
+                params.add(city);
+                types.add(3);
+            }
 
-        if (starsMax != null && starsMax > 0) {
-            sql.append(" AND ").append(starsSubquery).append(" <= ?");
-            params.add(starsMax);
-            paramTypes.add(2);
-        }
+            if (lat != null && lon != null && rangeKm != null && rangeKm > 0) {
+                double rangeDegree = rangeKm / 111.0;
+                sql.append("""
+                    AND SQRT(
+                            (r.latitudine - ?) * (r.latitudine - ?) +
+                            (r.longitudine - ?) * (r.longitudine - ?)
+                        ) <= ?
+                """);
+                params.add(lat);  types.add(2);
+                params.add(lat);  types.add(2);
+                params.add(lon);  types.add(2);
+                params.add(lon);  types.add(2);
+                params.add(rangeDegree); types.add(2);
+            }
 
-        if (category != null) {
-            sql.append(" AND LOWER(r.tipo_cucina) LIKE LOWER(?)");
-            params.add("%" + category + "%");
-            paramTypes.add(3);
-        }
+            if (priceMin != null) {
+                sql.append(" AND r.fascia_prezzo >= ?");
+                params.add(priceMin);
+                types.add(1);
+            }
+            if (priceMax != null) {
+                sql.append(" AND r.fascia_prezzo <= ?");
+                params.add(priceMax);
+                types.add(1);
+            }
 
-        sql.append(" ORDER BY r.nome LIMIT 10 OFFSET ?");
+            if (delivery) sql.append(" AND r.servizio_delivery = TRUE");
+            if (online)   sql.append(" AND r.prenotazione_online = TRUE");
 
-        params.add(page * 10);
-        paramTypes.add(1);
+            String starsSub = "(SELECT AVG(stelle) FROM recensioni WHERE id_ristorante = r.id)";
+            if (starsMin != null && starsMin > 0) {
+                sql.append(" AND ").append(starsSub).append(" >= ?");
+                params.add(starsMin);
+                types.add(2);
+            }
+            if (starsMax != null && starsMax > 0) {
+                sql.append(" AND ").append(starsSub).append(" <= ?");
+                params.add(starsMax);
+                types.add(2);
+            }
 
-        try (Connection conn = connMgr.getConnection();
-            PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+            if (category != null) {
+                sql.append(" AND LOWER(r.tipo_cucina) LIKE LOWER(?)");
+                params.add("%" + category + "%");
+                types.add(3);
+            }
 
-            // Set dei parametri
-            int idx = 1;
-            for (int i = 0; i < params.size(); i++) {
-                switch (paramTypes.get(i)) {
-                    case 1 -> ps.setInt(idx++, (int) params.get(i));
-                    case 2 -> ps.setDouble(idx++, (double) params.get(i));
-                    case 3 -> ps.setString(idx++, (String) params.get(i));
+            try (Connection conn = connMgr.getConnection();
+                PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+
+                int idx = 1;
+                for (int i = 0; i < params.size(); i++) {
+                    switch (types.get(i)) {
+                        case 1 -> ps.setInt(idx++, (int) params.get(i));
+                        case 2 -> ps.setDouble(idx++, (double) params.get(i));
+                        case 3 -> ps.setString(idx++, (String) params.get(i));
+                    }
+                }
+
+                try (ResultSet rs = ps.executeQuery()) {
+                    rs.next();
+                    return rs.getInt("total");
                 }
             }
-
-            List<String[]> results = new ArrayList<>();
-
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    results.add(new String[]{
-                            Integer.toString(rs.getInt("id")),
-                            rs.getString("nome")
-                    });
-                }
-            }
-
-            // Conteggio totale con gli stessi filtri
-            int total = countRestaurantsWithFilter(
-                    lat, lon, rangeKm,
-                    priceMin, priceMax,
-                    delivery, online,
-                    starsMin, starsMax,
-                    favouriteUserId,
-                    category
-            );
-
-            int pages = (int) Math.ceil(total / 10.0);
-
-            String[][] out = new String[results.size() + 1][2];
-            out[0][0] = Integer.toString(pages);
-            out[0][1] = Integer.toString(results.size());
-
-            for (int i = 0; i < results.size(); i++) {
-                out[i + 1] = results.get(i);
-            }
-
-            return out;
         }
-    }
-
-    private int countRestaurantsWithFilter(Double lat, Double lon, Double rangeKm,
-                                       Integer priceMin, Integer priceMax,
-                                       boolean delivery, boolean online,
-                                       Double starsMin, Double starsMax,
-                                       int favouriteUserId,
-                                       String category)
-            throws SQLException {
-
-        StringBuilder sql = new StringBuilder("""
-            SELECT COUNT(*) AS total
-            FROM "RistorantiTheKnife" r
-        """);
-
-        List<Object> params = new ArrayList<>();
-        List<Integer> types = new ArrayList<>();
-
-        // --------------------------
-        // Preferiti
-        // --------------------------
-        if (favouriteUserId > 0) {
-            sql.append("""
-                JOIN preferiti p ON p.id_ristorante = r.id
-                WHERE p.id_utente = ?
-            """);
-            params.add(favouriteUserId);
-            types.add(1);
-        } else {
-            sql.append(" WHERE 1 = 1");
-        }
-
-        // --------------------------
-        // Distanza (euclidea)
-        // --------------------------
-        if (lat != null && lon != null && rangeKm != null && rangeKm > 0) {
-            double rangeDegree = rangeKm / 111.0;
-            sql.append("""
-                AND SQRT(
-                        (r.latitudine - ?) * (r.latitudine - ?) +
-                        (r.longitudine - ?) * (r.longitudine - ?)
-                    ) <= ?
-            """);
-
-            params.add(lat);  types.add(2);
-            params.add(lat);  types.add(2);
-            params.add(lon);  types.add(2);
-            params.add(lon);  types.add(2);
-            params.add(rangeDegree); types.add(2);
-        }
-
-        if (priceMin != null) {
-            sql.append(" AND r.fascia_prezzo >= ?");
-            params.add(priceMin);
-            types.add(1);
-        }
-
-        if (priceMax != null) {
-            sql.append(" AND r.fascia_prezzo <= ?");
-            params.add(priceMax);
-            types.add(1);
-        }
-
-        if (delivery) sql.append(" AND r.servizio_delivery = TRUE");
-        if (online)   sql.append(" AND r.prenotazione_online = TRUE");
-
-        String starsSub = "(SELECT AVG(stelle) FROM recensioni WHERE id_ristorante = r.id)";
-        if (starsMin != null && starsMin > 0) {
-            sql.append(" AND ").append(starsSub).append(" >= ?");
-            params.add(starsMin);
-            types.add(2);
-        }
-        if (starsMax != null && starsMax > 0) {
-            sql.append(" AND ").append(starsSub).append(" <= ?");
-            params.add(starsMax);
-            types.add(2);
-        }
-
-        if (category != null) {
-            sql.append(" AND LOWER(r.tipo_cucina) LIKE LOWER(?)");
-            params.add("%" + category + "%");
-            types.add(3);
-        }
-
-        try (Connection conn = connMgr.getConnection();
-            PreparedStatement ps = conn.prepareStatement(sql.toString())) {
-
-            int idx = 1;
-            for (int i = 0; i < params.size(); i++) {
-                switch (types.get(i)) {
-                    case 1 -> ps.setInt(idx++, (int) params.get(i));
-                    case 2 -> ps.setDouble(idx++, (double) params.get(i));
-                    case 3 -> ps.setString(idx++, (String) params.get(i));
-                }
-            }
-
-            try (ResultSet rs = ps.executeQuery()) {
-                rs.next();
-                return rs.getInt("total");
-            }
-        }
-    }
-
 
 
     public int getReviewsPageCount(int restId) throws SQLException, InterruptedException {

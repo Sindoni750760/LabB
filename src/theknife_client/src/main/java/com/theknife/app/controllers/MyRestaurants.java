@@ -65,9 +65,8 @@ public class MyRestaurants implements OnlineChecker {
     }
 
     private void changePage(int page) throws IOException {
-        if (!checkOnline()) {
-            return;
-        }
+        if (!checkOnline()) return;
+        
 
         current_page = page;
 
@@ -128,6 +127,7 @@ public class MyRestaurants implements OnlineChecker {
 
     @FXML
     private void editSelected() throws IOException {
+        if (!checkOnline()) return;
         int id = restaurants_ids[restaurants_container.getSelectionModel().getSelectedIndex()];
         EditingRestaurant.setEditing(id);
         SceneManager.changeScene("EditRestaurant");
@@ -135,6 +135,7 @@ public class MyRestaurants implements OnlineChecker {
 
     @FXML
     private void viewReviews() throws IOException {
+        if(!checkOnline()) return;
         int id = restaurants_ids[restaurants_container.getSelectionModel().getSelectedIndex()];
         EditingRestaurant.setEditing(id);
         SceneManager.changeScene("RestaurantReviews");

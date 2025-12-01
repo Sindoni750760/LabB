@@ -82,9 +82,7 @@ public class EditRestaurant implements OnlineChecker {
      */
     @FXML
     private void updateRestaurant() throws IOException {
-        if (!checkOnline()) {
-            return;
-        }
+        if (!checkOnline()) return;
 
         ClientLogger.getInstance().info("Updating restaurant, editing_id: " + editing_id);
 
@@ -179,9 +177,7 @@ public class EditRestaurant implements OnlineChecker {
      */
     @FXML
     private void deleteRestaurant() throws IOException {
-        if (!checkOnline()) {
-            return;
-        }
+        if (!checkOnline()) return;
 
         ClientLogger.getInstance().info("Deleting restaurant, editing_id: " + editing_id);
 

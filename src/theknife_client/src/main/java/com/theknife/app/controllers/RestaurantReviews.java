@@ -146,6 +146,7 @@ public class RestaurantReviews implements OnlineChecker {
        ===================================================================== */
 
     private void loadTotalPages() throws IOException {
+        if(!checkOnline()) return;
         Communicator.send("getReviewsPages");
         Communicator.send(Integer.toString(EditingRestaurant.getId()));
 
@@ -232,6 +233,7 @@ public class RestaurantReviews implements OnlineChecker {
 
     @FXML
     private void addReview() throws IOException {
+        if (!checkOnline()) return;
         if (is_restaurateur) {
             int index = reviews_listview.getSelectionModel().getSelectedIndex();
             if (index >= 0)

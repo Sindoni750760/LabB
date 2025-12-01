@@ -36,9 +36,8 @@ public class LoginController implements OnlineChecker {
 
     @FXML
     private void login() throws IOException {
-        if (!checkOnline()) {
-            return;
-        }
+        if (!checkOnline()) return;
+        
 
         ClientLogger.getInstance().info("Attempting login for user: " + username.getText());
 
