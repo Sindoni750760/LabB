@@ -91,8 +91,7 @@ public class ClientContext {
     public String read() throws IOException {
         String msg = in.readLine();
         if (msg != null) {
-            System.out.println("[Client " + socket.getInetAddress() + " IN] " + msg);
-        }
+            System.out.println("[Client " + socket.getInetAddress() + " IN] " + msg);        }
         return msg;
     }
 
