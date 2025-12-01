@@ -1,157 +1,113 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.scene.control.Button?>
-<?import javafx.scene.control.CheckBox?>
-<?import javafx.scene.control.Label?>
-<?import javafx.scene.control.ListView?>
-<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.*?>
 <?import javafx.scene.layout.AnchorPane?>
 
-<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity"
-            prefHeight="400.0" prefWidth="600.0"
+<AnchorPane prefWidth="800" prefHeight="500"
             xmlns="http://javafx.com/javafx/19"
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.theknife.app.controllers.ViewRestaurants"
             stylesheets="/styles/style.css">
+
+    <!-- LEFT SIDE FILTER COLUMN -->
     <children>
 
-        <!-- Back button -->
-        <Button layoutX="14.0" layoutY="14.0"
-                mnemonicParsing="false"
-                onAction="#goBack"
-                text="Indietro" />
+        <!-- BACK BUTTON -->
+        <Button layoutX="10" layoutY="10" text="Indietro" onAction="#goBack"/>
 
-        <!-- Filter button -->
-        <Button layoutX="78.0" layoutY="14.0"
-                fx:id="filter_btn"
-                mnemonicParsing="false"
-                onAction="#updateFilters"
-                text="Filtra" />
+        <!-- FILTER BUTTON -->
+        <Button layoutX="85" layoutY="10" text="Filtra" onAction="#updateFilters"/>
 
-        <!-- Clear Filters button -->
-        <Button layoutX="138.0" layoutY="14.0"
+        <!-- CLEAR FILTERS -->
+        <Button layoutX="145" layoutY="10"
                 fx:id="clear_btn"
-                mnemonicParsing="false"
-                onAction="#clearFilters"
-                text="Rimuovi filtri" />
+                text="Rimuovi filtri"
+                onAction="#clearFilters"/>
 
-        <!-- Nation / City -->
-        <Label layoutX="14.0" layoutY="45.0" text="Nazione" />
-        <TextField fx:id="nation_field"
-                   layoutX="14.0" layoutY="65.0"
-                   promptText="Italia" />
+        <!-- MAIN FILTER COLUMN -->
+        <TextField fx:id="field1_input"
+           layoutX="20" layoutY="75"
+           prefWidth="160"
+           promptText="45.4642 oppure Nazione/">
+           
+        <TextField fx:id="field2_input"
+                layoutX="20" layoutY="130"
+                prefWidth="160"
+                promptText="9.1900 oppure Città"/>
 
-        <Label layoutX="14.0" layoutY="95.0" text="Città" />
-        <TextField fx:id="city_field"
-                   layoutX="14.0" layoutY="115.0"
-                   promptText="Milano" />
 
-        <!-- Latitude / Longitude / Range -->
-        <Label layoutX="14.0" layoutY="145.0" text="Latitudine" />
-        <TextField fx:id="latitude_field"
-                   layoutX="14.0" layoutY="165.0"
-                   promptText="45.7981484" />
+        <Label layoutX="20" layoutY="165" text="Raggio (km)"/>
+        <TextField fx:id="range_field"
+                   layoutX="20" layoutY="185" prefWidth="160"
+                   promptText="10"/>
 
-        <Label layoutX="14.0" layoutY="195.0" text="Longitudine" />
-        <TextField fx:id="longitude_field"
-                   layoutX="14.0" layoutY="215.0"
-                   promptText="8.8482614" />
-
-        <Label layoutX="14.0" layoutY="245.0" text="Raggio (km)" />
-        <TextField fx:id="range_km_field"
-                   layoutX="14.0" layoutY="265.0"
-                   promptText="10.0" />
-
-        <CheckBox fx:id="near_me_check"
-                  layoutX="110.0" layoutY="245.0"
-                  mnemonicParsing="false"
-                  onAction="#handleCoordinates"
-                  text="Vicino a me"
-                  visible="false" />
-
-        <!-- Price -->
-        <Label layoutX="14.0" layoutY="295.0" text="Prezzo medio (€)" />
+        <Label layoutX="20" layoutY="220" text="Prezzo medio (€)"/>
         <TextField fx:id="price_min_field"
-                   layoutX="14.0" layoutY="315.0"
-                   prefHeight="25.0" prefWidth="50.0"
-                   promptText="Min" />
+                   layoutX="20" layoutY="245" prefWidth="70" promptText="Min"/>
         <TextField fx:id="price_max_field"
-                   layoutX="74.0" layoutY="315.0"
-                   prefHeight="25.0" prefWidth="50.0"
-                   promptText="Max" />
+                   layoutX="110" layoutY="245" prefWidth="70" promptText="Max"/>
 
-        <!-- Delivery / Online -->
         <CheckBox fx:id="delivery_check"
-                  layoutX="14.0" layoutY="345.0"
-                  mnemonicParsing="false"
-                  text="Servizio delivery" />
+                  layoutX="20" layoutY="280"
+                  text="Servizio delivery"/>
+
         <CheckBox fx:id="online_check"
-                  layoutX="14.0" layoutY="365.0"
-                  mnemonicParsing="false"
-                  text="Prenotazione online" />
+                  layoutX="20" layoutY="305"
+                  text="Prenotazione online"/>
 
-        <!-- Stars -->
-        <Label layoutX="140.0" layoutY="295.0" text="Stelle" />
+        <Label layoutX="20" layoutY="340" text="Stelle"/>
         <TextField fx:id="stars_min_field"
-                   layoutX="180.0" layoutY="290.0"
-                   prefHeight="25.0" prefWidth="50.0"
-                   promptText="Min" />
+                   layoutX="20" layoutY="365"
+                   prefWidth="70"
+                   promptText="Min"/>
         <TextField fx:id="stars_max_field"
-                   layoutX="240.0" layoutY="290.0"
-                   prefHeight="25.0" prefWidth="50.0"
-                   promptText="Max" />
+                   layoutX="110" layoutY="365"
+                   prefWidth="70"
+                   promptText="Max"/>
 
-        <!-- Category & Favourites -->
         <TextField fx:id="category_field"
-                   layoutX="140.0" layoutY="320.0"
-                   prefWidth="120.0"
-                   promptText="Giapponese" />
-        <CheckBox fx:id="favourites_check"
-                  layoutX="140.0" layoutY="350.0"
-                  mnemonicParsing="false"
-                  text="Solo preferiti"
-                  visible="false" />
+                   layoutX="20" layoutY="400"
+                   prefWidth="160"
+                   promptText="Categoria"/>
 
-        <!-- List and Navigation -->
+        <!-- RIGHT SIDE LIST -->
         <ListView fx:id="restaurants_listview"
-                  layoutX="280.0" layoutY="40.0"
-                  prefHeight="250.0" prefWidth="300.0"
-                  onKeyPressed="#checkSelected"
-                  onMouseClicked="#checkSelected" />
+                  layoutX="210" layoutY="50"
+                  prefWidth="570"
+                  prefHeight="390"
+                  onMouseClicked="#checkSelected"
+                  onKeyPressed="#checkSelected"/>
 
         <Label fx:id="notification_label"
-               layoutX="200.0" layoutY="14.0"
+               layoutX="210" layoutY="10"
                textFill="RED"
-               visible="false"
-               text="empty" />
+               visible="false"/>
 
         <Label fx:id="no_restaurants_label"
-               layoutX="280.0" layoutY="132.0"
-               prefWidth="300.0"
+               layoutX="210" layoutY="230"
+               prefWidth="580"
                alignment="CENTER"
-               text="Non è stato trovato nessun ristorante con questi filtri"
-               visible="false" />
+               text="Nessun ristorante trovato"
+               visible="false"/>
 
+        <!-- PAGINATION -->
         <Label fx:id="pages_label"
-               layoutX="330.0" layoutY="304.0"
-               text="-/-" />
+               layoutX="350" layoutY="450"
+               text="-/-"/>
 
         <Button fx:id="prev_btn"
-                layoutX="280.0" layoutY="300.0"
-                mnemonicParsing="false"
-                onAction="#prevPage"
-                text="←" />
+                layoutX="310" layoutY="445"
+                text="←"
+                onAction="#prevPage"/>
 
         <Button fx:id="next_btn"
-                layoutX="307.0" layoutY="300.0"
-                mnemonicParsing="false"
-                onAction="#nextPage"
-                text="→" />
+                layoutX="385" layoutY="445"
+                text="→"
+                onAction="#nextPage"/>
 
         <Button fx:id="view_info_btn"
-                layoutX="472.0" layoutY="300.0"
-                mnemonicParsing="false"
-                onAction="#viewRestaurantInfo"
-                text="Vedi info" />
+                layoutX="650" layoutY="445"
+                text="Vedi info"
+                onAction="#viewRestaurantInfo"/>
     </children>
 </AnchorPane>
