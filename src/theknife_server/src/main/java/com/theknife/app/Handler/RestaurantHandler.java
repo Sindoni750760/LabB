@@ -65,9 +65,8 @@ public class RestaurantHandler implements CommandHandler {
             case "getMyRestaurantsPages"  -> handleGetMyRestaurantsPages(ctx);
             case "getMyRestaurants"       -> handleGetMyRestaurants(ctx);
 
-            // pagine recensioni ristorante (il client usa "getReviewsPages")
             case "getReviewsPages"        -> handleGetReviewsPages(ctx);
-            case "getReviewsPageCount"    -> handleGetReviewsPages(ctx); // alias compatibilità
+            case "getReviewsPageCount"    -> handleGetReviewsPages(ctx);
 
             case "getReviews"             -> handleGetReviews(ctx);
             case "getMyReview"            -> handleGetMyReview(ctx);
@@ -84,7 +83,6 @@ public class RestaurantHandler implements CommandHandler {
             case "addFavourite"           -> handleAddFavourite(ctx);
             case "removeFavourite"        -> handleRemoveFavourite(ctx);
 
-            // le mie recensioni (MyReviews controller)
             case "getMyReviewsPages"      -> handleGetMyReviewsPages(ctx);
             case "getMyReviews"           -> handleGetMyReviews(ctx);
 
@@ -235,17 +233,16 @@ public class RestaurantHandler implements CommandHandler {
             ctx.write(ok ? "ok" : "error");
         }
 
-        private void handleGetRestaurants(ClientContext ctx)
-        throws IOException, SQLException, InterruptedException {
+    private void handleGetRestaurants(ClientContext ctx)
+            throws IOException, SQLException, InterruptedException {
 
         int page = Integer.parseInt(ctx.read());
 
         // ---- PROTOCOLLO DAL CLIENT ----
-        // mode: all | location | coordinates | invalid
-        String mode      = ctx.read();
-        String first     = ctx.read();
-        String second    = ctx.read();
-        String rangeStr  = ctx.read();
+        String mode        = ctx.read();  // all | location | coordinates | invalid
+        String first       = ctx.read();
+        String second      = ctx.read();
+        String rangeStr    = ctx.read();
         String priceMinStr = ctx.read();
         String priceMaxStr = ctx.read();
         String categoryStr = ctx.read();
@@ -253,9 +250,10 @@ public class RestaurantHandler implements CommandHandler {
         String onlineStr   = ctx.read();
         String starsMinStr = ctx.read();
         String starsMaxStr = ctx.read();
-        // (per ora non gestiamo "only favourites")
-        boolean onlyFav = false;
-        int favUserId   = -1;
+        String onlyFavStr  = ctx.read();  // <-- AGGIUNTO (ora letto correttamente!)
+
+        boolean onlyFav = "y".equalsIgnoreCase(onlyFavStr);
+        int favUserId   = onlyFav ? ctx.getLoggedUserId() : -1;
 
         // ---- VARIABILI PER IL DB ----
         String nation = null;
@@ -264,25 +262,18 @@ public class RestaurantHandler implements CommandHandler {
         Double lon    = null;
         Double rangeKm = null;
 
-        // ==============================
-        // 1) INTERPRETAZIONE searchMode
-        // ==============================
+
+        /* ==========================================================
+           1) INTERPRETAZIONE searchMode
+           ========================================================== */
         switch (mode) {
 
-            case "all" -> {
-                // Nessun filtro geografico: prendi tutto
-                nation = null;
-                city   = null;
-                lat    = null;
-                lon    = null;
-                rangeKm = null;
-            }
+            case "all" -> { }
 
             case "invalid" -> {
-                // Input misto (es: Italia / 55) → nessun risultato, ma niente crash
                 ctx.write("ok");
-                ctx.write("1"); // 1 pagina
-                ctx.write("0"); // 0 risultati
+                ctx.write("1");
+                ctx.write("0");
                 return;
             }
 
@@ -313,9 +304,10 @@ public class RestaurantHandler implements CommandHandler {
             }
         }
 
-        // ============================
-        // 2) RANGE (solo con coordinate)
-        // ============================
+
+        /* ============================
+           2) RANGE (coordinate only)
+           ============================ */
         if (!"-".equals(rangeStr)) {
             try {
                 rangeKm = Double.parseDouble(rangeStr);
@@ -326,17 +318,16 @@ public class RestaurantHandler implements CommandHandler {
             }
 
             if (!"coordinates".equals(mode)) {
-                // Range ha senso solo con lat/lon
                 ctx.write("coordinates");
                 return;
             }
         }
 
-        // ============================
-        // 3) PREZZO
-        // ============================
-        Integer priceMin = null, priceMax = null;
 
+        /* ============================
+           3) PREZZO
+           ============================ */
+        Integer priceMin = null, priceMax = null;
         try {
             if (!"-".equals(priceMinStr)) priceMin = Integer.parseInt(priceMinStr);
             if (!"-".equals(priceMaxStr)) priceMax = Integer.parseInt(priceMaxStr);
@@ -352,11 +343,11 @@ public class RestaurantHandler implements CommandHandler {
             return;
         }
 
-        // ============================
-        // 4) STELLE
-        // ============================
-        Double starsMin = null, starsMax = null;
 
+        /* ============================
+           4) STELLE
+           ============================ */
+        Double starsMin = null, starsMax = null;
         try {
             if (!"-".equals(starsMinStr)) starsMin = Double.parseDouble(starsMinStr);
             if (!"-".equals(starsMaxStr)) starsMax = Double.parseDouble(starsMaxStr);
@@ -372,9 +363,10 @@ public class RestaurantHandler implements CommandHandler {
             return;
         }
 
-        // ============================
-        // 5) DELIVERY / ONLINE / CATEGORIA
-        // ============================
+
+        /* ============================
+           5) DELIVERY / ONLINE / CATEGORIA
+           ============================ */
         boolean delivery = "y".equals(deliveryStr);
         boolean online   = "y".equals(onlineStr);
 
@@ -383,9 +375,10 @@ public class RestaurantHandler implements CommandHandler {
             category = categoryStr.trim();
         }
 
-        // ============================
-        // 6) QUERY DB
-        // ============================
+
+        /* ============================
+           6) QUERY DB
+           ============================ */
         String[][] data = db.getRestaurantsWithFilter(
                 page,
                 nation, city,
@@ -393,13 +386,14 @@ public class RestaurantHandler implements CommandHandler {
                 priceMin, priceMax,
                 delivery, online,
                 starsMin, starsMax,
-                favUserId,
+                favUserId,          // <-- ORA FUNZIONA
                 category
         );
 
-        // ============================
-        // 7) RISPOSTA AL CLIENT
-        // ============================
+
+        /* ============================
+           7) RISPOSTA AL CLIENT
+           ============================ */
         ctx.write("ok");
         ctx.write(data[0][0]); // pages
         ctx.write(data[0][1]); // size
@@ -409,9 +403,6 @@ public class RestaurantHandler implements CommandHandler {
             ctx.write(data[i][1]); // nome
         }
     }
-
-
-
 
     private void handleGetRestaurantInfo(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {

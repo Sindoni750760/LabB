@@ -1,14 +1,21 @@
 package com.theknife.app.controllers;
 
+import java.io.IOException;
+
 import com.theknife.app.ClientLogger;
 import com.theknife.app.Communicator;
 import com.theknife.app.EditingRestaurant;
 import com.theknife.app.SceneManager;
-import javafx.fxml.FXML;
-import javafx.scene.Node;
-import javafx.scene.control.*;
+import com.theknife.app.User;
 
-import java.io.IOException;
+import javafx.application.Platform;
+import javafx.fxml.FXML;
+import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
+import javafx.scene.control.TextField;
+import javafx.scene.Node;
 
 public class ViewRestaurants implements OnlineChecker {
 
@@ -18,21 +25,14 @@ public class ViewRestaurants implements OnlineChecker {
     private int pages = 0;
     private int current_page = 0;
 
-    /** searchMode:
-     * "all" | "location" | "coordinates" | "invalid"
-     */
-    private String searchMode = "all";
+    // MODE AND FILTERS
+    private String searchMode = "invalid";   // "coordinates" | "location" | "invalid" | "all"
+    private String field1 = "-";
+    private String field2 = "-";
 
-    // campi usati nel protocollo
-    private String field1 = "-";   // nazione o latitudine
-    private String field2 = "-";   // città o longitudine
-
-    /* ============================
-       FXML FIELDS (ALLINEATI AL FXML)
-       ============================ */
-    @FXML private TextField field1_input;      // nazione o latitudine
-    @FXML private TextField field2_input;      // città o longitudine
-    @FXML private TextField range_field;       // raggio in km
+    @FXML private TextField field1_input;
+    @FXML private TextField field2_input;
+    @FXML private TextField range_field;
 
     @FXML private TextField price_min_field;
     @FXML private TextField price_max_field;
@@ -54,12 +54,10 @@ public class ViewRestaurants implements OnlineChecker {
     @FXML private Button prev_btn;
     @FXML private Button next_btn;
     @FXML private Button view_info_btn;
+
     @FXML private Button clear_btn;
 
 
-    /* ============================
-       INITIALIZE
-       ============================ */
     @FXML
     private void initialize() {
         ClientLogger.getInstance().info("ViewRestaurants initialized");
@@ -72,22 +70,17 @@ public class ViewRestaurants implements OnlineChecker {
         prev_btn.setDisable(true);
         next_btn.setDisable(true);
 
+        // carica tutti i ristoranti all'avvio
         loadAllRestaurants();
     }
 
 
-    /* ============================
-       DETECT SEARCH MODE
-       ============================ */
     private void detectSearchMode() {
-
         String f1 = field1_input.getText().trim();
         String f2 = field2_input.getText().trim();
 
-        if (f1.isEmpty() && f2.isEmpty()) {
-            searchMode = "all";
-            field1 = "-";
-            field2 = "-";
+        if (f1.isEmpty() || f2.isEmpty()) {
+            searchMode = "invalid";
             return;
         }
 
@@ -107,9 +100,6 @@ public class ViewRestaurants implements OnlineChecker {
     }
 
 
-    /* ============================
-       APPLY FILTERS
-       ============================ */
     @FXML
     private void updateFilters() throws IOException {
         hideNotification();
@@ -117,7 +107,7 @@ public class ViewRestaurants implements OnlineChecker {
         detectSearchMode();
 
         if (searchMode.equals("invalid")) {
-            setNotification("Inserisci due numeri (lat + lon) oppure due testi (nazione + città).");
+            setNotification("I due campi devono essere entrambi numeri (coordinate) oppure entrambi testo (nazione + città).");
             return;
         }
 
@@ -125,9 +115,6 @@ public class ViewRestaurants implements OnlineChecker {
     }
 
 
-    /* ============================
-       QUERY SERVER
-       ============================ */
     private void searchPage(int page) throws IOException {
         if (!checkOnline()) return;
 
@@ -140,39 +127,47 @@ public class ViewRestaurants implements OnlineChecker {
 
         current_page = page;
 
-        // ------------------
-        // PROTOCOLLO
-        // ------------------
+
+        /* =====================================================
+           PROTOCOLLO getRestaurants (13 parametri)
+         ===================================================== */
+
         Communicator.send("getRestaurants");
         Communicator.send(Integer.toString(page));
 
-        Communicator.send(searchMode);
+        // Search mode
+        Communicator.send(searchMode.equals("all") ? "all" : searchMode);
         Communicator.send(field1);
         Communicator.send(field2);
 
-        // range
+        // Range
         String range = range_field.getText().trim();
         Communicator.send(range.isEmpty() ? "-" : range);
 
-        // prezzo
+        // Price
         Communicator.send(price_min_field.getText().trim().isEmpty() ? "-" : price_min_field.getText().trim());
         Communicator.send(price_max_field.getText().trim().isEmpty() ? "-" : price_max_field.getText().trim());
 
-        // categoria
+        // Category
         String cat = category_field.getText().trim();
         Communicator.send(cat.isEmpty() ? "-" : cat);
 
-        // delivery / online
+        // Delivery / Online
         Communicator.send(delivery_check.isSelected() ? "y" : "n");
         Communicator.send(online_check.isSelected() ? "y" : "n");
 
-        // stelle
+        // Stars
         Communicator.send(stars_min_field.getText().trim().isEmpty() ? "-" : stars_min_field.getText().trim());
         Communicator.send(stars_max_field.getText().trim().isEmpty() ? "-" : stars_max_field.getText().trim());
 
-        // ------------------
-        // RISPOSTA SERVER
-        // ------------------
+        // === NEW: onlyFavourite flag (always NO here) ===
+        Communicator.send("n");
+
+
+        /* =====================================================
+           RISPOSTA SERVER
+         ===================================================== */
+
         String response = Communicator.read();
         if (response == null) {
             fallback();
@@ -182,15 +177,18 @@ public class ViewRestaurants implements OnlineChecker {
         switch (response) {
 
             case "ok" -> {
-                pages = Integer.parseInt(Communicator.read());
-                int size = Integer.parseInt(Communicator.read());
+                String pagesStr = Communicator.read();
+                pages = Integer.parseInt(pagesStr);
+
+                String sizeStr = Communicator.read();
+                int size = Integer.parseInt(sizeStr);
 
                 if (pages == 0 || size == 0) {
                     no_restaurants_label.setVisible(true);
                     return;
                 }
 
-                restaurants_ids = new String[size];
+                restaurants_ids   = new String[size];
                 restaurants_names = new String[size];
 
                 for (int i = 0; i < size; i++) {
@@ -208,10 +206,10 @@ public class ViewRestaurants implements OnlineChecker {
                 checkSelected();
             }
 
-            case "coordinates" -> setNotification("Coordinate non valide o raggio non valido.");
-            case "price"       -> setNotification("Filtro prezzo non valido.");
-            case "stars"       -> setNotification("Filtro stelle non valido.");
-            case "invalid"     -> setNotification("Errore nei campi inseriti.");
+            case "invalid" -> setNotification("I due campi devono essere coerenti (entrambi testo o entrambi numeri)");
+            case "coordinates" -> setNotification("Coordinate o raggio non validi.");
+            case "price" -> setNotification("Range di prezzo non valido.");
+            case "stars" -> setNotification("Range stelle non valido.");
 
             default -> setNotification("Errore: " + response);
         }
@@ -220,12 +218,16 @@ public class ViewRestaurants implements OnlineChecker {
 
     @FXML
     private void prevPage() throws IOException {
-        if (current_page > 0) searchPage(--current_page);
+        if (current_page > 0) {
+            searchPage(--current_page);
+        }
     }
 
     @FXML
     private void nextPage() throws IOException {
-        if (current_page + 1 < pages) searchPage(++current_page);
+        if (current_page + 1 < pages) {
+            searchPage(++current_page);
+        }
     }
 
 
@@ -250,7 +252,6 @@ public class ViewRestaurants implements OnlineChecker {
 
     @FXML
     private void clearFilters() {
-
         field1_input.clear();
         field2_input.clear();
         range_field.clear();
@@ -262,7 +263,7 @@ public class ViewRestaurants implements OnlineChecker {
         delivery_check.setSelected(false);
         online_check.setSelected(false);
 
-        searchMode = "all";
+        searchMode = "invalid";
         field1 = "-";
         field2 = "-";
 
@@ -293,18 +294,6 @@ public class ViewRestaurants implements OnlineChecker {
     }
 
 
-    private void loadAllRestaurants() {
-        try {
-            searchMode = "all";
-            field1 = "-";
-            field2 = "-";
-            searchPage(0);
-        } catch (Exception e) {
-            ClientLogger.getInstance().error("Failed to load all restaurants");
-        }
-    }
-
-
     @Override
     public Node[] getInteractiveNodes() {
         return new Node[]{
@@ -316,5 +305,17 @@ public class ViewRestaurants implements OnlineChecker {
                 restaurants_listview,
                 prev_btn, next_btn, view_info_btn, clear_btn
         };
+    }
+
+
+    private void loadAllRestaurants() {
+        try {
+            searchMode = "all";
+            field1 = "-";
+            field2 = "-";
+            searchPage(0);
+        } catch (Exception e) {
+            ClientLogger.getInstance().error("Failed to load all restaurants");
+        }
     }
 }

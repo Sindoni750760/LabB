@@ -6,9 +6,7 @@ import com.theknife.app.EditingRestaurant;
 import com.theknife.app.SceneManager;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.ListView;
+import javafx.scene.control.*;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -32,30 +30,41 @@ public class FavouriteController implements OnlineChecker {
         loadFavorites();
     }
 
+    /**
+     * Carica tutti i ristoranti che l'utente ha segnato come preferiti.
+     * Usa il protocollo getRestaurants con onlyFav = "y".
+     */
     private void loadFavorites() throws IOException {
         if (!checkOnline()) return;
-        
+
         notification_label.setVisible(false);
         favourites_list.getItems().clear();
         remove_btn.setDisable(true);
         view_btn.setDisable(true);
 
+        /* ================================
+           PROTOCOLLO getRestaurants
+           allineato al RestaurantHandler
+         ================================= */
+
         Communicator.send("getRestaurants");
-        Communicator.send("0");   // page
-        Communicator.send("-");   // nation (ignored in onlyFav mode)
-        Communicator.send("-");   // city   (ignored in onlyFav mode)
-        Communicator.send("-");   // price min
-        Communicator.send("-");   // price max
-        Communicator.send("-");   // category
-        Communicator.send("n");   // delivery
-        Communicator.send("n");   // online
-        Communicator.send("-");   // stars min
-        Communicator.send("-");   // stars max
-        Communicator.send("n");   // nearMe
-        Communicator.send("-");   // lat
-        Communicator.send("-");   // lon
-        Communicator.send("-");   // rangeKm
-        Communicator.send("y");   // ONLY favourite
+        Communicator.send("0");          // page
+        Communicator.send("all");        // mode
+        Communicator.send("-");          // first
+        Communicator.send("-");          // second
+        Communicator.send("-");          // range
+        Communicator.send("-");          // price min
+        Communicator.send("-");          // price max
+        Communicator.send("-");          // category
+        Communicator.send("n");          // delivery filter
+        Communicator.send("n");          // online filter
+        Communicator.send("-");          // stars min
+        Communicator.send("-");          // stars max
+        Communicator.send("y");          // ONLY FAVOURITES !!!
+
+        /* ======================
+           RISPOSTA DEL SERVER
+         ====================== */
 
         String resp = Communicator.read();
         if (resp == null) {
@@ -69,7 +78,7 @@ public class FavouriteController implements OnlineChecker {
             return;
         }
 
-        // pages (non ci interessa)
+        // pagine (non ci interessa)
         String pages = Communicator.read();
         String sizeStr = Communicator.read();
 
@@ -85,6 +94,7 @@ public class FavouriteController implements OnlineChecker {
         for (int i = 0; i < size; i++) {
             fav_ids[i]   = Communicator.read();
             fav_names[i] = Communicator.read();
+
             if (fav_ids[i] == null || fav_names[i] == null) {
                 fallback();
                 return;
@@ -94,6 +104,7 @@ public class FavouriteController implements OnlineChecker {
         favourites_list.getItems().setAll(fav_names);
         checkSelected();
     }
+
 
     @FXML
     private void removeFavourite() throws IOException {
@@ -109,6 +120,7 @@ public class FavouriteController implements OnlineChecker {
             return;
         }
 
+        // Rimuovi dall'elenco locale
         List<String> names = new ArrayList<>(Arrays.asList(fav_names));
         List<String> ids = new ArrayList<>(Arrays.asList(fav_ids));
         names.remove(index);
@@ -116,14 +128,16 @@ public class FavouriteController implements OnlineChecker {
 
         fav_names = names.toArray(new String[0]);
         fav_ids = ids.toArray(new String[0]);
+
         favourites_list.getItems().setAll(fav_names);
         checkSelected();
     }
 
+
     @FXML
     private void viewRestaurant() throws IOException {
         if (!checkOnline()) return;
-        
+
         int index = favourites_list.getSelectionModel().getSelectedIndex();
         if (index < 0) return;
 
@@ -131,6 +145,7 @@ public class FavouriteController implements OnlineChecker {
         SceneManager.setPreviousNavigation("Favorites");
         SceneManager.changeScene("ViewRestaurantInfo");
     }
+
 
     @FXML
     private void checkSelected() {
@@ -141,10 +156,12 @@ public class FavouriteController implements OnlineChecker {
         view_btn.setDisable(disable);
     }
 
+
     @FXML
     private void goBack() throws IOException {
         SceneManager.changeScene("App");
     }
+
 
     @Override
     public Node[] getInteractiveNodes() {
