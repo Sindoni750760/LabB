@@ -249,32 +249,54 @@ public class ViewRestaurants implements OnlineChecker {
         SceneManager.changeScene("ViewRestaurantInfo");
     }
 
-
+    /**
+     * Ripristina tutti i campi dei filtri alla condizione iniziale,
+     * imposta la searchMode su "all", azzera field1/field2,
+     * e ricarica la pagina 0.
+     */
     @FXML
     private void clearFilters() {
+        hideNotification();
+
+        // reset input dei due campi (possono essere nazione/città o lat/lon)
         field1_input.clear();
         field2_input.clear();
-        range_field.clear();
-        price_min_field.clear();
-        price_max_field.clear();
-        stars_min_field.clear();
-        stars_max_field.clear();
-        category_field.clear();
-        delivery_check.setSelected(false);
-        online_check.setSelected(false);
-
-        searchMode = "invalid";
         field1 = "-";
         field2 = "-";
 
+        // reset raggio
+        range_field.clear();
+
+        // reset prezzo
+        price_min_field.clear();
+        price_max_field.clear();
+
+        // reset stelle
+        stars_min_field.clear();
+        stars_max_field.clear();
+
+        // reset categoria
+        category_field.clear();
+
+        // reset checkbox
+        delivery_check.setSelected(false);
+        online_check.setSelected(false);
+
+        // reset etichette / stato GUI
+        no_restaurants_label.setVisible(false);
         restaurants_listview.getItems().clear();
         pages_label.setText("-/-");
-        no_restaurants_label.setVisible(false);
         prev_btn.setDisable(true);
         next_btn.setDisable(true);
         view_info_btn.setDisable(true);
 
-        hideNotification();
+        // stato logico interno
+        searchMode = "all";
+        pages = 0;
+        current_page = 0;
+
+        // ricarica tutti i ristoranti usando la logica già testata
+        loadAllRestaurants();
     }
 
 
