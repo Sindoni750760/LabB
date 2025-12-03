@@ -1,47 +1,30 @@
 package com.theknife.app;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
+import java.io.*;
+import java.sql.*;
+import java.util.Properties;
 
-/**
- * Manager singleton per la gestione delle connessioni al database PostgreSQL.
- * Responsabile della creazione di nuove connessioni e della configurazione del driver JDBC.
- * 
- * @author Mattia Sindoni 750760 VA
- * @author Erica Faccio 751654 VA
- * @author Giovanni Isgrò 753536 VA
- */
 public class ConnectionManager {
 
-    /** Istanza singleton del ConnectionManager. */
     private static ConnectionManager instance = null;
 
-    /** URL JDBC per la connessione al database PostgreSQL. */
-    private final String jdbcUrl = "jdbc:postgresql://localhost:5432/theknife";
-    
-    /** Nome utente per l'autenticazione al database. */
-    private final String user    = "postgres";
-    
-    /** Password per l'autenticazione al database. */
-    private final String pass    = "Federico.2006";
+    private String jdbcUrl;
+    private String user;
+    private String pass;
 
-    /**
-     * Costruttore privato che carica il driver PostgreSQL JDBC.
-     */
+    /** Percorso del file di configurazione */
+    private final String CONFIG_PATH = "connection.ini";
+
     private ConnectionManager() {
         try {
             Class.forName("org.postgresql.Driver");
         } catch (ClassNotFoundException e) {
             ServerLogger.getInstance().error("PostgreSQL JDBC driver not found: " + e.getMessage());
         }
+
+        loadOrCreateConfig();
     }
 
-    /**
-     * Restituisce l'istanza singleton del ConnectionManager.
-     *
-     * @return istanza singleton
-     */
     public static synchronized ConnectionManager getInstance() {
         if (instance == null)
             instance = new ConnectionManager();
@@ -49,33 +32,61 @@ public class ConnectionManager {
     }
 
     /**
-     * Ritorna una nuova connessione al database.
-     * Le try-with-resources in DBHandler la chiuderanno automaticamente.
-     *
-     * @return una nuova connessione al database
-     * @throws SQLException se si verifica un errore durante la connessione
+     * Legge connection.ini se esiste, altrimenti ne crea uno con valori di default.
      */
+    private void loadOrCreateConfig() {
+        Properties props = new Properties();
+        File f = new File(CONFIG_PATH);
+
+        if (!f.exists()) {
+            // crea file con valori predefiniti
+            createDefaultConfig();
+        }
+
+        try (FileInputStream fis = new FileInputStream(CONFIG_PATH)) {
+            props.load(fis);
+        } catch (IOException e) {
+            ServerLogger.getInstance().error("Impossibile leggere connection.ini: " + e.getMessage());
+            createDefaultConfig();
+        }
+
+        jdbcUrl = props.getProperty("jdbc_url", "jdbc:postgresql://localhost:5432/theknife");
+        user    = props.getProperty("username", "postgres");
+        pass    = props.getProperty("password", "");
+
+        ServerLogger.getInstance().info("Configurazione DB caricata correttamente.");
+    }
+
+    /**
+     * Crea un file connection.ini con valori standard se non esiste.
+     */
+    private void createDefaultConfig() {
+        Properties props = new Properties();
+
+        props.setProperty("jdbc_url", "jdbc:postgresql://localhost:5432/theknife");
+        props.setProperty("username", "postgres");
+        props.setProperty("password", "");
+
+        try (FileOutputStream fos = new FileOutputStream(CONFIG_PATH)) {
+            props.store(fos, "Configurazione connessione database");
+            ServerLogger.getInstance().info("Creato connection.ini predefinito");
+        } catch (IOException e) {
+            ServerLogger.getInstance().error("Impossibile creare connection.ini: " + e.getMessage());
+        }
+    }
+
+    /** Ritorna una nuova connessione */
     public Connection getConnection() throws SQLException {
         return DriverManager.getConnection(jdbcUrl, user, pass);
     }
 
-    /**
-     * Compatibilità con eventuali chiamate esistenti: non fa nulla,
-     * ma evita errori di compilazione se venisse usata.
-     *
-     * @param c connessione da chiudere
-     */
     public void releaseConnection(Connection c) {
         if (c != null) {
             try { c.close(); } catch (SQLException ignored) {}
         }
     }
 
-    /**
-     * Chiamata alla chiusura del server. Non teniamo cache,
-     * quindi non serve fare nulla di particolare.
-     */
     public void flush() {
-        // Nessuna cache da svuotare nella versione semplificata.
+        // nessuna cache
     }
 }
