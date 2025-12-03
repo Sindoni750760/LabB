@@ -63,6 +63,7 @@ public interface QueryRestaurant {
      * @param onlyFavourites true per mostrare solo i preferiti
      * @return lista di array contenenti le informazioni dei ristoranti
      * @throws SQLException se si verifica un errore di database
+     * @throws InterruptedException 
      */
     List<String[]> listRestaurants(
             int page,
@@ -74,7 +75,7 @@ public interface QueryRestaurant {
             String nearMe,
             Integer userId,
             boolean onlyFavourites
-    ) throws SQLException;
+    ) throws SQLException, InterruptedException;
 
     /**
      * Recupera le informazioni dettagliate di un ristorante.
@@ -133,10 +134,10 @@ public interface QueryRestaurant {
     List<String[]> getMyRestaurants(int userId, int page) throws SQLException, InterruptedException;
 
 
-    // RECENSIONI
+    // recensioni
     int getReviewsPageCount(int restaurantId) throws SQLException, InterruptedException;
 
-    List<String[]> getReviews(int restaurantId, int page) throws SQLException, InterruptedException;
+    String[][] getReviews(int restaurantId, int page) throws SQLException, InterruptedException;
 
     boolean addReview(int userId, int restaurantId, int stars, String text) throws SQLException, InterruptedException;
 
@@ -151,7 +152,7 @@ public interface QueryRestaurant {
     List<String[]> getMyReviews(int userId, int page) throws SQLException, InterruptedException;
 
 
-    // RISPOSTE
+    // Risposte
     String getResponse(int reviewId) throws SQLException, InterruptedException;
 
     boolean addResponse(int reviewId, String text) throws SQLException, InterruptedException;
@@ -161,7 +162,7 @@ public interface QueryRestaurant {
     boolean removeResponse(int reviewId) throws SQLException, InterruptedException;
 
 
-    // PREFERITI
+    // Preferiti
     boolean isFavourite(int userId, int restaurantId) throws SQLException, InterruptedException;
 
     boolean addFavourite(int userId, int restaurantId) throws SQLException, InterruptedException;
