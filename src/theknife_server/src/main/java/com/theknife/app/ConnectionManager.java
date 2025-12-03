@@ -1,85 +1,142 @@
 package com.theknife.app;
 
 import java.io.*;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.Properties;
 
+/**
+ * Gestisce la connessione al database PostgreSQL tramite file di configurazione connection.ini.
+ * Il file viene cercato automaticamente nella cartella "LabB", indipendentemente da dove
+ * si trovi il JAR del server.
+ *
+ * Struttura attesa:
+ *   LabB/
+ *      connection.ini
+ *
+ * Se il file non esiste, viene creato automaticamente.
+ */
 public class ConnectionManager {
 
     private static ConnectionManager instance = null;
 
     private String jdbcUrl;
-    private String user;
-    private String pass;
+    private String username;
+    private String password;
 
-    /** Percorso del file di configurazione */
-    private final String CONFIG_PATH = "connection.ini";
+    private File iniFile;
 
+    /** Caricamento del driver e setup */
     private ConnectionManager() {
         try {
             Class.forName("org.postgresql.Driver");
         } catch (ClassNotFoundException e) {
-            ServerLogger.getInstance().error("PostgreSQL JDBC driver not found: " + e.getMessage());
+            throw new RuntimeException("Driver PostgreSQL mancante.", e);
         }
 
-        loadOrCreateConfig();
+        File labbRoot = findLabBRoot();
+
+        if (labbRoot == null)
+            throw new RuntimeException("Impossibile trovare la cartella 'LabB'.");
+
+        iniFile = new File(labbRoot, "connection.ini");
+
+        if (!iniFile.exists()) {
+            createIniFile();   // crea il template
+        }
+
+        loadIni();  // carica i valori
     }
 
+    /** Singleton */
     public static synchronized ConnectionManager getInstance() {
         if (instance == null)
             instance = new ConnectionManager();
         return instance;
     }
 
-    /**
-     * Legge connection.ini se esiste, altrimenti ne crea uno con valori di default.
-     */
-    private void loadOrCreateConfig() {
-        Properties props = new Properties();
-        File f = new File(CONFIG_PATH);
+    // ============================================================
+    //   1) RICERCA INTELLIGENTE DELLA CARTELLA "LabB"
+    // ============================================================
 
-        if (!f.exists()) {
-            // crea file con valori predefiniti
-            createDefaultConfig();
+    private File findLabBRoot() {
+        File start = new File(System.getProperty("user.dir"));
+
+        // 1) Se qualcuno esegue il jar DA una cartella che contiene LabB
+        File sub = new File(start, "LabB");
+        if (sub.exists() && sub.isDirectory()) return sub;
+
+        // 2) Se siamo già dentro LabB
+        if ("LabB".equalsIgnoreCase(start.getName())) return start;
+
+        // 3) Risali verso la root
+        File current = start;
+        while (current != null) {
+
+            // questa è LabB?
+            if ("LabB".equalsIgnoreCase(current.getName()))
+                return current;
+
+            // contiene LabB come sottocartella?
+            File child = new File(current, "LabB");
+            if (child.exists() && child.isDirectory())
+                return child;
+
+            current = current.getParentFile();
         }
 
-        try (FileInputStream fis = new FileInputStream(CONFIG_PATH)) {
-            props.load(fis);
-        } catch (IOException e) {
-            ServerLogger.getInstance().error("Impossibile leggere connection.ini: " + e.getMessage());
-            createDefaultConfig();
-        }
-
-        jdbcUrl = props.getProperty("jdbc_url", "jdbc:postgresql://localhost:5432/theknife");
-        user    = props.getProperty("username", "postgres");
-        pass    = props.getProperty("password", "");
-
-        ServerLogger.getInstance().info("Configurazione DB caricata correttamente.");
+        return null;
     }
 
-    /**
-     * Crea un file connection.ini con valori standard se non esiste.
-     */
-    private void createDefaultConfig() {
-        Properties props = new Properties();
+    // ============================================================
+    //   2) CREAZIONE AUTOMATICA DEL FILE connection.ini
+    // ============================================================
 
-        props.setProperty("jdbc_url", "jdbc:postgresql://localhost:5432/theknife");
-        props.setProperty("username", "postgres");
-        props.setProperty("password", "");
+    private void createIniFile() {
+        try (PrintWriter pw = new PrintWriter(new FileWriter(iniFile))) {
 
-        try (FileOutputStream fos = new FileOutputStream(CONFIG_PATH)) {
-            props.store(fos, "Configurazione connessione database");
-            ServerLogger.getInstance().info("Creato connection.ini predefinito");
+            pw.println("jdbc_url=jdbc:postgresql://localhost:5432/theknife");
+            pw.println("username=postgres");
+            pw.println("password=");
+
         } catch (IOException e) {
-            ServerLogger.getInstance().error("Impossibile creare connection.ini: " + e.getMessage());
+            throw new RuntimeException("Impossibile creare il file connection.ini", e);
         }
     }
 
-    /** Ritorna una nuova connessione */
+    // ============================================================
+    //   3) LETTURA DEL FILE connection.ini
+    // ============================================================
+
+    private void loadIni() {
+        Properties prop = new Properties();
+
+        try (FileInputStream fis = new FileInputStream(iniFile)) {
+            prop.load(fis);
+
+        } catch (IOException e) {
+            throw new RuntimeException("Errore nella lettura del connection.ini", e);
+        }
+
+        jdbcUrl  = prop.getProperty("jdbc_url");
+        username = prop.getProperty("username");
+        password = prop.getProperty("password");
+
+        if (jdbcUrl == null || username == null || password == null) {
+            throw new RuntimeException("connection.ini non valido: parametri mancanti.");
+        }
+    }
+
+    // ============================================================
+    //   4) RESTITUISCE UNA NUOVA CONNESSIONE
+    // ============================================================
+
     public Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(jdbcUrl, user, pass);
+        return DriverManager.getConnection(jdbcUrl, username, password);
     }
 
+    // Compatibilità con versioni vecchie
     public void releaseConnection(Connection c) {
         if (c != null) {
             try { c.close(); } catch (SQLException ignored) {}
@@ -87,6 +144,6 @@ public class ConnectionManager {
     }
 
     public void flush() {
-        // nessuna cache
+        // nessuna operazione necessaria
     }
 }

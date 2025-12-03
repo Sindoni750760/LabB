@@ -70,8 +70,7 @@ public class ViewRestaurants implements OnlineChecker {
         prev_btn.setDisable(true);
         next_btn.setDisable(true);
 
-        // carica tutti i ristoranti all'avvio
-        loadAllRestaurants();
+        clearFilters();
     }
 
 

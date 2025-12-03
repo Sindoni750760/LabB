@@ -137,7 +137,7 @@ public class ServerApplication {
 
         // Chiude tutte le connessioni DB
         try {
-            ConnectionManager.getInstance().flush();
+            ConnectionManager.getInstance();
         } catch (Exception e) {
             log.error("Errore durante l'operazione flush() della ConnectionCache: " + e.getMessage());
         }
