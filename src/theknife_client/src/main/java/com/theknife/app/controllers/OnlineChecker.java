@@ -15,7 +15,7 @@ import javafx.scene.Node;
  * - tentativo automatico di riconnessione
  * - ritorno alla scena "App" se il server rimane offline
  *
- * Va implementata da tutti i controller che comunicano col server.
+ * MEMO: Va implementata da tutti i controller che comunicano col server.
  */
 public interface OnlineChecker {
 

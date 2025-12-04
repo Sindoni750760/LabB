@@ -134,19 +134,19 @@ public class AuthHandler implements CommandHandler {
         ctx.write("ok");
     }
 
+    
+    /**
+    * Gestisce il comando "getUserInfo".
+    * Legge le informazioni dell'utente attualmente loggato dalla sessione
+    * e le invia al client.
+    *
+    * @param ctx contesto della sessione client
+    * @throws IOException se si verifica un errore di I/O
+    * @throws SQLException se si verifica un errore di database
+    * @throws InterruptedException se il thread viene interrotto
+    */
     private void handleGetUserInfo(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
-
-        /**
-         * Gestisce il comando "getUserInfo".
-         * Legge le informazioni dell'utente attualmente loggato dalla sessione
-         * e le invia al client.
-         *
-         * @param ctx contesto della sessione client
-         * @throws IOException se si verifica un errore di I/O
-         * @throws SQLException se si verifica un errore di database
-         * @throws InterruptedException se il thread viene interrotto
-         */
 
         int id = ctx.getLoggedUserId();
 

@@ -56,9 +56,7 @@ public class ConnectionManager {
         return instance;
     }
 
-    // ============================================================
     //   1) RICERCA INTELLIGENTE DELLA CARTELLA "LabB"
-    // ============================================================
 
     private File findLabBRoot() {
         File start = new File(System.getProperty("user.dir"));
@@ -89,9 +87,7 @@ public class ConnectionManager {
         return null;
     }
 
-    // ============================================================
     //   2) CREAZIONE AUTOMATICA DEL FILE connection.ini
-    // ============================================================
 
     private void createIniFile() {
         try (PrintWriter pw = new PrintWriter(new FileWriter(iniFile))) {
@@ -105,9 +101,7 @@ public class ConnectionManager {
         }
     }
 
-    // ============================================================
     //   3) LETTURA DEL FILE connection.ini
-    // ============================================================
 
     private void loadIni() {
         Properties prop = new Properties();
@@ -128,9 +122,7 @@ public class ConnectionManager {
         }
     }
 
-    // ============================================================
-    //   4) RESTITUISCE UNA NUOVA CONNESSIONE
-    // ============================================================
+    // 4) RESTITUISCE UNA NUOVA CONNESSIONE
 
     public Connection getConnection() throws SQLException {
         return DriverManager.getConnection(jdbcUrl, username, password);

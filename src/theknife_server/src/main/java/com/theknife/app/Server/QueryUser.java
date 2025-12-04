@@ -23,7 +23,7 @@ public interface QueryUser {
      * @param lat latitudine del domicilio
      * @param lon longitudine del domicilio
      * @param isRistoratore true se l'utente è un ristoratore
-     * @return true se l'inserimento ha successo, false altrimenti
+     * @return {@true} se l'inserimento ha successo, {@false} altrimenti
      * @throws SQLException se si verifica un errore di database
      * @throws InterruptedException se il thread viene interrotto
      */

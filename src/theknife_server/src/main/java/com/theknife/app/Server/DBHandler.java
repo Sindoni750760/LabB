@@ -9,8 +9,8 @@ import java.util.List;
  * Repository principale del server.
  * Espone un'unica istanza (singleton) e implementa QueryUser + QueryRestaurant.
  *
- * Tutta la logica SQL è implementata nei layer astratti:
- *   GenericCRUD -> UserCRUD -> RestaurateurCRUD -> RestaurantCRUD
+ * Tutta la logica SQL è implementata nei layer:
+ * GenericCRUD -> UserCRUD -> RestaurateurCRUD -> RestaurantCRUD
  */
 public class DBHandler extends RestaurantCRUD implements QueryUser, QueryRestaurant {
 
@@ -28,11 +28,7 @@ public class DBHandler extends RestaurantCRUD implements QueryUser, QueryRestaur
         return instance;
     }
 
-
-    /* =========================================================
-       IMPLEMENTAZIONE QueryUser
-       ========================================================= */
-
+    //Metodi QueryUser:
     @Override
     public boolean addUser(String nome, String cognome, String username,
                            String passwordHashed, Date dataNascita,
@@ -66,10 +62,9 @@ public class DBHandler extends RestaurantCRUD implements QueryUser, QueryRestaur
     }
 
 
-    /* =========================================================
-       IMPLEMENTAZIONE QueryRestaurant
-       (wrapper attorno ai metodi già esistenti)
-       ========================================================= */
+    /* 
+    * Metodi QueryRestaurants
+    */
 
     @Override
     public boolean addRestaurant(int ownerId,
@@ -151,10 +146,10 @@ public class DBHandler extends RestaurantCRUD implements QueryUser, QueryRestaur
         boolean online   = "y".equalsIgnoreCase(hasOnline);
         int favouriteUserId = (onlyFavourites && userId != null) ? userId : -1;
 
-        // nearMe per ora lo ignoriamo: la logica "vicino a me" sta nel livello Handler
+        // logica "vicino a me" sta nel livello Handler
         String[][] raw = super.getRestaurantsWithFilter(
                 page,
-                null, // nation (gestita nel tuo Handler)
+                null, // gestita nel Handler
                 null, // city
                 lat, lon, rangeKm,
                 priceMin, priceMax,
@@ -343,7 +338,7 @@ public class DBHandler extends RestaurantCRUD implements QueryUser, QueryRestaur
     public String[][] getReviews(int restaurantId, int page)
             throws SQLException, InterruptedException {
 
-        // Chiama l’implementazione originale (DBHandler "vecchio")
+        // Chiama l’implementazione originale
         String[][] arr = super.getReviews(restaurantId, page);
 
         // Sicurezza: se dovesse mai essere null, restituiamo un array vuoto

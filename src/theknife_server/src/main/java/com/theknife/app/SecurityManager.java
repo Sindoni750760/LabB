@@ -51,7 +51,7 @@ public class SecurityManager {
      *
      * @param raw password in chiaro da verificare
      * @param hash hash bcrypt da confrontare
-     * @return true se la password corrisponde, false altrimenti
+     * @return {@true} se la password corrisponde, {@false} altrimenti
      */
     public boolean verifyPassword(String raw, String hash) {
         return encoder.matches(raw, hash);
@@ -66,7 +66,7 @@ public class SecurityManager {
      * - Contiene almeno un carattere speciale
      *
      * @param pw password da verificare
-     * @return true se la password soddisfa tutti i criteri, false altrimenti
+     * @return {@true} se la password soddisfa tutti i criteri, {@false} altrimenti
      */
     public boolean checkPasswordStrength(String pw) {
         if (pw.length() < 8 || pw.length() > 32) return false;

@@ -10,8 +10,6 @@ import java.nio.charset.StandardCharsets;
  * Contiene:
  *  - connessione
  *  - invio/ricezione messaggi
- *  - heartbeat ("ping" automatico ogni 5s)
- *  - gestione errori e stato online/offline
  */
 
 public class Communicator {

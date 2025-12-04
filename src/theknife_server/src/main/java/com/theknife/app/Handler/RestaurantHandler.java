@@ -44,7 +44,7 @@ public class RestaurantHandler implements CommandHandler {
      *
      * @param cmd comando da gestire
      * @param ctx contesto della sessione client
-     * @return true se il comando era riconosciuto, false altrimenti
+     * @return {@true} se il comando era riconosciuto, {@false} altrimenti
      * @throws IOException se si verifica un errore di I/O
      * @throws SQLException se si verifica un errore di database
      * @throws InterruptedException se il thread viene interrotto
@@ -262,10 +262,6 @@ public class RestaurantHandler implements CommandHandler {
         Double lon    = null;
         Double rangeKm = null;
 
-
-        /* ==========================================================
-           1) INTERPRETAZIONE searchMode
-           ========================================================== */
         switch (mode) {
 
             case "all" -> { }
@@ -304,10 +300,6 @@ public class RestaurantHandler implements CommandHandler {
             }
         }
 
-
-        /* ============================
-           2) RANGE (coordinate only)
-           ============================ */
         if (!"-".equals(rangeStr)) {
             try {
                 rangeKm = Double.parseDouble(rangeStr);
@@ -323,10 +315,6 @@ public class RestaurantHandler implements CommandHandler {
             }
         }
 
-
-        /* ============================
-           3) PREZZO
-           ============================ */
         Integer priceMin = null, priceMax = null;
         try {
             if (!"-".equals(priceMinStr)) priceMin = Integer.parseInt(priceMinStr);
@@ -343,10 +331,6 @@ public class RestaurantHandler implements CommandHandler {
             return;
         }
 
-
-        /* ============================
-           4) STELLE
-           ============================ */
         Double starsMin = null, starsMax = null;
         try {
             if (!"-".equals(starsMinStr)) starsMin = Double.parseDouble(starsMinStr);
@@ -363,10 +347,6 @@ public class RestaurantHandler implements CommandHandler {
             return;
         }
 
-
-        /* ============================
-           5) DELIVERY / ONLINE / CATEGORIA
-           ============================ */
         boolean delivery = "y".equals(deliveryStr);
         boolean online   = "y".equals(onlineStr);
 
@@ -375,10 +355,6 @@ public class RestaurantHandler implements CommandHandler {
             category = categoryStr.trim();
         }
 
-
-        /* ============================
-           6) QUERY DB
-           ============================ */
         String[][] data = db.getRestaurantsWithFilter(
                 page,
                 nation, city,
@@ -390,10 +366,6 @@ public class RestaurantHandler implements CommandHandler {
                 category
         );
 
-
-        /* ============================
-           7) RISPOSTA AL CLIENT
-           ============================ */
         ctx.write("ok");
         ctx.write(data[0][0]); // pages
         ctx.write(data[0][1]); // size

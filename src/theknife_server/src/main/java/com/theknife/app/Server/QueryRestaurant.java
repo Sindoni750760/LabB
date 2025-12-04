@@ -27,7 +27,7 @@ public interface QueryRestaurant {
      * @param delivery true se offre delivery
      * @param online true se offre prenotazione online
      * @param tipoCucina tipo di cucina
-     * @return true se l'inserimento ha successo, false altrimenti
+     * @return {@true} se l'inserimento ha successo, {@false} altrimenti
      * @throws SQLException se si verifica un errore di database
      */
     boolean addRestaurant(
@@ -128,7 +128,7 @@ public interface QueryRestaurant {
      */
     boolean deleteRestaurant(int id) throws SQLException, InterruptedException;
 
-    // MIO RISTORANTI
+    // Metodi MyRestaurants
     int getMyRestaurantsPageCount(int userId) throws SQLException, InterruptedException;
 
     List<String[]> getMyRestaurants(int userId, int page) throws SQLException, InterruptedException;

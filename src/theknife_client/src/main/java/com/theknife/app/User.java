@@ -45,7 +45,6 @@ public class User{
             // login riuscito: salva ID interno
             // NON viene inviato l'ID qui → server lo salva nella sessione del socket, non lo manda
             // per semplicità, NON memorizziamo userId lato client (non lo usa)
-            // se vuoi recuperarlo, aggiungo un comando al server
 
             // ora servono le info utente
             Communicator.send("getUserInfo");

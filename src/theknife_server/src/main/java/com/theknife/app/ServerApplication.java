@@ -33,9 +33,6 @@ public class ServerApplication {
     /** Thread dedicato all'accettazione di connessioni client. */
     private Thread acceptThread;
 
-    /** Porta sulla quale il server ascolta le connessioni. */
-    private int port;
-
     /**
      * Costruttore privato per il pattern singleton.
      */
@@ -57,15 +54,13 @@ public class ServerApplication {
      * Crea un ServerSocket e avvia il thread di accettazione delle connessioni.
      *
      * @param port numero della porta su cui ascoltare le connessioni
-     * @return true se il server è stato avviato con successo, false altrimenti
+     * @return {@true} se il server è stato avviato con successo, {@false} altrimenti
      */
     public synchronized boolean start(int port) {
         if (running.get()) {
             log.warning("Tentativo di avvio ma il server è già in esecuzione.");
             return false;
         }
-
-        this.port = port;
 
         try {
             serverSocket = new ServerSocket(port);
@@ -135,20 +130,13 @@ public class ServerApplication {
         if (acceptThread != null)
             try { acceptThread.join(); } catch (InterruptedException ignored) {}
 
-        // Chiude tutte le connessioni DB
-        try {
-            ConnectionManager.getInstance();
-        } catch (Exception e) {
-            log.error("Errore durante l'operazione flush() della ConnectionCache: " + e.getMessage());
-        }
-
         log.info("Server arrestato correttamente.");
     }
 
     /**
      * Verifica se il server è attualmente in esecuzione.
      *
-     * @return true se il server è in esecuzione, false altrimenti
+     * @return {@true} se il server è in esecuzione, {@false} altrimenti
      */
     public boolean isRunning() {
         return running.get();

@@ -6,7 +6,7 @@ import com.theknife.app.ConnectionManager;
 
 /**
  * Layer di base per tutti i CRUD.
- * Espone il ConnectionManager e (se vuoi) utilità comuni.
+ * Espone il ConnectionManager e utilità comuni.
  */
 public abstract class GenericCRUD {
 
