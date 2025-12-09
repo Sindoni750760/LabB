@@ -61,31 +61,32 @@ public class AuthHandler implements CommandHandler {
      * Costruttore privato, utilizzato dal pattern Singleton.
      */
     private AuthHandler() {}
-
+    
     /**
      * Gestisce un comando testuale fornito dal client.
      *
-     * <p>Il protocollo previsto è il seguente:</p>
+     * <p>Mappa i comandi supportati ai relativi metodi privati di gestione.
+     * In particolare:</p>
      *
-     * <table border="1">
-     *     <tr><th>Comando</th><th>Effetto</th></tr>
-     *     <tr><td>login</td><td>Invoca {@link #handleLogin(ClientContext)}</td></tr>
-     *     <tr><td>register</td><td>Invoca {@link #handleRegister(ClientContext)}</td></tr>
-     *     <tr><td>logout</td><td>Invoca {@link #handleLogout(ClientContext)}</td></tr>
-     *     <tr><td>getUserInfo</td><td>Invoca {@link #handleGetUserInfo(ClientContext)}</td></tr>
-     * </table>
+     * <ul>
+     *     <li><code>login</code> → {@link #handleLogin(ClientContext)}</li>
+     *     <li><code>register</code> → {@link #handleRegister(ClientContext)}</li>
+     *     <li><code>logout</code> → {@link #handleLogout(ClientContext)}</li>
+     *     <li><code>getUserInfo</code> → {@link #handleGetUserInfo(ClientContext)}</li>
+     * </ul>
      *
      * @param cmd comando ricevuto dal client
      * @param ctx contesto di sessione, incapsula lettura/scrittura su socket
      * @return {@code true} se il comando è stato gestito, {@code false} altrimenti
      *
-     * @throws IOException se si verificano problemi I/O sulla socket
+     * @throws IOException se si verificano problemi di I/O sulla socket
      * @throws SQLException se si verificano errori DB lato service
      * @throws InterruptedException se si verifica un'interruzione del thread handler
      */
     @Override
     public boolean handle(String cmd, ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
+
 
         switch (cmd) {
             case "login"       -> handleLogin(ctx);

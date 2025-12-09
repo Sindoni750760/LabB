@@ -5,20 +5,49 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Layer CRUD intermedio dedicato alla gestione dei ristoranti.
- * <p>
- * Implementa tutte le operazioni principali relative a:
+ * Layer intermedio di accesso ai dati dedicato alla gestione dei ristoranti,
+ * comprensivo di operazioni CRUD, ricerca con filtri e interrogazioni aggregate.
+ *
+ * <p>Questa classe fornisce un'astrazione DB-oriented delle principali
+ * funzionalità applicative legate ai ristoranti, includendo:</p>
+ *
  * <ul>
- *     <li>Creazione/modifica/eliminazione ristorante</li>
- *     <li>Recupero informazioni estese</li>
- *     <li>Ricerca con multipli filtri</li>
- *     <li>Gestione recensioni e risposte</li>
- *     <li>Preferiti</li>
+ *     <li>creazione, modifica ed eliminazione di ristoranti</li>
+ *     <li>recupero di informazioni estese (metadata aggregati)</li>
+ *     <li>ricerca filtrata, con paginazione e vincoli multipli</li>
+ *     <li>gestione recensioni, risposte e preferiti</li>
  * </ul>
  *
- * Estende {@link RestaurateurCRUD} ereditando funzioni per l'accesso del proprietario.
+ * <p><b>Gerarchia</b>: estende {@link RestaurateurCRUD}, ereditando metodi
+ * dedicati alla verifica della proprietà (accesso del ristoratore) utilizzati,
+ * ad esempio, per:</p>
+ *
+ * <ul>
+ *     <li>modifica di un ristorante</li>
+ *     <li>eliminazione di un ristorante</li>
+ *     <li>risposta a una recensione</li>
+ * </ul>
+ *
+ * <p><b>Gestione risorse DB</b></p>
+ * <ul>
+ *     <li>utilizza connessioni ottenute da {@code connMgr.getConnection()}</li>
+ *     <li>fa uso di {@link PreparedStatement} per evitare SQL injection</li>
+ *     <li>rilascia sempre le risorse con try-with-resources</li>
+ * </ul>
+ *
+ * <p><b>Eccezioni</b></p>
+ * <ul>
+ *     <li>{@link SQLException} — propagata in caso di problemi lato database</li>
+ *     <li>{@link InterruptedException} — propagata quando l'operazione viene interrotta</li>
+ * </ul>
+ *
+ * <p>La validazione degli input (coerenza dei parametri, range, ecc.) è
+ * demandata ai livelli superiori (handler e UI). I metodi restituiscono
+ * tipicamente booleani o matrici di stringhe formattate in vista del
+ * protocollo testuale usato dal server.</p>
  */
 public abstract class RestaurantCRUD extends RestaurateurCRUD {
+
 
     /**
      * Inserisce un nuovo ristorante associato a un ristoratore.
@@ -500,24 +529,21 @@ public abstract class RestaurantCRUD extends RestaurateurCRUD {
         }
     }
 
-   /**
-     * Recupera la recensione dell'utente per un dato ristorante.
-     * Ogni utente ha al massimo una review per ristorante.
+    /**
+     * Restituisce il numero di pagine che contengono le recensioni
+     * associate a un determinato ristorante.
      *
-     * @param userId ID utente
-     * @param restId ID ristorante
-     * @return array contenente:
-     * <pre>
-     * [0] stelle (String)
-     * [1] testo recensione
-     * </pre>
-     * oppure {@code null} se non esiste
+     * <p>La logica applicativa prevede 10 recensioni per pagina.</p>
      *
-     * @throws SQLException errore DB
-     * @throws InterruptedException thread interrotto
+     * @param restId ID del ristorante
+     * @return numero di pagine (maggiore o uguale a 0)
+     *
+     * @throws SQLException errore durante la query SQL
+     * @throws InterruptedException se il thread viene interrotto
      */
     public int getReviewsPageCount(int restId)
             throws SQLException, InterruptedException {
+
 
         String sql = """
             SELECT COUNT(*)
@@ -676,14 +702,12 @@ public abstract class RestaurantCRUD extends RestaurateurCRUD {
     
     /**
      * Modifica una recensione inserita in precedenza dallo stesso utente.
-     * <p>
      * Aggiorna esclusivamente:
      * <ul>
      *   <li>stelle</li>
      *   <li>testo recensione</li>
      * </ul>
      * L'utente deve coincidere con l'autore per rispettare i vincoli applicativi.
-     * </p>
      *
      * @param userId ID dell'autore
      * @param restId ID del ristorante
@@ -714,22 +738,23 @@ public abstract class RestaurantCRUD extends RestaurateurCRUD {
         }
     }
 
-     /**
+    /**
      * Rimuove una recensione appartenente a un determinato utente.
-     * <p>
-     * La rimozione è vincolata da:
-     * <ul>
-     *   <li>ID utente deve corrispondere all'autore</li>
-     *   <li>ID ristorante deve essere quello corretto</li>
-     * </ul>
-     * </p>
      *
-     * @param userId ID autore
-     * @param restId ID ristorante
-     * @return true se eliminata, false se non esistente
+     * <p>La rimozione è vincolata da:</p>
+     * <ul>
+     *   <li>l'ID utente deve corrispondere all'autore della recensione</li>
+     *   <li>l'ID ristorante deve essere quello associato alla recensione</li>
+     * </ul>
+     *
+     * @param userId ID dell'autore
+     * @param restId ID del ristorante
+     * @return {@code true} se è stata eliminata almeno una riga,
+     *         {@code false} se la recensione non esiste
      * @throws SQLException errore di database
      * @throws InterruptedException thread interrotto
      */
+
     public boolean removeReview(int userId, int restId)
             throws SQLException, InterruptedException {
 
@@ -751,19 +776,20 @@ public abstract class RestaurantCRUD extends RestaurateurCRUD {
 
     /**
      * Verifica se l'utente è autorizzato a rispondere a una determinata recensione.
-     * <p>
-     * Condizione:
+     *
+     * <p>Condizione:</p>
      * <ul>
      *     <li>l'utente deve essere proprietario del ristorante associato alla recensione</li>
      * </ul>
-     * </p>
      *
-     * @param userId utente autenticato
-     * @param reviewId recensione
-     * @return true se può rispondere
+     * @param userId ID dell'utente autenticato
+     * @param reviewId ID della recensione
+     * @return {@code true} se l'utente può inserire o modificare una risposta,
+     *         {@code false} altrimenti
      * @throws SQLException errore DB
      * @throws InterruptedException thread interrotto
-    */
+     */
+
     public boolean canRespond(int userId, int reviewId)
             throws SQLException, InterruptedException {
 
@@ -792,6 +818,8 @@ public abstract class RestaurantCRUD extends RestaurateurCRUD {
      * @return stringa contenente risposta oppure null
      * @throws SQLException errore DB
      * @throws InterruptedException thread interrotto
+     * @throws SQLException errore DB
+     * @throws InterruptedException operazione interrotta
      */
     public String getResponse(int reviewId)
             throws SQLException, InterruptedException {
@@ -822,6 +850,8 @@ public abstract class RestaurantCRUD extends RestaurateurCRUD {
      * @param reviewId ID recensione
      * @param text testo risposta
      * @return true se registrata
+     * @throws SQLException errore DB
+     * @throws InterruptedException operazione interrotta
      */
     public boolean addResponse(int reviewId, String text)
             throws SQLException, InterruptedException {
@@ -847,6 +877,8 @@ public abstract class RestaurantCRUD extends RestaurateurCRUD {
      * @param reviewId ID recensione
      * @param text testo aggiornato
      * @return true se modificata
+     * @throws SQLException errore DB
+     * @throws InterruptedException operazione interrotta
      */
     public boolean editResponse(int reviewId, String text)
             throws SQLException, InterruptedException {
@@ -872,6 +904,8 @@ public abstract class RestaurantCRUD extends RestaurateurCRUD {
      *
      * @param reviewId ID recensione
      * @return true se eliminata
+     * @throws SQLException errore DB
+     * @throws InterruptedException operazione interrotta
      */
     public boolean removeResponse(int reviewId)
             throws SQLException, InterruptedException {
@@ -898,6 +932,8 @@ public abstract class RestaurantCRUD extends RestaurateurCRUD {
      * @param userId utente
      * @param restId ristorante
      * @return true se presente nei preferiti
+     * @throws SQLException errore DB
+     * @throws InterruptedException operazione interrotta
      */
     public boolean isFavourite(int userId, int restId)
             throws SQLException, InterruptedException {
@@ -926,6 +962,8 @@ public abstract class RestaurantCRUD extends RestaurateurCRUD {
      * @param userId utente
      * @param restId ristorante
      * @return true se inserito correttamente
+     * @throws SQLException errore DB
+     * @throws InterruptedException operazione interrotta
      */
     public boolean addFavourite(int userId, int restId)
             throws SQLException, InterruptedException {
@@ -951,6 +989,8 @@ public abstract class RestaurantCRUD extends RestaurateurCRUD {
      * @param userId utente
      * @param restId ristorante
      * @return true se rimosso correttamente
+     * @throws SQLException errore DB
+     * @throws InterruptedException operazione interrotta
      */
     public boolean removeFavourite(int userId, int restId)
             throws SQLException, InterruptedException {

@@ -6,15 +6,16 @@ import java.io.IOException;
 import java.sql.SQLException;
 
 /**
- * Handler responsabile della gestione di tutti i comandi relativi
- * a ristoranti, recensioni, risposte e preferiti.
+ * Handler responsabile della gestione di tutti i comandi relativi a ristoranti,
+ * recensioni, risposte dei ristoratori e preferiti utente.
  *
- * <p>Implementa la logica di routing tra comandi testuali ricevuti dal client
- * e metodi di accesso ai dati forniti dal {@link DBHandler}.</p>
+ * <p>La classe effettua il dispatch dei comandi testuali ricevuti dal client
+ * inoltrandoli ai corrispondenti metodi del livello dati ({@link DBHandler}).</p>
  *
- * <p>Tra le funzionalità principali gestite:</p>
+ * <p>Macro-categorie di operazioni gestite:</p>
+ *
  * <ul>
- *     <li>CRUD ristoranti:
+ *     <li><b>CRUD ristoranti</b>:
  *         <ul>
  *             <li>{@code addRestaurant}</li>
  *             <li>{@code editRestaurant}</li>
@@ -22,49 +23,61 @@ import java.sql.SQLException;
  *         </ul>
  *     </li>
  *
- *     <li>Visualizzazione ristoranti:
+ *     <li><b>Ricerca e visualizzazione</b>:
  *         <ul>
- *             <li>{@code getRestaurants} con filtri multipli (position, range, prezzo, rating, ecc.)</li>
+ *             <li>{@code getRestaurants} con filtri multipli</li>
  *             <li>{@code getRestaurantInfo}</li>
  *             <li>{@code getMyRestaurants}, {@code getMyRestaurantsPages}</li>
  *         </ul>
  *     </li>
  *
- *     <li>Gestione recensioni:
+ *     <li><b>Recensioni utente</b>:
  *         <ul>
  *             <li>{@code getReviewsPages}, {@code getReviews}</li>
- *             <li>{@code getMyReview}, {@code addReview}, {@code editReview}, {@code removeReview}</li>
+ *             <li>{@code getMyReview}</li>
+ *             <li>{@code addReview}, {@code editReview}, {@code removeReview}</li>
  *         </ul>
  *     </li>
  *
- *     <li>Gestione risposte del ristoratore:
+ *     <li><b>Risposte del ristoratore</b>:
  *         <ul>
  *             <li>{@code getResponse}</li>
  *             <li>{@code addResponse}, {@code editResponse}, {@code removeResponse}</li>
  *         </ul>
  *     </li>
  *
- *     <li>Gestione preferiti:
+ *     <li><b>Preferiti</b>:
  *         <ul>
  *             <li>{@code isFavourite}, {@code addFavourite}, {@code removeFavourite}</li>
  *         </ul>
  *     </li>
  * </ul>
  *
- * <p>Questo handler non accede direttamente alla rete, ma utilizza
- * {@link ClientContext} per scambiare messaggi
- * con il client secondo un protocollo testuale ordinato.</p>
+ * <p>Protocollo di comunicazione:</p>
+ * <pre>
+ * [comando]
+ * [parametro1]
+ * [parametro2]
+ * ...
+ * </pre>
  *
- * <p>Pattern utilizzati:</p>
+ * <p>L’ordine di lettura dei parametri è vincolante e deve rispettare quello
+ * inviato dal client.</p>
+ *
+ * <p>La classe non interagisce direttamente con la rete ma utilizza
+ * {@link ClientContext} per consumare i parametri e restituire le risposte.</p>
+ *
+ * <p>Pattern applicati:</p>
  * <ul>
- *     <li>Singleton</li>
- *     <li>Command Pattern tramite {@link CommandHandler}</li>
+ *     <li><b>Singleton</b> → accesso tramite {@link #getInstance()}</li>
+ *     <li><b>Command Pattern</b> → implementazione di {@link CommandHandler}</li>
  * </ul>
  *
  * @author Mattia Sindoni 750760 VA
  * @author Erica Faccio 751654 VA
  * @author Giovanni Isgrò 753536 VA
  */
+
 public class RestaurantHandler implements CommandHandler {
 
     /** Istanza singleton del RestaurantHandler. */

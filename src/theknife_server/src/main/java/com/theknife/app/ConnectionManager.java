@@ -9,28 +9,29 @@ import java.util.Properties;
 /**
  * Gestore centralizzato per l’accesso al database PostgreSQL.
  *
- * <p>La configurazione è contenuta nel file <b>connection.ini</b>, cercato
- * automaticamente nella cartella "LabB", indipendentemente dal percorso del JAR.</p>
+ * <p>La configurazione è contenuta nel file {@code connection.ini}, ricercato
+ * automaticamente nella cartella radice del progetto denominata {@code LabB}.</p>
  *
- * Struttura attesa del progetto:
+ * <p>Struttura attesa del progetto:</p>
  *
  * <pre>
- *   LabB/
- *      connection.ini
- *      server.jar
- *      ...
+ * LabB/
+ * ├─ connection.ini
+ * └─ server.jar
  * </pre>
  *
- * <p>Se il file non esiste, viene generato automaticamente con valori predefiniti.</p>
+ * <p>Se il file di configurazione non è presente, viene generato automaticamente
+ * con valori predefiniti.</p>
  *
- * Supporta:
+ * <p>Il componente si occupa di:</p>
  * <ul>
- *     <li>lettura parametri DB al bootstrap</li>
- *     <li>creazione del file di configurazione se assente</li>
- *     <li>fornitura delle connessioni SQL</li>
+ *     <li>Caricare il driver JDBC PostgreSQL</li>
+ *     <li>Individuare (o creare) il file di configurazione</li>
+ *     <li>Leggere i parametri di connessione</li>
+ *     <li>Fornire connessioni JDBC attive</li>
  * </ul>
  *
- * Pattern utilizzato: Singleton.
+ * <p>Pattern applicato: <b>Singleton</b>.</p>
  */
 public class ConnectionManager {
 
@@ -40,21 +41,23 @@ public class ConnectionManager {
     private String username;
     private String password;
 
-    /** Percorso completo del file di configurazione. */
+    /** Percorso del file {@code connection.ini} individuato. */
     private File iniFile;
 
     /**
      * Costruttore privato.
      *
      * <p>Responsabilità:</p>
+     *
      * <ul>
-     *     <li>caricamento del driver PostgreSQL</li>
-     *     <li>ricerca della cartella LabB</li>
-     *     <li>creazione del file di configurazione se assente</li>
-     *     <li>lettura dei parametri dal file</li>
+     *     <li>Caricare il driver PostgreSQL</li>
+     *     <li>Ricercare la cartella {@code LabB}</li>
+     *     <li>Creare {@code connection.ini} se mancante</li>
+     *     <li>Leggere i parametri dal file</li>
      * </ul>
      *
-     * @throws RuntimeException se non è possibile localizzare "LabB" o leggere connection.ini
+     * @throws RuntimeException se non è possibile individuare {@code LabB}
+     *                          o se il file di configurazione risulta illeggibile.
      */
     private ConnectionManager() {
         try {
@@ -77,9 +80,9 @@ public class ConnectionManager {
     }
 
     /**
-     * Restituisce la singola istanza di ConnectionManager.
+     * Restituisce l'istanza unica di {@link ConnectionManager}.
      *
-     * @return istanza singleton
+     * @return l'istanza singleton
      */
     public static synchronized ConnectionManager getInstance() {
         if (instance == null)
@@ -88,16 +91,17 @@ public class ConnectionManager {
     }
 
     /**
-     * Cerca la cartella "LabB" risalendo dal working directory corrente.
+     * Ricerca la cartella {@code LabB} risalendo progressivamente
+     * dai percorsi parent della working directory corrente.
      *
-     * <p>È prevista una ricerca a ritroso:</p>
+     * <p>Ricerca effettuata con priorità:</p>
      * <ol>
-     *     <li>cerca una sottocartella chiamata LabB</li>
-     *     <li>controlla se la working directory corrente è LabB</li>
-     *     <li>risale successivamente la gerarchia dei parent</li>
+     *     <li>Verifica presenza sottocartella denominata {@code LabB}</li>
+     *     <li>Verifica se la directory corrente è {@code LabB}</li>
+     *     <li>Risale nella gerarchia dei parent</li>
      * </ol>
      *
-     * @return File rappresentante la root della cartella LabB, oppure null se non trovata
+     * @return la directory radice del progetto oppure {@code null} se non individuata
      */
     private File findLabBRoot() {
         File start = new File(System.getProperty("user.dir"));
@@ -122,16 +126,17 @@ public class ConnectionManager {
     }
 
     /**
-     * Genera un file connection.ini con valori di default.
+     * Genera un file {@code connection.ini} con valori predefiniti.
      *
-     * Struttura generata:
+     * <p>Contenuto standard:</p>
+     *
      * <pre>
      * jdbc_url=jdbc:postgresql://localhost:5432/theknife
      * username=postgres
      * password=
      * </pre>
      *
-     * @throws RuntimeException se il file non può essere creato
+     * @throws RuntimeException se si verificano errori di scrittura
      */
     private void createIniFile() {
         try (PrintWriter pw = new PrintWriter(new FileWriter(iniFile))) {
@@ -144,15 +149,17 @@ public class ConnectionManager {
     }
 
     /**
-     * Carica i parametri dal file connection.ini.
-     * Valori attesi:
+     * Carica i parametri di connessione dal file {@code connection.ini}.
+     *
+     * <p>Valori attesi:</p>
      * <ul>
-     *     <li>jdbc_url</li>
-     *     <li>username</li>
-     *     <li>password</li>
+     *     <li>{@code jdbc_url}</li>
+     *     <li>{@code username}</li>
+     *     <li>{@code password}</li>
      * </ul>
      *
-     * @throws RuntimeException se il file è mancante o incompleto
+     * @throws RuntimeException se il file è mancante,
+     *                          danneggiato o con chiavi mancanti
      */
     private void loadIni() {
         Properties prop = new Properties();
@@ -171,29 +178,34 @@ public class ConnectionManager {
             throw new RuntimeException("connection.ini non valido: parametri mancanti.");
         }
     }
+
     /**
-     * Restituisce una nuova connessione JDBC aperta verso PostgreSQL.
+     * Restituisce una connessione JDBC attiva verso il database configurato.
      *
-     * <p>Ogni chiamata genera una nuova connessione che deve essere chiusa</p>
-     * tramite:
+     * <p>Il metodo ritorna ogni volta una nuova connessione, che deve essere chiusa
+     * tramite try-with-resources:</p>
      *
      * <pre>
-     * @code {try (Connection conn = connMgr.getConnection()) { ... }}
+     * try (Connection conn = ConnectionManager.getInstance().getConnection()) {
+     *     ...
+     * }
      * </pre>
      *
-     * @return una connessione attiva verso il DB configurato
-     * @throws SQLException se i parametri sono errati o il DB non è raggiungibile
+     * @return una connessione aperta verso PostgreSQL
+     * @throws SQLException se il database non è raggiungibile
+     *                      o le credenziali non sono valide
      */
     public Connection getConnection() throws SQLException {
         return DriverManager.getConnection(jdbcUrl, username, password);
     }
 
     /**
-     * Metodo di compatibilità con versioni precedenti del design.
+     * Rilascia una connessione precedentemente ottenuta.
      *
-     * <p>Equivalente a conn.close(), ma tollera valori null.</p>
+     * <p>Metodo tollerante verso argomenti {@code null};
+     * equivale a {@link Connection#close()}.</p>
      *
-     * @param c connessione da rilasciare (chiudere)
+     * @param c connessione da chiudere; può essere {@code null}
      */
     public void releaseConnection(Connection c) {
         if (c != null) {

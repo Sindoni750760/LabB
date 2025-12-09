@@ -26,12 +26,12 @@ public abstract class RestaurateurCRUD extends UserCRUD {
 
     /**
      * Verifica se un utente è autorizzato a modificare un ristorante.
-     * <p>
-     * Si basa sull'associazione diretta:
+     *
+     * <p>Si basa sull'associazione diretta:</p>
+     *
      * <pre>
-     *   "RistorantiTheKnife".proprietario = userId
+     * "RistorantiTheKnife".proprietario = userId
      * </pre>
-     * </p>
      *
      * @param userId ID dell'utente che tenta l'accesso
      * @param restId ID del ristorante oggetto dell'operazione
@@ -41,6 +41,7 @@ public abstract class RestaurateurCRUD extends UserCRUD {
      * @throws SQLException errore durante la query SQL
      * @throws InterruptedException se il thread viene interrotto
      */
+
     public boolean hasAccess(int userId, int restId)
             throws SQLException, InterruptedException {
 
