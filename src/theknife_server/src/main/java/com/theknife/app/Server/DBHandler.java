@@ -456,14 +456,4 @@ public class DBHandler extends RestaurantCRUD implements QueryUser, QueryRestaur
 
         return arr;
     }
-
-    /**
-     * Verifica se una stringa è nulla o composta solo da spazi.
-     *
-     * @param s stringa da controllare
-     * @return true se la stringa è vuota o nulla
-     */
-    private boolean isBlank(String s) {
-        return s == null || s.trim().isEmpty();
-    }
 }
