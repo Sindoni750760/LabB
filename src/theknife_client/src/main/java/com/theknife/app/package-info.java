@@ -1,19 +1,23 @@
 /**
- * Package principale dell'applicazione client TheKnife.
+ * Package principale del client TheKnife.
+ * Gestisce lifecycle JavaFX, routing tra schermate e comunicazione TCP con il server.
  *
- * <p>Include le componenti fondamentali del lato client, responsabili per:</p>
+ * <h2>Componenti principali</h2>
  *
  * <ul>
- *     <li>l'avvio dell'applicazione JavaFX;</li>
- *     <li>la gestione e navigazione delle scene;</li>
- *     <li>la configurazione dell'accesso al server;</li>
- *     <li>la comunicazione client-server tramite socket;</li>
- *     <li>la memorizzazione dello stato applicativo nel client.</li>
+ *     <li>{@link com.theknife.app.App} — entrypoint JavaFX</li>
+ *     <li>{@link com.theknife.app.Main} — entrypoint CLI</li>
+ *     <li>{@link com.theknife.app.SceneManager} — navigazione scene</li>
+ *     <li>{@link com.theknife.app.Communicator} — comunicazione socket</li>
+ *     <li>{@link com.theknife.app.User} — info utente loggato</li>
  * </ul>
  *
- * <p>Le classi contenute in questo package costituiscono il nucleo tecnico
- * dell'applicazione e vengono utilizzate dai controller dell'interfaccia
- * grafica per gestire dinamicamente viste, operazioni remoti e feedback
- * verso l'utente.</p>
+ * <h2>Responsabilità</h2>
+ * <ul>
+ *     <li>Mostrare le UI richieste</li>
+ *     <li>Inviare istruzioni al server</li>
+ *     <li>Validare input lato client</li>
+ *     <li>Gestire stato sessione</li>
+ * </ul>
  */
 package com.theknife.app;
