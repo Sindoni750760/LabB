@@ -197,7 +197,6 @@ public class AppController implements OnlineChecker {
      *     <li>Mostra messaggio di errore</li>
      * </ul>
      *
-     * @throws IOException se il tentativo di connessione genera errori I/O
      */
     @Override
     public Node[] getInteractiveNodes() {
