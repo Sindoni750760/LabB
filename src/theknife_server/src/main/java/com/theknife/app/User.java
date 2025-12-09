@@ -7,27 +7,44 @@ import java.text.SimpleDateFormat;
 import com.theknife.app.Server.DBHandler;
 
 /**
- * Service singleton per la gestione degli utenti lato server.
- * Fornisce metodi per registrazione, login e recupero delle informazioni utente.
- * Gestisce la validazione dei dati e l'interazione con il database.
- * 
- * @author Mattia Sindoni 750760 VA
- * @author Erica Faccio 751654 VA
- * @author Giovanni Isgrò 753536 VA
+ * Servizio singleton utilizzato lato server per la gestione degli utenti.
+ * <p>
+ * Si occupa di:
+ * </p>
+ * <ul>
+ *     <li>registrazione utente</li>
+ *     <li>validazione credenziali per il login</li>
+ *     <li>recupero informazioni utente</li>
+ * </ul>
+ *
+ * <p>
+ * Questa classe rappresenta un livello logico superiore rispetto a {@link DBHandler},
+ * che delega tutte le operazioni di accesso al database.
+ * </p>
+ *
+ * <p>
+ * Pattern applicato: Singleton.
+ * </p>
+ *
+ * @author
+ *     Mattia Sindoni 750760 VA<br>
+ *     Erica Faccio 751654 VA<br>
+ *     Giovanni Isgrò 753536 VA
  */
 public class User {
 
-    /** Istanza singleton del servizio User. */
+    /** Istanza singleton del servizio. */
     private static User instance = null;
 
-    /** Manager per operazioni di sicurezza (hashing password). */
+    /** Gestore della sicurezza (hashing/validazione password). */
     private final SecurityManager security;
-    
-    /** Handler per le operazioni sul database. */
+
+    /** Access layer verso il database. */
     private final DBHandler db;
 
     /**
-     * Costruttore privato che inizializza i servizi dipendenti.
+     * Costruttore privato.
+     * Inizializza dipendenze interne.
      */
     private User() {
         this.security = SecurityManager.getInstance();
@@ -35,9 +52,9 @@ public class User {
     }
 
     /**
-     * Restituisce l'istanza singleton del servizio User.
+     * Restituisce l'istanza singleton del servizio {@link User}.
      *
-     * @return istanza singleton
+     * @return unica istanza del servizio
      */
     public static synchronized User getInstance() {
         if (instance == null)
@@ -45,30 +62,43 @@ public class User {
         return instance;
     }
 
-    // ============================================================
-    //                     REGISTRAZIONE
-    // ============================================================
-
     /**
-     * Registra un nuovo utente nel sistema.
-     * Effettua validazioni lato server su campi obbligatori, robustezza password,
-     * e formato delle coordinate.
+     * Effettua la registrazione di un nuovo utente nel database.
+     * <p>
+     * Esegue le seguenti validazioni lato server:
+     * </p>
+     * <ul>
+     *     <li>campi obbligatori non vuoti</li>
+     *     <li>password conforme ai requisiti minimi</li>
+     *     <li>formato delle coordinate numerico</li>
+     *     <li>data di nascita nel formato yyyy-MM-dd</li>
+     * </ul>
      *
-     * @param nome nome dell'utente
-     * @param cognome cognome dell'utente
-     * @param username username univoco
+     * <p>
+     * Codici ritornati:
+     * </p>
+     * <ul>
+     *     <li>{@code ok} → registrazione completata</li>
+     *     <li>{@code missing} → campi mancanti</li>
+     *     <li>{@code password} → password non valida</li>
+     *     <li>{@code date} → data non conforme</li>
+     *     <li>{@code coordinates} → coordinate non numeriche</li>
+     *     <li>{@code credentials} → username già esistente</li>
+     * </ul>
+     *
+     * @param nome nome dell’utente
+     * @param cognome cognome dell’utente
+     * @param username username desiderato
      * @param pw password in chiaro
-     * @param dataNascita data di nascita nel formato "yyyy-MM-dd" (o "-" se non specificata)
-     * @param latStr latitudine del domicilio
-     * @param lonStr longitudine del domicilio
-     * @param isRistoratore true se l'utente è un ristoratore
-     * @return "ok" se la registrazione ha successo,
-     *         "missing" se campi obbligatori sono vuoti,
-     *         "password" se la password non soddisfa i requisiti,
-     *         "coordinates" se le coordinate sono invalide,
-     *         "credentials" se l'username esiste già
-     * @throws SQLException se si verifica un errore del database
-     * @throws InterruptedException se il thread viene interrotto
+     * @param dataNascita data di nascita formattata yyyy-MM-dd, oppure "-"
+     * @param latStr latitudine come stringa
+     * @param lonStr longitudine come stringa
+     * @param isRistoratore flag booleano per tipologia utente
+     *
+     * @return esito dell'operazione come stringa simbolica
+     *
+     * @throws SQLException errore database
+     * @throws InterruptedException thread interrotto
      */
     public String registerUser(
             String nome,
@@ -81,15 +111,12 @@ public class User {
             boolean isRistoratore
     ) throws SQLException, InterruptedException {
 
-        // Campi obbligatori
         if (nome.trim().isEmpty() || cognome.trim().isEmpty() || username.trim().isEmpty())
             return "missing";
 
-        // Password check
         if (!security.checkPasswordStrength(pw))
             return "password";
 
-        // Data di nascita -> long
         long birth = -1L;
         if (!dataNascita.equals("-")) {
             try {
@@ -101,7 +128,6 @@ public class User {
             }
         }
 
-        // Coordinate
         double lat, lon;
         try {
             lat = Double.parseDouble(latStr);
@@ -110,28 +136,38 @@ public class User {
             return "coordinates";
         }
 
-        // Inserimento in DB
         boolean ok = db.addUser(
-                nome, cognome, username,
+                nome,
+                cognome,
+                username,
                 security.hashPassword(pw),
-                birth, lat, lon, isRistoratore
+                birth,
+                lat,
+                lon,
+                isRistoratore
         );
 
-        // Il client si aspetta "credentials" quando l'username esiste già
         return ok ? "ok" : "credentials";
     }
 
     /**
-     * Effettua il login di un utente verificando le credenziali.
-     * Verifica che l'username esista e che la password sia corretta.
+     * Effettua la verifica delle credenziali utente.
+     * <p>
+     * Ritorno previsto:
+     * </p>
+     * <ul>
+     *     <li>ID utente → login valido</li>
+     *     <li>-1 → username inesistente</li>
+     *     <li>-2 → password non corretta</li>
+     * </ul>
      *
-     * @param username username dell'utente
-     * @param pw password in chiaro
-     * @return l'ID dell'utente se il login ha successo,
-     *         -1 se l'username non esiste,
-     *         -2 se la password è errata
-     * @throws SQLException se si verifica un errore del database
-     * @throws InterruptedException se il thread viene interrotto
+     * @param username username fornito
+     * @param pw password fornita in chiaro
+     *
+     * @return codice risultato numerico
+     *
+     * @throws SQLException errore database
+     * @throws InterruptedException thread interrotto
      */
     public int loginUser(String username, String pw)
             throws SQLException, InterruptedException {
@@ -139,24 +175,34 @@ public class User {
         String[] data = db.getUserLoginInfo(username);
 
         if (data == null)
-            return -1; // username non trovato
+            return -1; // username inesistente
 
         if (security.verifyPassword(pw, data[1]))
-            return Integer.parseInt(data[0]); // login ok
+            return Integer.parseInt(data[0]); // autenticato
 
         return -2; // password errata
     }
 
     /**
-     * Recupera le informazioni di un utente dal database.
+     * Recupera le informazioni essenziali associate a un utente.
      *
-     * @param id l'ID dell'utente
-     * @return un array contenente [nome, cognome, "y"/"n"] dove l'ultimo elemento
-     *         indica se l'utente è un ristoratore, oppure null se l'utente non esiste
-     * @throws SQLException se si verifica un errore del database
-     * @throws InterruptedException se il thread viene interrotto
+     * <p>
+     * Array di ritorno:
+     * </p>
+     *
+     * <pre>
+     * [0] nome
+     * [1] cognome
+     * [2] "y" / "n" → is_ristoratore
+     * </pre>
+     *
+     * @param id id utente
+     * @return array informazioni utente o null se non presente
+     *
+     * @throws SQLException errore SQL
+     * @throws InterruptedException thread interrotto
      */
     public String[] getUserInfo(int id) throws SQLException, InterruptedException {
-        return db.getUserInfo(id);  // <-- CORRETTO
+        return db.getUserInfo(id);
     }
 }

@@ -7,20 +7,29 @@ import java.util.List;
 
 /**
  * Repository principale del server.
- * Espone un'unica istanza (singleton) e implementa QueryUser + QueryRestaurant.
- *
- * Tutta la logica SQL è implementata nei layer:
- * GenericCRUD -> UserCRUD -> RestaurateurCRUD -> RestaurantCRUD
+ * <p>
+ * Espone un'unica istanza (singleton) e implementa le interfacce
+ * {@link QueryUser} e {@link QueryRestaurant}.  
+ * Delegando al livello superiore (GenericCRUD → UserCRUD → RestaurateurCRUD
+ * → RestaurantCRUD), fornisce un'unica entrypoint per tutte le operazioni
+ * legate a utenti, ristoranti, recensioni e preferiti.
+ * </p>
  */
 public class DBHandler extends RestaurantCRUD implements QueryUser, QueryRestaurant {
 
     /** Istanza singleton. */
     private static DBHandler instance = null;
 
+    /** Costruttore privato (pattern Singleton). */
     private DBHandler() {
         super();
     }
 
+    /**
+     * Restituisce l'unica istanza di {@code DBHandler}.
+     *
+     * @return istanza singleton
+     */
     public static synchronized DBHandler getInstance() {
         if (instance == null) {
             instance = new DBHandler();
@@ -28,7 +37,19 @@ public class DBHandler extends RestaurantCRUD implements QueryUser, QueryRestaur
         return instance;
     }
 
-    //Metodi QueryUser:
+    /**
+     * Aggiunge un nuovo utente nel database.
+     *
+     * @param nome nome dell'utente
+     * @param cognome cognome dell'utente
+     * @param username username univoco
+     * @param passwordHashed password già hashata
+     * @param dataNascita data di nascita (può essere null)
+     * @param lat latitudine del domicilio
+     * @param lon longitudine del domicilio
+     * @param isRistoratore true se l’utente è un ristoratore
+     * @return true se l'inserimento è riuscito
+     */
     @Override
     public boolean addUser(String nome, String cognome, String username,
                            String passwordHashed, Date dataNascita,
@@ -40,6 +61,12 @@ public class DBHandler extends RestaurantCRUD implements QueryUser, QueryRestaur
                              birth, lat, lon, isRistoratore);
     }
 
+    /**
+     * Verifica se esiste un utente con lo username specificato.
+     *
+     * @param username username da controllare
+     * @return true se l'utente esiste
+     */
     @Override
     public boolean userExists(String username)
             throws SQLException, InterruptedException {
@@ -47,6 +74,13 @@ public class DBHandler extends RestaurantCRUD implements QueryUser, QueryRestaur
         return super.getUserLoginInfo(username) != null;
     }
 
+       /**
+     * Restituisce le informazioni necessarie al login:
+     * password hash + id utente.
+     *
+     * @param username username da cercare
+     * @return array contenente le info login, o null se non esiste
+     */
     @Override
     public String[] getUserLoginInfo(String username)
             throws SQLException, InterruptedException {
@@ -54,6 +88,12 @@ public class DBHandler extends RestaurantCRUD implements QueryUser, QueryRestaur
         return super.getUserLoginInfo(username);
     }
 
+    /**
+     * Restituisce informazioni complete di un utente dato il suo ID.
+     *
+     * @param id id dell’utente
+     * @return array con nome, cognome e flag ristoratore
+     */
     @Override
     public String[] getUserInfoById(int id)
             throws SQLException, InterruptedException {
@@ -62,10 +102,11 @@ public class DBHandler extends RestaurantCRUD implements QueryUser, QueryRestaur
     }
 
 
-    /* 
-    * Metodi QueryRestaurants
-    */
-
+    /**
+     * Aggiunge un nuovo ristorante.
+     *
+     * @return true se l'inserimento è riuscito
+     */
     @Override
     public boolean addRestaurant(int ownerId,
                                  String nome,
@@ -80,7 +121,6 @@ public class DBHandler extends RestaurantCRUD implements QueryUser, QueryRestaur
                                  String tipoCucina)
             throws SQLException {
 
-        // NB: ordine parametri originale: name, nation, city, address, lat, lon, price, tipo, delivery, online
         try {
             return super.addRestaurant(
                     ownerId,
@@ -101,7 +141,11 @@ public class DBHandler extends RestaurantCRUD implements QueryUser, QueryRestaur
         }
         return online;
     }
-
+    /**
+     * Restituisce una lista di ristoranti filtrati e paginati.
+     *
+     * @return lista di array [id, nome]
+     */
     @Override
     public List<String[]> listRestaurants(
             int page,
@@ -167,14 +211,23 @@ public class DBHandler extends RestaurantCRUD implements QueryUser, QueryRestaur
         }
         return result;
     }
-
+    /**
+     * Restituisce tutte le informazioni dettagliate su un ristorante.
+     *
+     * @param id id del ristorante
+     * @return array di stringhe con tutte le informazioni
+     */
     @Override
     public String[] getRestaurantInfo(int id)
             throws SQLException, InterruptedException {
 
         return super.getRestaurantInfo(id);
     }
-
+    /**
+     * Modifica un ristorante esistente.
+     *
+     * @return true se l'update va a buon fine
+     */
     @Override
     public boolean editRestaurant(int id, String nome,
                                   String nazione,
@@ -208,21 +261,32 @@ public class DBHandler extends RestaurantCRUD implements QueryUser, QueryRestaur
         }
         return online;
     }
-
+    
+    /**
+     * Elimina un ristorante dato il suo ID.
+     *
+     * @return true se l'eliminazione è avvenuta
+     */
     @Override
     public boolean deleteRestaurant(int id)
             throws SQLException, InterruptedException {
 
         return super.deleteRestaurant(id);
     }
-
+    
+    /**
+     * Restituisce il numero totale di pagine di ristoranti dell'utente.
+     */
     @Override
     public int getMyRestaurantsPageCount(int userId)
             throws SQLException, InterruptedException {
 
         return super.getUserRestaurantsPages(userId);
     }
-
+    
+    /**
+     * Restituisce la pagina di ristoranti dell’utente.
+     */
     @Override
     public List<String[]> getMyRestaurants(int userId, int page)
             throws SQLException, InterruptedException {
@@ -233,34 +297,49 @@ public class DBHandler extends RestaurantCRUD implements QueryUser, QueryRestaur
         return list;
     }
 
+    /**
+     * Restituisce quante pagine di recensioni possiede un ristorante.
+     */
     @Override
     public int getReviewsPageCount(int restaurantId)
             throws SQLException, InterruptedException {
 
         return super.getReviewsPageCount(restaurantId);
     }
-
+    
+    /**
+     * Aggiunge una nuova recensione utente.
+     */
     @Override
     public boolean addReview(int userId, int restaurantId, int stars, String text)
             throws SQLException, InterruptedException {
 
         return super.addReview(userId, restaurantId, stars, text);
     }
-
+    
+    /**
+     * Modifica una recensione utente esistente.
+     */
     @Override
     public boolean editReview(int userId, int restaurantId, int stars, String text)
             throws SQLException, InterruptedException {
 
         return super.editReview(userId, restaurantId, stars, text);
     }
-
+    
+    /**
+     * Rimuove una recensione dell’utente.
+     */
     @Override
     public boolean removeReview(int userId, int restaurantId)
             throws SQLException, InterruptedException {
 
         return super.removeReview(userId, restaurantId);
     }
-
+    
+    /**
+     * Restituisce la recensione dell’utente su un ristorante.
+     */
     @Override
     public String[] getMyReview(int userId, int restaurantId)
             throws SQLException, InterruptedException {
@@ -268,13 +347,19 @@ public class DBHandler extends RestaurantCRUD implements QueryUser, QueryRestaur
         return super.getMyReview(userId, restaurantId);
     }
 
+    /**
+     * Restituisce quante pagine di recensioni ha l’utente.
+     */
     @Override
     public int getMyReviewsPageCount(int userId)
             throws SQLException, InterruptedException {
 
         return super.getUserReviewsPages(userId);
     }
-
+    
+    /**
+     * Restituisce una pagina di recensioni dell’utente.
+     */
     @Override
     public List<String[]> getMyReviews(int userId, int page)
             throws SQLException, InterruptedException {
@@ -285,6 +370,9 @@ public class DBHandler extends RestaurantCRUD implements QueryUser, QueryRestaur
         return list;
     }
 
+    /**
+     * Restituisce la risposta del ristoratore a una recensione.
+     */
     @Override
     public String getResponse(int reviewId)
             throws SQLException, InterruptedException {
@@ -292,6 +380,9 @@ public class DBHandler extends RestaurantCRUD implements QueryUser, QueryRestaur
         return super.getResponse(reviewId);
     }
 
+    /**
+     * Aggiunge una risposta a una recensione.
+     */
     @Override
     public boolean addResponse(int reviewId, String text)
             throws SQLException, InterruptedException {
@@ -299,6 +390,9 @@ public class DBHandler extends RestaurantCRUD implements QueryUser, QueryRestaur
         return super.addResponse(reviewId, text);
     }
 
+    /**
+     * Modifica una risposta già esistente.
+     */
     @Override
     public boolean editResponse(int reviewId, String text)
             throws SQLException, InterruptedException {
@@ -306,6 +400,9 @@ public class DBHandler extends RestaurantCRUD implements QueryUser, QueryRestaur
         return super.editResponse(reviewId, text);
     }
 
+    /**
+     * Rimuove una risposta del ristoratore.
+     */
     @Override
     public boolean removeResponse(int reviewId)
             throws SQLException, InterruptedException {
@@ -313,6 +410,9 @@ public class DBHandler extends RestaurantCRUD implements QueryUser, QueryRestaur
         return super.removeResponse(reviewId);
     }
 
+    /**
+     * Verifica se un ristorante è tra i preferiti dell’utente.
+     */
     @Override
     public boolean isFavourite(int userId, int restaurantId)
             throws SQLException, InterruptedException {
@@ -320,6 +420,9 @@ public class DBHandler extends RestaurantCRUD implements QueryUser, QueryRestaur
         return super.isFavourite(userId, restaurantId);
     }
 
+    /**
+     * Aggiunge un ristorante ai preferiti dell’utente.
+     */
     @Override
     public boolean addFavourite(int userId, int restaurantId)
             throws SQLException, InterruptedException {
@@ -327,13 +430,19 @@ public class DBHandler extends RestaurantCRUD implements QueryUser, QueryRestaur
         return super.addFavourite(userId, restaurantId);
     }
 
+    /**
+     * Rimuove un ristorante dai preferiti dell’utente.
+     */
     @Override
     public boolean removeFavourite(int userId, int restaurantId)
             throws SQLException, InterruptedException {
 
         return super.removeFavourite(userId, restaurantId);
     }
-    
+
+    /**
+     * Restituisce le recensioni di un ristorante per pagina.
+     */    
     @Override
     public String[][] getReviews(int restaurantId, int page)
             throws SQLException, InterruptedException {
@@ -348,4 +457,13 @@ public class DBHandler extends RestaurantCRUD implements QueryUser, QueryRestaur
         return arr;
     }
 
+    /**
+     * Verifica se una stringa è nulla o composta solo da spazi.
+     *
+     * @param s stringa da controllare
+     * @return true se la stringa è vuota o nulla
+     */
+    private boolean isBlank(String s) {
+        return s == null || s.trim().isEmpty();
+    }
 }

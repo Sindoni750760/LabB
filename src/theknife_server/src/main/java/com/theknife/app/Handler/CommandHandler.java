@@ -4,27 +4,45 @@ import java.io.IOException;
 import java.sql.SQLException;
 
 /**
- * Interfaccia per i gestori dei comandi del client.
- * Ogni handler elabora uno specifico insieme di comandi e fornisce
- * la logica necessaria per rispondere ai comandi del client.
- * 
- * @author Mattia Sindoni 750760 VA
- * @author Erica Faccio 751654 VA
- * @author Giovanni Isgrò 753536 VA
+ * Interfaccia che definisce il ruolo per gli handler deputati alla gestione
+ * dei comandi testuali inviati dal client.
+ *
+ * <p>
+ * Ogni implementazione di questa interfaccia si occupa di:
+ * </p>
+ *
+ * <ul>
+ *     <li>riconoscere un sottoinsieme di comandi specifico (es. login, register, ecc.)</li>
+ *     <li>interpretare parametri aggiuntivi ricevuti attraverso il {@link ClientContext}</li>
+ *     <li>produrre una risposta corretta secondo il protocollo applicativo</li>
+ * </ul>
+ * @see ClientContext
  */
 public interface CommandHandler {
 
     /**
-     * Gestisce il comando se riconosciuto.
-     * Ritorna false se il comando non è di competenza di questo handler,
-     * permettendo la delega ad altri handler.
+     * Elabora il comando ricevuto dal client.
      *
-     * @param cmd comando letto dal client (prima riga)
-     * @param ctx contesto della sessione client con cui comunicare
-     * @return true se il comando è stato gestito, false se non è di competenza
-     * @throws IOException se si verifica un errore di I/O durante la comunicazione
-     * @throws SQLException se si verifica un errore di database
-     * @throws InterruptedException se il thread viene interrotto
+     * <p>Flusso tipico:</p>
+     * <ol>
+     *     <li>verifica che il comando {@code cmd} sia supportato dall'handler</li>
+     *     <li>legge eventuali parametri aggiuntivi tramite {@link ClientContext#read()}</li>
+     *     <li>invoca i servizi di dominio opportuni</li>
+     *     <li>scrive la risposta tramite {@link ClientContext#write(String)}</li>
+     * </ol>
+     *
+     * <p>Il metodo <strong>non solleva direttamente eccezioni applicative</strong>,
+     * ma notifica errori tramite eccezioni tecniche o messaggi sul canale di output.</p>
+     *
+     * @param cmd comando ricevuto dal client (prima riga del protocollo)
+     * @param ctx contesto di comunicazione associato alla sessione client
+     *
+     * @return {@code true} se il comando è stato gestito correttamente da questo handler,
+     *         {@code false} se il comando non rientra tra quelli supportati
+     *
+     * @throws IOException se avvengono errori di I/O sulla socket
+     * @throws SQLException se avvengono errori nelle operazioni sul database
+     * @throws InterruptedException se il thread di gestione viene interrotto
      */
     boolean handle(String cmd, ClientContext ctx) throws IOException, SQLException, InterruptedException;
 }

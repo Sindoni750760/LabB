@@ -12,18 +12,23 @@ import javafx.scene.control.Label;
 
 import java.io.IOException;
 /**
- * Controller per la schermata di informazioni dettagliate di un ristorante.
- * Gestisce la visualizzazione di tutte le informazioni, verifica lo stato nei preferiti
- * e consente di aggiungere o rimuovere il ristorante dalla lista dei preferiti.
- * Supporta inoltre la navigazione verso le recensioni.
- * 
- * @author Mattia Sindoni 750760 VA
- * @author Erica Faccio 751654 VA
- * @author Giovanni Isgrò 753536 VA
- */
+ * Controller della schermata di informazioni dettagliate di un ristorante.
+ *
+ * <p>Responsabilità principali:</p>
+ * <ul>
+ *     <li>Visualizzare i dati completi relativi al ristorante selezionato</li>
+ *     <li>Permettere la navigazione verso le recensioni del ristorante</li>
+ *     <li>Consentire all'utente autenticato di aggiungere o rimuovere il ristorante dai preferiti</li>
+ *     <li>Adattare la UI in base allo stato di preferito</li>
+ * </ul>
+ *
+ * <p>Implementa {@link OnlineChecker} per la gestione automatica dei casi
+ * di server non raggiungibile (fallback, UI disabilitata, riconnessione).</p>
+*/
 
 public class ViewRestaurantInfo implements OnlineChecker {
 
+    /** Indica lo stato corrente di preferito del ristorante rispetto all'utente. */
     private boolean is_favourite;
 
     @FXML private Label name_label;
@@ -39,6 +44,23 @@ public class ViewRestaurantInfo implements OnlineChecker {
 
     @FXML private Button fav_btn;
 
+    /**
+     * Inizializza la schermata caricando le informazioni relative al ristorante.
+     *
+     * <p>Il metodo esegue i seguenti passaggi:</p>
+     * <ol>
+     *     <li>Verifica lo stato del server tramite {@link #checkOnline()}</li>
+     *     <li>Recupera i dati del ristorante tramite {@link EditingRestaurant#getInfo()}</li>
+     *     <li>Mostra i dati all'interno dei campi UI</li>
+     *     <li>Determina se il ristorante è già tra i preferiti</li>
+     *     <li>Aggiorna il pulsante preferiti di conseguenza</li>
+     * </ol>
+     *
+     * <p>In caso di errori o dati non disponibili, viene effettuato un fallback minimo
+     * (visualizzazione parziale della pagina).</p>
+     *
+     * @throws IOException se la comunicazione con il server o il refresh scena fallisce
+     */
     @FXML
     private void initialize() throws IOException {
         if(!checkOnline()) return;
@@ -46,7 +68,6 @@ public class ViewRestaurantInfo implements OnlineChecker {
 
         String[] info = EditingRestaurant.getInfo();
         if (info == null) {
-            // fallback soft
             name_label.setText("Ristorante non trovato");
             return;
         }
@@ -69,7 +90,6 @@ public class ViewRestaurantInfo implements OnlineChecker {
         else if (o)      services_label.setText("Solo prenotazione online");
         else             services_label.setText("Nessuno");
 
-        // Gestione pulsante preferiti
         if (User.getInfo() == null) {
             fav_btn.setVisible(false);
         } else {
@@ -93,6 +113,17 @@ public class ViewRestaurantInfo implements OnlineChecker {
         }
     }
 
+    /**
+     * Torna alla schermata precedente.
+     *
+     * <p>La destinazione dipende dalla navigazione effettuata in precedenza:</p>
+     * <ul>
+     *     <li>Se proveniamo dai preferiti → torna a "Favorites"</li>
+     *     <li>Altrimenti → torna alla schermata lista ristoranti</li>
+     * </ul>
+     *
+     * @throws IOException se la scena non può essere caricata
+     */
     @FXML
     private void goBack() throws IOException {
         String ctx = SceneManager.getPreviousNavigation();
@@ -103,11 +134,45 @@ public class ViewRestaurantInfo implements OnlineChecker {
         }
     }
 
+    /**
+     * Naviga alla schermata delle recensioni del ristorante.
+     *
+     * @throws IOException se la nuova schermata non è caricabile
+    */
     @FXML
     private void viewReviews() throws IOException {
         SceneManager.changeScene("RestaurantReviews");
     }
 
+    /**
+     * Aggiunge o rimuove il ristorante dai preferiti, in base allo stato corrente.
+     *
+     * <p>Flusso logico:</p>
+     * <ol>
+     *     <li>Verifica stato server</li>
+     *     <li>Send comando al server:
+     *         <ul>
+     *             <li>"addFavourite"</li>
+     *             <li>"removeFavourite"</li>
+     *         </ul>
+     *     </li>
+     *     <li>Mostra feedback tramite alert/warning globale</li>
+     *     <li>Determina la schermata successiva coerentemente</li>
+     * </ol>
+     *
+     * <p>Comportamenti speciali:</p>
+     * <ul>
+     *     <li>Se un ristorante viene aggiunto → redirect automatico a "Favorites"</li>
+     *     <li>Se viene rimosso:
+     *         <ul>
+     *             <li>Se eravamo in "Favorites" → resta in "Favorites"</li>
+     *             <li>Altrimenti → torna alla lista ristoranti</li>
+     *         </ul>
+     *     </li>
+     * </ul>
+     *
+     * @throws IOException se la navigazione successiva fallisce
+     */
     @FXML
     private void addToFavourites() throws IOException {
         if (!checkOnline()) return;
@@ -129,7 +194,6 @@ public class ViewRestaurantInfo implements OnlineChecker {
         }
 
         if (!"ok".equals(resp)) {
-            // piccolo feedback sullo stato globale
             SceneManager.setAppWarning("Errore nella gestione dei preferiti: " + resp);
         } else {
             SceneManager.setAppAlert(
@@ -137,13 +201,11 @@ public class ViewRestaurantInfo implements OnlineChecker {
             );
         }
 
-        // Se appena AGGIUNTO → vai sempre alla pagina Preferiti
         if (!wasFavourite) {
             SceneManager.changeScene("Favorites");
             return;
         }
 
-        // Se era preferito e l'ho rimosso:
         String ctx = SceneManager.getPreviousNavigation();
         if ("Favorites".equals(ctx)) {
             SceneManager.changeScene("Favorites");
@@ -152,6 +214,15 @@ public class ViewRestaurantInfo implements OnlineChecker {
         }
     }
 
+    /**
+     * Restituisce i nodi UI che devono essere disabilitati/riabilitati
+     * durante la gestione dello stato di connessione del server.
+     *
+     * <p>In questo caso, l'unico elemento interattivo rilevante
+     * è il pulsante per l'aggiunta/rimozione dai preferiti.</p>
+     *
+     * @return insieme dei nodi interattivi della schermata
+    */
     @Override
     public Node[] getInteractiveNodes() {
         return new Node[]{fav_btn};

@@ -13,9 +13,24 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+
+/**
+     * Controller della schermata dei ristoranti preferiti.
+     * <p>Consente di:</p>
+     * <ul>
+     *     <li>Caricare l'elenco dei ristoranti preferiti dell'utente</li>
+     *     <li>Rimuovere un ristorante dai preferiti</li>
+     *     <li>Visualizzare i dettagli di un ristorante selezionato</li>
+     * </ul>
+     *
+     * <p>Implementa {@link OnlineChecker} per abilitare/disabilitare i componenti UI
+     * in base allo stato di connessione del server.</p>
+     */
 public class FavouriteController implements OnlineChecker {
 
+    /** ID dei ristoranti preferiti caricati dal server. */
     @FXML private ListView<String> favourites_list;
+    /** Nome dei ristoranti preferiti corrispondenti agli ID. */
     @FXML private Button remove_btn;
     @FXML private Button view_btn;
     @FXML private Label notification_label;
@@ -23,6 +38,16 @@ public class FavouriteController implements OnlineChecker {
     private String[] fav_ids;
     private String[] fav_names;
 
+    /**
+     * Inizializza la schermata dei preferiti.
+     * <p>Esegue:</p>
+     * <ul>
+     *     <li>Verifica della connessione al server</li>
+     *     <li>Caricamento iniziale dei preferiti</li>
+     * </ul>
+     *
+     * @throws IOException se il caricamento iniziale fallisce
+     */
     @FXML
     private void initialize() throws IOException {
         ClientLogger.getInstance().info("FavouriteController initialized");
@@ -31,8 +56,14 @@ public class FavouriteController implements OnlineChecker {
     }
 
     /**
-     * Carica tutti i ristoranti che l'utente ha segnato come preferiti.
-     * Usa il protocollo getRestaurants con onlyFav = "y".
+     * Carica la lista di ristoranti preferiti utilizzando il protocollo
+     * {@code getRestaurants} con filtro esclusivo sulle preferenze dell'utente.
+     * <br>Aggiorna la lista visibile nella UI.
+     *
+     * <p>In caso di disconnessione o risposta inconsistente da parte del server,
+     * invoca il fallback.</p>
+     *
+     * @throws IOException se la comunicazione con il server fallisce
      */
     private void loadFavorites() throws IOException {
         if (!checkOnline()) return;
@@ -41,11 +72,6 @@ public class FavouriteController implements OnlineChecker {
         favourites_list.getItems().clear();
         remove_btn.setDisable(true);
         view_btn.setDisable(true);
-
-        /* ================================
-           PROTOCOLLO getRestaurants
-           allineato al RestaurantHandler
-         ================================= */
 
         Communicator.send("getRestaurants");
         Communicator.send("0");          // page
@@ -61,10 +87,6 @@ public class FavouriteController implements OnlineChecker {
         Communicator.send("-");          // stars min
         Communicator.send("-");          // stars max
         Communicator.send("y");          // ONLY FAVOURITES !!!
-
-        /* ======================
-           RISPOSTA DEL SERVER
-         ====================== */
 
         String resp = Communicator.read();
         if (resp == null) {
@@ -105,7 +127,18 @@ public class FavouriteController implements OnlineChecker {
         checkSelected();
     }
 
-
+    /**
+     * Rimuove il ristorante selezionato dai preferiti.
+     *
+     * <p>Flusso logico:</p>
+     * <ul>
+     *     <li>Invia comando {@code removeFavourite} al server</li>
+     *     <li>Aggiorna l’elenco locale</li>
+     *     <li>Aggiorna la lista visibile nella UI</li>
+     * </ul>
+     *
+     * @throws IOException se la comunicazione con il server fallisce
+     */
     @FXML
     private void removeFavourite() throws IOException {
         int index = favourites_list.getSelectionModel().getSelectedIndex();
@@ -133,7 +166,13 @@ public class FavouriteController implements OnlineChecker {
         checkSelected();
     }
 
-
+    /**
+     * Apre la schermata di dettaglio del ristorante selezionato.
+     * <br>Imposta {@link EditingRestaurant} con l'ID corrispondente
+     * e naviga verso la view informativa.
+     *
+     * @throws IOException se la nuova schermata non può essere caricata
+     */
     @FXML
     private void viewRestaurant() throws IOException {
         if (!checkOnline()) return;
@@ -146,7 +185,11 @@ public class FavouriteController implements OnlineChecker {
         SceneManager.changeScene("ViewRestaurantInfo");
     }
 
-
+     /**
+     * Controlla l'elemento selezionato nella ListView.
+     * <p>Disabilita i pulsanti {@code remove_btn} e {@code view_btn} se
+     * non è selezionato alcun elemento.</p>
+     */
     @FXML
     private void checkSelected() {
         int index = favourites_list.getSelectionModel().getSelectedIndex();
@@ -156,13 +199,23 @@ public class FavouriteController implements OnlineChecker {
         view_btn.setDisable(disable);
     }
 
-
+    /**
+     * Torna alla schermata principale dell'applicazione.
+     *
+     * @throws IOException se la schermata non può essere caricata
+     */
     @FXML
     private void goBack() throws IOException {
         SceneManager.changeScene("App");
     }
 
-
+    /**
+     * Restituisce i nodi interattivi della schermata,
+     * utilizzati da {@link OnlineChecker} per disabilitare componenti
+     * in caso di server offline.
+     *
+     * @return array contenente ListView e pulsanti interattivi
+     */
     @Override
     public Node[] getInteractiveNodes() {
         return new Node[]{

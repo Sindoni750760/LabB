@@ -14,36 +14,57 @@ import java.util.List;
 
 /**
  * Thread dedicato alla gestione di un singolo client connesso al server.
- * Legge i comandi dal client e li instrada ai rispettivi handler per l'elaborazione.
- * Ogni connessione client viene gestita da una istanza di questa classe eseguita in un thread separato.
- * 
- * @author Mattia Sindoni 750760 VA
- * @author Erica Faccio 751654 VA
- * @author Giovanni Isgrò 753536 VA
+ *
+ * <p>Ogni istanza viene avviata alla connessione del client
+ * e gestisce comunicazione, comandi e chiusura della sessione.</p>
+ *
+ * <p>La gestione dei comandi è delegata a una lista ordinata di
+ * {@link CommandHandler}, inoltrando i comandi finché uno li riconosce.</p>
+ *
+ * Lato server ogni client:
+ * <ul>
+ *     <li>ha un proprio socket</li>
+ *     <li>ha un proprio contesto di sessione</li>
+ *     <li>viene gestito in un thread dedicato</li>
+ * </ul>
+ *
+ * @author Mattia Sindoni
+ * @author Erica Faccio
+ * @author Giovanni Isgrò
  */
 public class ClientThread extends Thread {
 
-    /** Socket della connessione client. */
+    /** Socket associato alla sessione del client. */
     private final Socket socket;
-    
-    /** Contesto della sessione client, gestisce lettura/scrittura. */
+
+    /** Contesto per comunicazione e stato sessione. */
     private final ClientContext ctx;
-    
-    /** Lista degli handler che elaborano i comandi del client. */
+
+    /** Lista ordinata di handler registrati per l'elaborazione dei comandi. */
     private final List<CommandHandler> handlers = new ArrayList<>();
 
     /**
-     * Costruttore che inizializza il thread client.
-     * Registra gli handler nel corretto ordine di precedenza.
+     * Costruisce una nuova istanza del thread client,
+     * associandola al socket ricevuto.
      *
-     * @param socket socket della connessione client
-     * @throws IOException se si verifica un errore durante la creazione del contesto
+     * <p>Inizializza il {@link ClientContext} e registra gli handler,
+     * rispettando l’ordine di priorità:</p>
+     *
+     * <ol>
+     *     <li>{@link AuthHandler} → autenticazione</li>
+     *     <li>{@link RestaurantHandler} → ristoranti e recensioni</li>
+     *     <li>{@link DisconnectHandler} → disconnessione client</li>
+     * </ol>
+     *
+     * <p>Il thread viene avviato automaticamente tramite {@link #start()}.</p>
+     *
+     * @param socket socket della connessione stabilita dal client
+     * @throws IOException se fallisce la creazione del contesto
      */
     public ClientThread(Socket socket) throws IOException {
         this.socket = socket;
         this.ctx = new ClientContext(socket);
 
-        // Registro gli handler in ordine
         handlers.add(AuthHandler.getInstance());
         handlers.add(RestaurantHandler.getInstance());
         handlers.add(DisconnectHandler.getInstance());
@@ -52,8 +73,15 @@ public class ClientThread extends Thread {
     }
 
     /**
-     * Esecuzione principale del thread client.
-     * Legge i comandi dal client e li elabora tramite gli handler.
+     * Metodo principale eseguito nel thread dedicato al client.
+     *
+     * <p>Si occupa esclusivamente di gestire la vita della sessione:</p>
+     * <ul>
+     *     <li>Segna la connessione a log</li>
+     *     <li>Esegue il loop di ricezione comandi</li>
+     *     <li>Segna la disconnessione</li>
+     *     <li>Chiude connessione e risorse</li>
+     * </ul>
      */
     @Override
     public void run() {
@@ -68,17 +96,29 @@ public class ClientThread extends Thread {
     }
 
     /**
-     * Loop principale che legge e elabora i comandi del client.
-     * Legge una riga di comando dal client e la instrada agli handler in ordine.
+     * Loop operativo principale del thread.
      *
-     * @throws IOException se si verifica un errore di I/O
-     * @throws SQLException se si verifica un errore di database
-     * @throws InterruptedException se il thread viene interrotto
+     * <p>Funzioni svolte:</p>
+     * <ul>
+     *     <li>attendere comandi dal client</li>
+     *     <li>identificare l’handler corretto</li>
+     *     <li>inoltrare il comando all’handler competente</li>
+     *     <li>chiudere quando il client interrompe la comunicazione</li>
+     * </ul>
+     *
+     * <p>Se nessun handler riconosce il comando, il server ignora
+     * l’input.</p>
+     *
+     * @throws IOException errori di rete
+     * @throws SQLException errori sul database lato handler
+     * @throws InterruptedException gestione operazioni concorrenti
      */
     private void loop() throws IOException, SQLException, InterruptedException {
         while (true) {
             String cmd = ctx.read();
-            if (cmd == null) break; // client chiuso
+            if (cmd == null) {
+                break;
+            }
 
             System.out.println("[Client " + socket.getInetAddress() + " IN] " + cmd);
 
@@ -91,15 +131,20 @@ public class ClientThread extends Thread {
             }
 
             if (!handled) {
-                // comando sconosciuto, opzionale:
-                // ctx.write("error");
+                ctx.write("unknown_command");
             }
         }
     }
 
     /**
-     * Chiude la connessione con il client in modo pulito.
-     * Chiude il contesto e il socket.
+     * Chiude tutte le risorse associate al client:
+     * <ul>
+     *     <li>socket di rete</li>
+     *     <li>streams di lettura/scrittura</li>
+     *     <li>stato contestuale</li>
+     * </ul>
+     *
+     * <p>Viene invocato automaticamente quando il thread termina.</p>
      */
     private void close() {
         ctx.close();

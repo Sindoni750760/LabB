@@ -3,33 +3,62 @@ package com.theknife.app;
 import java.io.IOException;
 
 /**
- * Classe statica che gestisce lo stato dell'utente attualmente loggato.
- * Fornisce metodi per effettuare login, logout e recuperare le informazioni dell'utente.
- * Supporta anche la disconnessione forzata in caso di errore di comunicazione.
- * @author Mattia Sindoni 750760 VA
- * @author Erica Faccio 751654 VA
- * @author Giovanni Isgrò 753536 VA
-*/
+ * Classe statica che gestisce lo stato dell'utente attualmente autenticato nel client.
+ *
+ * <p>Fornisce funzionalità per:</p>
+ * <ul>
+ *     <li>eseguire il login e memorizzare le informazioni utente</li>
+ *     <li>effettuare logout locale e remoto</li>
+ *     <li>accedere ai dati utente sinché è valido lo stato di sessione</li>
+ *     <li>ripristinare lo stato in caso di errore di comunicazione</li>
+ * </ul>
+ *
+ * <p>Lo stato mantenuto non includes un identificativo numerico univoco,
+ * in quanto la sessione viene gestita dal server in base al socket corrente.</p>
+ *
+ * @see Communicator
+ */
 
 public class User{
-
+    /** Nome dell'utente autenticato. */
     private static String name;
+    /** Cognome dell'utente autenticato. */
     private static String surname;
+    /** Flag di stato utente autenticato. */
     private static boolean loggedIn = false;
+    /** Indica se l'utente autenticato è un ristoratore. */
     private static boolean isRestaurateur = false;
 
-    /**
-     * Login utente tramite protocollo testuale
+     /**
+     * Effettua il login presso il server usando il protocollo testuale.
+     *
+     * <p>Flusso logico:</p>
+     * <ol>
+     *     <li>Invia username e password al server</li>
+     *     <li>Attende conferma della validità delle credenziali</li>
+     *     <li>Richiede le informazioni associate all’utente autenticato</li>
+     *     <li>Aggiorna lo stato locale del client</li>
+     * </ol>
+     *
+     * @param username nome utente richiesto
+     * @param password password in chiaro da autenticare
+     * @return stringa di esito dal server:
+     *         <ul>
+     *             <li>"ok" → autenticazione riuscita</li>
+     *             <li>"username" → utente inesistente</li>
+     *             <li>"password" → credenziali errate</li>
+     *             <li>"error" → errore interno</li>
+     *         </ul>
+     *
+     * @throws IOException se si verifica un errore nella comunicazione con il server
      */
     public static String login(String username, String password) throws IOException {
         ClientLogger.getInstance().info("User.login() - Sending login command for user: " + username);
 
-        // invio comando login
         Communicator.send("login");
         Communicator.send(username);
         Communicator.send(password);
 
-        // risposta del server
         String response = Communicator.read();
         ClientLogger.getInstance().info("User.login() - Server response: " + response);
 
@@ -41,12 +70,6 @@ public class User{
 
         if (response.equals("ok")) {
             ClientLogger.getInstance().info("User.login() - Login OK, requesting user info");
-
-            // login riuscito: salva ID interno
-            // NON viene inviato l'ID qui → server lo salva nella sessione del socket, non lo manda
-            // per semplicità, NON memorizziamo userId lato client (non lo usa)
-
-            // ora servono le info utente
             Communicator.send("getUserInfo");
 
             ClientLogger.getInstance().info("User.login() - Waiting for user info");
@@ -71,7 +94,15 @@ public class User{
     }
 
     /**
-     * Logout locale + server
+     * Effettua il logout lato client e lato server.
+     *
+     * <p>Dopo il logout:</p>
+     * <ul>
+     *     <li>le informazioni utente vengono azzerate</li>
+     *     <li>lo stato di sessione diventa non autenticato</li>
+     * </ul>
+     *
+     * @throws IOException se si verifica un errore di comunicazione
      */
     public static void logout() throws IOException {
         ClientLogger.getInstance().info("User.logout() - Sending logout command");
@@ -91,8 +122,16 @@ public class User{
         }
     }
 
-    /**
-     * Reset di sicurezza
+   /**
+     * Reset di emergenza dello stato utente.
+     *
+     * <p>Viene invocato in caso di errore di comunicazione o server offline.</p>
+     *
+     * <p>Effetti:</p>
+     * <ul>
+     *     <li>logout forzato</li>
+     *     <li>rimozione delle informazioni memorizzate</li>
+     * </ul>
      */
     public static void panic() {
         loggedIn = false;
@@ -102,7 +141,16 @@ public class User{
     }
 
     /**
-     * Informazioni utente attualmente loggato
+     * Restituisce le informazioni dell’utente attualmente loggato.
+     *
+     * @return array di lunghezza 3 contenente:
+     *         <pre>
+     *         [0] → nome
+     *         [1] → cognome
+     *         [2] → "y" se ristoratore, altrimenti "n"
+     *         </pre>
+     *
+     *         oppure {@code null} se non autenticato
      */
     public static String[] getInfo() {
         if (!loggedIn) return null;
@@ -114,10 +162,20 @@ public class User{
         };
     }
 
+    /**
+     * Indica se esiste un utente attualmente autenticato.
+     *
+     * @return {@code true} se l’utente risulta loggato, altrimenti {@code false}
+     */
     public static boolean isLoggedIn() {
         return loggedIn;
     }
-
+    
+    /**
+     * Indica se l’utente attualmente loggato è registrato come ristoratore.
+     *
+     * @return {@code true} se il profilo utente è di tipo "ristoratore"
+     */
     public static boolean isRestaurateur() {
         return isRestaurateur;
     }

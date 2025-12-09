@@ -6,34 +6,70 @@ import com.theknife.app.ClientLogger;
 import com.theknife.app.SceneManager;
 import com.theknife.app.User;
 import javafx.fxml.FXML;
+import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 
 /**
- * Controller per la schermata di login.
- * Gestisce l'autenticazione dell'utente e la navigazione tra le scene.
+ * Controller della schermata di login.
+ * <p>Responsabilità principali:</p>
+ * <ul>
+ *     <li>Gestire il tentativo di autenticazione dell'utente</li>
+ *     <li>Navigare all'interno dell'applicazione in base all'esito del login</li>
+ *     <li>Mostrare notifiche e messaggi di errore</li>
+ * </ul>
  *
- * Implementa OnlineChecker per gestire il fallback in caso di server offline.
- *
- * @author ...
+ * <p>Implementa {@link OnlineChecker} per gestire i casi in cui il server sia offline,
+ * disabilitando la UI o mostrando fallback appropriati.</p>
  */
 public class LoginController implements OnlineChecker {
-
+    /** Campo di input per lo username inserito dall'utente. */
     @FXML
     private TextField username;
-
+    /** Campo di input per la password, protetta tramite PasswordField. */
     @FXML
     private PasswordField password;
-
+    /** Label UI dedicata alla visualizzazione di notifiche e messaggi di errore. */
     @FXML
     private Label notification_label;
 
+    /**
+     * Torna alla schermata principale dell'applicazione.
+     *
+     * @throws IOException se la nuova scena non viene caricata correttamente
+     */
     @FXML
     private void goBack() throws IOException {
         SceneManager.changeScene("App");
     }
 
+     /**
+     * Effettua il tentativo di login utilizzando i dati inseriti.
+     *
+     * <p>Flusso logico:</p>
+     * <ol>
+     *     <li>Verifica la connessione tramite {@link #checkOnline()}</li>
+     *     <li>Invoca {@link User#login(String, String)}</li>
+     *     <li>Gestisce le risposte previste dal protocollo</li>
+     *     <li>Naviga alla schermata corretta in base al ruolo:
+     *          <ul>
+     *              <li>Utente normale → "App"</li>
+     *              <li>Ristoratore → "MyRestaurants"</li>
+     *          </ul>
+     *     </li>
+     * </ol>
+     *
+     * <p>Possibili risposte del server:</p>
+     * <ul>
+     *     <li>"ok" → login completato</li>
+     *     <li>"username" → utente inesistente</li>
+     *     <li>"password" → password errata</li>
+     *     <li>altro → errore imprevisto o messaggio generico</li>
+     * </ul>
+     *
+     * @throws IOException se la scena successiva non può essere caricata
+     */
     @FXML
     private void login() throws IOException {
         if (!checkOnline()) return;
@@ -86,13 +122,24 @@ public class LoginController implements OnlineChecker {
         }
     }
 
+    /**
+     * Mostra nella UI un messaggio testuale tramite la label dedicata.
+     *
+     * @param text testo del messaggio da mostrare
+     */
     private void setNotification(String text) {
         notification_label.setVisible(true);
         notification_label.setText(text);
     }
 
+    /**
+     * Restituisce i nodi interattivi che devono essere gestiti da {@link OnlineChecker}.
+     * <br>Vengono principalmente utilizzati per disattivare la UI in caso di server non raggiungibile.
+     *
+     * @return array contenente campi di input e label notifiche
+     */
     @Override
-    public javafx.scene.Node[] getInteractiveNodes() {
+    public Node[] getInteractiveNodes() {
         return new javafx.scene.Node[]{
                 username, password, notification_label
         };

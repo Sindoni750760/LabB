@@ -17,12 +17,18 @@ import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 
 /**
- * Controller per la schermata di registrazione.
- * Gestisce l'inserimento dei dati utente, la validazione e la comunicazione con il server.
- * 
- * @author Mattia Sindoni 750760 VA
- * @author Erica Faccio 751654 VA
- * @author Giovanni Isgrò 753536 VA
+ * Controller della schermata di registrazione utente.
+ *
+ * <p>Consente di:</p>
+ * <ul>
+ *     <li>acquisire i dati utente tramite form</li>
+ *     <li>validare la correttezza dei campi inseriti</li>
+ *     <li>inviare la richiesta di registrazione al server</li>
+ *     <li>gestire le risposte ricevute dal backend</li>
+ * </ul>
+ *
+ * <p>Implementa {@link OnlineChecker} per il fallback automatico
+ * in caso di server non raggiungibile.</p>
  */
 
 public class RegisterController implements OnlineChecker {
@@ -42,6 +48,14 @@ public class RegisterController implements OnlineChecker {
 
     @FXML private Label notification_label;
 
+    /**
+     * Inizializza la schermata configurando il calendario.
+     *
+     * <p>Imposta una {@link DateCell} personalizzata che:</p>
+     * <ul>
+     *     <li>disabilita date future rispetto alla data odierna</li>
+     * </ul>
+     */
     @FXML
     private void initialize() {
         birth_date.setDayCellFactory(d ->
@@ -55,11 +69,39 @@ public class RegisterController implements OnlineChecker {
         );
     }
 
+      /**
+     * Torna alla schermata principale dell'applicazione.
+     *
+     * @throws IOException se il caricamento della nuova schermata fallisce
+     */
     @FXML
     private void goBack() throws IOException {
         SceneManager.changeScene("App");
     }
 
+    /**
+     * Effettua la registrazione utente.
+     *
+     * <p>Il flusso logico comprende:</p>
+     * <ol>
+     *     <li>Verifica dello stato del server tramite {@link #checkOnline()}</li>
+     *     <li>Validazione password e conferma password</li>
+     *     <li>Validazione dei requisiti minimi di sicurezza</li>
+     *     <li>Invio dati al server con protocollo "register"</li>
+     *     <li>Gestione e interpretazione della risposta</li>
+     * </ol>
+     *
+     * <p>Possibili risposte dal server:</p>
+     * <ul>
+     *     <li>"ok" → registrazione avvenuta</li>
+     *     <li>"missing" → campi mancanti</li>
+     *     <li>"password" → password non valida</li>
+     *     <li>"credentials" → username già esistente</li>
+     *     <li>altro → errore generico</li>
+     * </ul>
+     *
+     * @throws IOException se la riconnessione o il cambio scena generano problemi
+     */
     @FXML
     private void register() throws IOException {
         if (!checkOnline()) return;
@@ -149,11 +191,22 @@ public class RegisterController implements OnlineChecker {
         }
     }
 
+    /**
+     * Mostra un messaggio di notifica nel pannello corrente.
+     *
+     * @param text messaggio da visualizzare
+     */
     private void setNotification(String text) {
         notification_label.setVisible(true);
         notification_label.setText(text);
     }
 
+    /**
+     * Restituisce la lista dei nodi che devono essere abilitati/disabilitati
+     * in caso di server offline.
+     *
+     * @return array di nodi interattivi del form di registrazione
+     */
     @Override
     public javafx.scene.Node[] getInteractiveNodes() {
         return new javafx.scene.Node[]{

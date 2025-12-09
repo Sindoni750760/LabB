@@ -5,14 +5,41 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * CRUD specifico per il RISTORATORE:
- *   - controllo accesso ai ristoranti
- *   - elenco dei ristoranti di cui è proprietario
+ * Layer CRUD dedicato alle operazioni relative ai ristoratori.
+ * <p>
+ * Fornisce funzionalità di alto livello per verificare i permessi
+ * e recuperare i ristoranti gestiti da un utente.
+ * </p>
+ * <p>
+ * Estende {@link UserCRUD} in quanto opera su ristoranti associati
+ * a utenti proprietari.
+ * </p>
+ *
+ * Funzionalità principali:
+ * <ul>
+ *     <li>Controllo accesso ai ristoranti (ownership)</li>
+ *     <li>Paginazione dei ristoranti di un dato ristoratore</li>
+ *     <li>Lettura elenco sintetico dei ristoranti posseduti</li>
+ * </ul>
  */
 public abstract class RestaurateurCRUD extends UserCRUD {
 
     /**
-     * Verifica se l'utente ha accesso (è proprietario) del ristorante.
+     * Verifica se un utente è autorizzato a modificare un ristorante.
+     * <p>
+     * Si basa sull'associazione diretta:
+     * <pre>
+     *   "RistorantiTheKnife".proprietario = userId
+     * </pre>
+     * </p>
+     *
+     * @param userId ID dell'utente che tenta l'accesso
+     * @param restId ID del ristorante oggetto dell'operazione
+     * @return {@code true} se l'utente è proprietario del ristorante,
+     *         {@code false} altrimenti
+     *
+     * @throws SQLException errore durante la query SQL
+     * @throws InterruptedException se il thread viene interrotto
      */
     public boolean hasAccess(int userId, int restId)
             throws SQLException, InterruptedException {
@@ -36,7 +63,17 @@ public abstract class RestaurateurCRUD extends UserCRUD {
     }
 
     /**
-     * Numero di pagine di ristoranti gestiti dall'utente.
+     * Restituisce il numero di pagine contenenti i ristoranti
+     * appartenenti all'utente indicato.
+     * <p>
+     * Convenzione applicativa → 10 elementi per pagina.
+     * </p>
+     *
+     * @param userId ID del ristoratore
+     * @return numero di pagine (>= 0)
+     *
+     * @throws SQLException errore durante la query SQL
+     * @throws InterruptedException se il thread viene interrotto
      */
     public int getUserRestaurantsPages(int userId)
             throws SQLException, InterruptedException {
@@ -59,9 +96,31 @@ public abstract class RestaurateurCRUD extends UserCRUD {
         }
     }
 
-    /**
-     * Lista (pagina) di ristoranti gestiti dall'utente.
-     * Ogni elemento: [ id_ristorante, nome ].
+     /**
+     * Restituisce una pagina dei ristoranti gestiti dall'utente indicato.
+     *
+     * <p>Formato risultato:</p>
+     * <pre>
+     * [
+     *   [ idRistorante, nome ],
+     *   [ idRistorante, nome ],
+     *   ...
+     * ]
+     * </pre>
+     *
+     * <p>Convenzioni:</p>
+     * <ul>
+     *     <li>ordinamento alfabetico per nome</li>
+     *     <li>paginazione basata su page (indice 0-based)</li>
+     *     <li>limite massimo di 17 righe per query</li>
+     * </ul>
+     *
+     * @param userId ID proprietario dei ristoranti
+     * @param page numero di pagina (0-based)
+     * @return matrice contenente ID e nome dei ristoranti
+     *
+     * @throws SQLException errore SQL
+     * @throws InterruptedException thread interrotto
      */
     public String[][] getUserRestaurants(int userId, int page)
             throws SQLException, InterruptedException {

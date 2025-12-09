@@ -8,6 +8,7 @@ import com.theknife.app.EditingRestaurant;
 import com.theknife.app.SceneManager;
 
 import javafx.fxml.FXML;
+import javafx.scene.Node;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
@@ -16,16 +17,16 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 /**
- * Controller per la schermata di modifica o aggiunta di un ristorante.
- * Gestisce il caricamento dei dati, l'aggiornamento, l'eliminazione e la validazione dei campi.
+ * Controller della schermata di modifica o aggiunta di un ristorante.
+ * Gestisce caricamento dati, validazione, aggiornamento o inserimento,
+ * ed eventuale eliminazione del ristorante selezionato.
  *
- * Implementa OnlineChecker per gestire il fallback unificato in caso di server offline.
- *
- * @author ...
+ * <p>Implementa {@link OnlineChecker} per consentire la disabilitazione
+ * unificata di elementi UI in caso di server offline.</p>
  */
 public class EditRestaurant implements OnlineChecker {
 
-    /** ID del ristorante in modifica, o 0 se si sta aggiungendo un nuovo ristorante. */
+    /** ID del ristorante in modifica, o 0 quando se ne sta creando uno nuovo. */
     private int editing_id;
 
     @FXML private Button edit_btn;
@@ -36,8 +37,11 @@ public class EditRestaurant implements OnlineChecker {
     @FXML private CheckBox delivery_check, online_check;
     @FXML private Label notification_label;
 
-    /**
-     * Inizializza i campi del form caricando i dati del ristorante se già esistente.
+  /**
+     * Inizializza la schermata.
+     * <br>Se è presente un ristorante in modifica (ID > 0), popola i campi del form
+     * con i dati già disponibili. In caso contrario prepara l'interfaccia per l'inserimento
+     * di un nuovo ristorante.
      */
     @FXML
     private void initialize() {
@@ -65,20 +69,37 @@ public class EditRestaurant implements OnlineChecker {
     }
 
     /**
-     * Torna alla schermata "MyRestaurants".
+     * Naviga alla schermata "MyRestaurants".
      *
-     * @throws IOException se la scena non può essere caricata
+     * @throws IOException se la scena non può essere caricata correttamente
      */
     @FXML
     private void goBack() throws IOException {
         SceneManager.changeScene("MyRestaurants");
     }
 
-    /**
-     * Aggiorna o aggiunge un ristorante in base al valore di editing_id.
-     * Valida i campi e gestisce le risposte del server.
+     /**
+     * Aggiorna o inserisce un ristorante in base al valore di {@link #editing_id}.
      *
-     * @throws IOException se la scena non può essere caricata
+     * <p>Flusso logico:</p>
+     * <ul>
+     *     <li>Controlla la connessione al server</li>
+     *     <li>Valida i campi principali</li>
+     *     <li>Invia richiesta di aggiornamento/inserimento</li>
+     *     <li>Gestisce le risposte predefinite del server</li>
+     * </ul>
+     *
+     * <p>Possibili risposte del server:</p>
+     * <ul>
+     *     <li>"ok" → operazione completata</li>
+     *     <li>"missing" → campi mancanti</li>
+     *     <li>"coordinates" → coordinate non valide</li>
+     *     <li>"price_format" → prezzo non correttamente parsabile</li>
+     *     <li>"price_negative" → prezzo negativo</li>
+     *     <li>altre stringhe → errore generico</li>
+     * </ul>
+     *
+     * @throws IOException se la scena non può essere caricata dopo l’operazione
      */
     @FXML
     private void updateRestaurant() throws IOException {
@@ -151,7 +172,8 @@ public class EditRestaurant implements OnlineChecker {
     }
 
     /**
-     * Impedisce di superare il limite massimo di caratteri nel campo categorie.
+     * Traccia un limite massimo di caratteri per il campo categorie.
+     * <br>Se superato, tronca il testo a 255 caratteri.
      */
     @FXML
     private void checkTextBox() {
@@ -161,9 +183,9 @@ public class EditRestaurant implements OnlineChecker {
     }
 
     /**
-     * Mostra un messaggio di notifica nella schermata corrente.
+     * Mostra un messaggio di notifica nella schermata.
      *
-     * @param msg messaggio da visualizzare
+     * @param msg messaggio descrittivo da visualizzare
      */
     private void setNotification(String msg) {
         notification_label.setVisible(true);
@@ -171,9 +193,16 @@ public class EditRestaurant implements OnlineChecker {
     }
 
     /**
-     * Elimina il ristorante corrente previa conferma dell'utente.
+     * Elimina il ristorante attualmente selezionato.
      *
-     * @throws IOException se la scena non può essere caricata
+     * <p>Flusso logico:</p>
+     * <ul>
+     *     <li>Richiede conferma all’utente tramite alert</li>
+     *     <li>Invia richiesta di eliminazione al server</li>
+     *     <li>Gestisce la risposta del server ("ok" oppure errore)</li>
+     * </ul>
+     *
+     * @throws IOException se la scena successiva non può essere caricata
      */
     @FXML
     private void deleteRestaurant() throws IOException {
@@ -210,10 +239,13 @@ public class EditRestaurant implements OnlineChecker {
     }
 
     /**
-     * Nodi interattivi da disabilitare in caso di fallback.
+     * Restituisce i nodi interattivi che devono essere disattivabili
+     * quando il server non è raggiungibile.
+     *
+     * @return array di nodi UI disabilitabili
      */
     @Override
-    public javafx.scene.Node[] getInteractiveNodes() {
+    public Node[] getInteractiveNodes() {
         return new javafx.scene.Node[]{
                 edit_btn, delete_btn,
                 name_field, nation_field, city_field, address_field,

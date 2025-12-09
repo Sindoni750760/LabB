@@ -14,13 +14,20 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 
 /**
- * Controller per la schermata "MyRestaurants".
- * Gestisce la visualizzazione, modifica, aggiunta e rimozione dei ristoranti dell'utente.
- * Supporta la paginazione e la navigazione tra le recensioni.
+ * Controller della schermata dedicata alla gestione dei ristoranti dell'utente.
  *
- * Implementa OnlineChecker per gestione centralizzata del fallback.
+ * <p>Consente di:</p>
+ * <ul>
+ *     <li>Visualizzare i ristoranti registrati dall’utente</li>
+ *     <li>Navigare le pagine di ristoranti associati</li>
+ *     <li>Modificare un ristorante selezionato</li>
+ *     <li>Accedere alle recensioni del ristorante</li>
+ *     <li>Effettuare il logout</li>
+ *     <li>Aggiungere un nuovo ristorante</li>
+ * </ul>
  *
- * @author ...
+ * <p>Implementa {@link OnlineChecker} per la gestione unificata del fallback
+ * quando il server non è raggiungibile o risponde in modo incoerente.</p>
  */
 public class MyRestaurants implements OnlineChecker {
 
@@ -28,13 +35,31 @@ public class MyRestaurants implements OnlineChecker {
     @FXML private Label no_restaurants_label;
     @FXML private Label page_label;
     @FXML private Button edit_btn, reviews_btn, prev_btn, next_btn;
-
+    
+    /** Identificativi dei ristoranti caricati dalla pagina corrente. */
     private int[] restaurants_ids;
+    /** Nomi dei ristoranti corrispondenti agli ID nella pagina corrente. */
     private String[] restaurants_names;
-
+    /** Numero totale di pagine ricevuto dal server. */
     private int total_pages;
+    /** Indice della pagina corrente, inizializzato a 0. */
     private int current_page = 0;
 
+    /**
+     * Inizializza la schermata caricando le pagine disponibili
+     * e navigando alla prima, se presente.
+     *
+     * <p>Flusso logico:</p>
+     * <ul>
+     *     <li>Reset dell'editing del ristorante</li>
+     *     <li>Disabilitazione della navigazione pagine</li>
+     *     <li>Verifica connessione</li>
+     *     <li>Lettura del numero totale di pagine</li>
+     *     <li>Caricamento pagina iniziale se disponibile</li>
+     * </ul>
+     *
+     * @throws IOException se la comunicazione con il server non va a buon fine
+     */
     @FXML
     private void initialize() throws IOException {
         ClientLogger.getInstance().info("MyRestaurants initialized");
@@ -64,6 +89,13 @@ public class MyRestaurants implements OnlineChecker {
             no_restaurants_label.setVisible(true);
     }
 
+    /**
+     * Cambia pagina e ricarica i ristoranti dell’utente.
+     *
+     * @param page pagina da caricare (indice inizializzato a 0)
+     *
+     * @throws IOException se la comunicazione con il server fallisce
+     */
     private void changePage(int page) throws IOException {
         if (!checkOnline()) return;
         
@@ -106,16 +138,32 @@ public class MyRestaurants implements OnlineChecker {
         checkSelected();
     }
 
+    /**
+     * Naviga alla pagina precedente, se disponibile.
+     *
+     * @throws IOException se la comunicazione con il server fallisce
+     */
     @FXML
     private void prevPage() throws IOException {
         changePage(--current_page);
     }
 
+    /**
+     * Naviga alla pagina successiva, se disponibile.
+     *
+     * @throws IOException se la comunicazione con il server fallisce
+     */
     @FXML
     private void nextPage() throws IOException {
         changePage(++current_page);
     }
 
+    /**
+     * Aggiorna lo stato dei pulsanti relativi all'elemento selezionato.
+     *
+     * <p>Disabilita i pulsanti di modifica e recensioni
+     * quando non è selezionato alcun ristorante.</p>
+     */
     @FXML
     private void checkSelected() {
         int index = restaurants_container.getSelectionModel().getSelectedIndex();
@@ -125,6 +173,11 @@ public class MyRestaurants implements OnlineChecker {
         reviews_btn.setDisable(disable);
     }
 
+    /**
+     * Apre la schermata di modifica per il ristorante selezionato.
+     *
+     * @throws IOException se la nuova scena non può essere caricata
+     */
     @FXML
     private void editSelected() throws IOException {
         if (!checkOnline()) return;
@@ -133,6 +186,11 @@ public class MyRestaurants implements OnlineChecker {
         SceneManager.changeScene("EditRestaurant");
     }
 
+    /**
+     * Apre la schermata che mostra le recensioni del ristorante selezionato.
+     *
+     * @throws IOException se la nuova scena non può essere caricata
+     */
     @FXML
     private void viewReviews() throws IOException {
         if(!checkOnline()) return;
@@ -141,18 +199,35 @@ public class MyRestaurants implements OnlineChecker {
         SceneManager.changeScene("RestaurantReviews");
     }
 
+    /**
+     * Effettua il logout dell’utente e torna alla schermata principale.
+     *
+     * @throws IOException se la schermata non viene caricata correttamente
+     */
     @FXML
     private void logout() throws IOException {
         User.logout();
         SceneManager.changeScene("App");
     }
 
+    /**
+     * Avvia la creazione di un nuovo ristorante.
+     * <p>Reimposta lo stato di editing e passa alla schermata dedicata.</p>
+     *
+     * @throws IOException se la schermata non viene caricata correttamente
+     */
     @FXML
     private void addRestaurant() throws IOException {
         EditingRestaurant.reset();
         SceneManager.changeScene("EditRestaurant");
     }
 
+    /**
+     * Restituisce i nodi interattivi della view, utilizzati da {@link OnlineChecker}.
+     * <br>Vengono disabilitati automaticamente quando il server risulta offline.
+     *
+     * @return array contenente elementi della UI modificabili dall'utente
+     */
     @Override
     public javafx.scene.Node[] getInteractiveNodes() {
         return new javafx.scene.Node[]{

@@ -6,15 +6,43 @@ import java.util.List;
 
 /**
  * CRUD relativo agli UTENTI.
- * Contiene le query che lavorano sulla tabella utenti
- * e le funzioni legate alle recensioni scritte dall'utente.
+ * <p>
+ * Contiene le query dirette sulla tabella {@code utenti} e tutte
+ * le funzionalità legate all'utente come:
+ * </p>
+ * <ul>
+ *     <li>Registrazione</li>
+ *     <li>Recupero credenziali</li>
+ *     <li>Recupero informazioni utente</li>
+ *     <li>Lettura posizione geografica utente</li>
+ *     <li>Lettura recensioni scritte dall'utente</li>
+ * </ul>
+ *
+ * <p>
+ * Estende {@link GenericCRUD}, ereditando:
+ * </p>
+ * <ul>
+ *     <li>accesso thread-safe al {@link java.sql.Connection}</li>
+ *     <li>metodi di utilità per query di conteggio</li>
+ * </ul>
  */
 public abstract class UserCRUD extends GenericCRUD {
 
-    /* User */
-
     /**
-     *  birth espresso in millisecondi (o -1 se assente).
+     * Inserisce un nuovo utente nella tabella {@code utenti}.
+     *
+     * @param nome nome dell'utente
+     * @param cognome cognome dell'utente
+     * @param username username univoco
+     * @param hashPassword password già hashata
+     * @param birth timestamp della data di nascita oppure -1 se assente
+     * @param lat latitudine del domicilio
+     * @param lon longitudine del domicilio
+     * @param isRist {@code true} se l'utente è ristoratore
+     * @return {@code true} se l'inserimento ha avuto successo
+     *
+     * @throws SQLException problemi nella query SQL
+     * @throws InterruptedException in caso l'operazione venga interrotta
      */
     public boolean addUser(String nome, String cognome, String username, String hashPassword,
                            long birth, double lat, double lon, boolean isRist)
@@ -50,7 +78,19 @@ public abstract class UserCRUD extends GenericCRUD {
     }
 
     /**
-     * Ritorna [id, hashPassword] oppure null se non trovato.
+     * Recupera le credenziali necessarie al login dell'utente.
+     *
+     * @param username username dell'utente
+     *
+     * @return array di lunghezza 2 con:
+     *     <pre>
+     *     [0] = id utente
+     *     [1] = password hashata
+     *     </pre>
+     *     oppure {@code null} se l'utente non esiste
+     *
+     * @throws SQLException errore nella query SQL
+     * @throws InterruptedException in caso di interruzione
      */
     public String[] getUserLoginInfo(String username)
             throws SQLException, InterruptedException {
@@ -78,7 +118,19 @@ public abstract class UserCRUD extends GenericCRUD {
     }
 
     /**
-     * Ritorna [nome, cognome, "y"/"n" is_ristoratore].
+     * Restituisce le informazioni di profilo utente.
+     *
+     * @param userId ID univoco dell'utente
+     *
+     * @return array:
+     *     <pre>
+     *     [0] = nome
+     *     [1] = cognome
+     *     [2] = "y" se ristoratore, "n" altrimenti
+     *     </pre>
+     *
+     * @throws SQLException errore SQL
+     * @throws InterruptedException thread interrotto
      */
     public String[] getUserInfo(int userId)
             throws SQLException, InterruptedException {
@@ -107,7 +159,19 @@ public abstract class UserCRUD extends GenericCRUD {
     }
 
     /**
-     * Ritorna [latitudine, longitudine] del domicilio utente.
+     * Restituisce la posizione geografica dell'utente.
+     *
+     * @param userId ID dell'utente
+     *
+     * @return vettore di lunghezza 2:
+     *     <pre>
+     *     [0] latitudine
+     *     [1] longitudine
+     *     </pre>
+     *     oppure {@code null} se utente inesistente
+     *
+     * @throws SQLException errore SQL
+     * @throws InterruptedException thread interrotto
      */
     public double[] getUserPosition(int userId)
             throws SQLException, InterruptedException {
@@ -131,8 +195,18 @@ public abstract class UserCRUD extends GenericCRUD {
     }
 
 
-    /* Recensioni dell'utente */
-
+    /**
+     * Restituisce il numero di pagine contenenti le recensioni
+     * scritte dall'utente.
+     *
+     * Convenzione applicativa → 10 recensioni per pagina.
+     *
+     * @param userId ID utente
+     * @return numero di pagine >= 0
+     *
+     * @throws SQLException errore SQL
+     * @throws InterruptedException interruzione
+     */
     public int getUserReviewsPages(int userId)
             throws SQLException, InterruptedException {
 
@@ -155,10 +229,24 @@ public abstract class UserCRUD extends GenericCRUD {
     }
 
     /**
-     * Ritorna String[][] con:
-     *  [i][0] = nome ristorante
-     *  [i][1] = stelle
-     *  [i][2] = testo recensione
+     * Recupera una pagina delle recensioni scritte dall’utente,
+     * includendo anche il nome del ristorante.
+     *
+     * Formato ritorno:
+     * <pre>
+     * [
+     *    [ nomeRistorante, stelle, testo ],
+     *    ...
+     * ]
+     * </pre>
+     *
+     * @param userId ID dell'utente
+     * @param page pagina (indice 0-based)
+     * @return matrice di stringhe ordinata in ordine desc
+     *         sulle recensioni più recenti
+     *
+     * @throws SQLException errore SQL
+     * @throws InterruptedException thread interrotto
      */
     public String[][] getUserReviews(int userId, int page)
             throws SQLException, InterruptedException {

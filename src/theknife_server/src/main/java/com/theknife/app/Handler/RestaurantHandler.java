@@ -6,10 +6,61 @@ import java.io.IOException;
 import java.sql.SQLException;
 
 /**
- * Handler singleton per i comandi relativi ai ristoranti.
- * Gestisce le operazioni CRUD per ristoranti, recensioni, risposte ai commenti e preferiti.
- * Responsabile di delegare al DBHandler per l'accesso ai dati.
- * 
+ * Handler responsabile della gestione di tutti i comandi relativi
+ * a ristoranti, recensioni, risposte e preferiti.
+ *
+ * <p>Implementa la logica di routing tra comandi testuali ricevuti dal client
+ * e metodi di accesso ai dati forniti dal {@link DBHandler}.</p>
+ *
+ * <p>Tra le funzionalità principali gestite:</p>
+ * <ul>
+ *     <li>CRUD ristoranti:
+ *         <ul>
+ *             <li>{@code addRestaurant}</li>
+ *             <li>{@code editRestaurant}</li>
+ *             <li>{@code deleteRestaurant}</li>
+ *         </ul>
+ *     </li>
+ *
+ *     <li>Visualizzazione ristoranti:
+ *         <ul>
+ *             <li>{@code getRestaurants} con filtri multipli (position, range, prezzo, rating, ecc.)</li>
+ *             <li>{@code getRestaurantInfo}</li>
+ *             <li>{@code getMyRestaurants}, {@code getMyRestaurantsPages}</li>
+ *         </ul>
+ *     </li>
+ *
+ *     <li>Gestione recensioni:
+ *         <ul>
+ *             <li>{@code getReviewsPages}, {@code getReviews}</li>
+ *             <li>{@code getMyReview}, {@code addReview}, {@code editReview}, {@code removeReview}</li>
+ *         </ul>
+ *     </li>
+ *
+ *     <li>Gestione risposte del ristoratore:
+ *         <ul>
+ *             <li>{@code getResponse}</li>
+ *             <li>{@code addResponse}, {@code editResponse}, {@code removeResponse}</li>
+ *         </ul>
+ *     </li>
+ *
+ *     <li>Gestione preferiti:
+ *         <ul>
+ *             <li>{@code isFavourite}, {@code addFavourite}, {@code removeFavourite}</li>
+ *         </ul>
+ *     </li>
+ * </ul>
+ *
+ * <p>Questo handler non accede direttamente alla rete, ma utilizza
+ * {@link ClientContext} per scambiare messaggi
+ * con il client secondo un protocollo testuale ordinato.</p>
+ *
+ * <p>Pattern utilizzati:</p>
+ * <ul>
+ *     <li>Singleton</li>
+ *     <li>Command Pattern tramite {@link CommandHandler}</li>
+ * </ul>
+ *
  * @author Mattia Sindoni 750760 VA
  * @author Erica Faccio 751654 VA
  * @author Giovanni Isgrò 753536 VA
@@ -20,9 +71,9 @@ public class RestaurantHandler implements CommandHandler {
     private static RestaurantHandler instance = null;
 
     /**
-     * Restituisce l'istanza singleton del RestaurantHandler.
+     * Restituisce l'unica istanza dell'handler.
      *
-     * @return istanza singleton
+     * @return istanza unica mantenuta in memoria
      */
     public static synchronized RestaurantHandler getInstance() {
         if (instance == null)
@@ -30,24 +81,40 @@ public class RestaurantHandler implements CommandHandler {
         return instance;
     }
 
-    /** Handler per le operazioni sul database. */
+    /** Servizio interno che esegue tutte le operazioni SQL. */
     private final DBHandler db = DBHandler.getInstance();
 
     /**
-     * Costruttore privato per il pattern singleton.
+     * Costruttore privato per impedire istanziazione esterna.
      */
     private RestaurantHandler() {}
 
     /**
-     * Gestisce i comandi relativi ai ristoranti: add, edit, delete, get,
-     * e le operazioni su recensioni, risposte e preferiti.
+     * Gestisce tutte le richieste correlate ai ristoranti, alle recensioni
+     * e ai preferiti, inoltrando ai rispettivi metodi.
      *
-     * @param cmd comando da gestire
-     * @param ctx contesto della sessione client
-     * @return {@true} se il comando era riconosciuto, {@false} altrimenti
-     * @throws IOException se si verifica un errore di I/O
-     * @throws SQLException se si verifica un errore di database
-     * @throws InterruptedException se il thread viene interrotto
+     * <p>Il protocollo avviene sempre nella forma:</p>
+     *
+     * <pre>
+     * [comando]
+     * [parametro1]
+     * [parametro2]
+     * ...
+     * </pre>
+     *
+     * <p>L’ordine di lettura dei parametri è strettamente definito
+     * dal client, quindi il server deve consumarli nell’esatto ordine corretto.</p>
+     *
+     * <p>Se il comando non è di pertinenza dell’handler,
+     * ritorna {@code false} per delegare altri handler.</p>
+     *
+     * @param cmd comando testuale ricevuto dal client
+     * @param ctx oggetto che incapsula socket, input e output
+     * @return {@code true} se il comando è stato gestito, {@code false} altrimenti
+     *
+     * @throws IOException se avvengono errori nella comunicazione col client
+     * @throws SQLException propagata dal DB in caso di fallimenti SQL
+     * @throws InterruptedException se un thread è stato interrotto durante DB o rete
      */
     @Override
     public boolean handle(String cmd, ClientContext ctx)
@@ -92,7 +159,38 @@ public class RestaurantHandler implements CommandHandler {
         return true;
     }
 
-    
+    /**
+     * Gestisce il comando {@code addRestaurant}.
+     *
+     * <p>Legge dal client i seguenti parametri in ordine:</p>
+     * <ol>
+     *     <li>nome</li>
+     *     <li>nazione</li>
+     *     <li>città</li>
+     *     <li>indirizzo</li>
+     *     <li>latitudine</li>
+     *     <li>longitudine</li>
+     *     <li>fascia di prezzo</li>
+     *     <li>categorie</li>
+     *     <li>flag delivery (y/n)</li>
+     *     <li>flag prenotazione online (y/n)</li>
+     * </ol>
+     *
+     * <p>Effettua controlli di validità sui campi numerici e obbligatori;
+     * in caso di errori restituisce codici specifici quali:</p>
+     *
+     * <ul>
+     *     <li>{@code missing} → campi obbligatori mancanti</li>
+     *     <li>{@code coordinates} → coordinate non numeriche</li>
+     *     <li>{@code price_format} → prezzo non numerico</li>
+     *     <li>{@code price_negative} → prezzo < 0</li>
+     * </ul>
+     *
+     * <p>In caso di successo restituisce {@code ok}.</p>
+     *
+     * @param ctx contesto della sessione associata al client
+     */
+
     private void handleAddRestaurant(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
 
@@ -152,6 +250,26 @@ public class RestaurantHandler implements CommandHandler {
 
         ctx.write(ok ? "ok" : "error");
     }
+
+    /**
+     * Gestisce il comando {@code editRestaurant}.
+     *
+     * <p>Il client fornisce ID ristorante e nuovi valori dei campi.
+     * Prima della modifica viene verificato che l'utente corrente
+     * sia proprietario del ristorante tramite {@code db.hasAccess()}.</p>
+     *
+     * <p>Può restituire:</p>
+     * <ul>
+     *     <li>{@code denied} → se l'utente non è proprietario</li>
+     *     <li>{@code missing} → se alcuni campi obbligatori sono mancanti</li>
+     *     <li>{@code coordinates} → lat/lon non valide</li>
+     *     <li>{@code price_format} → prezzo non numerico</li>
+     *     <li>{@code price_negative} → prezzo < 0</li>
+     *     <li>{@code ok} → aggiornamento riuscito</li>
+     * </ul>
+     *
+     * @param ctx contesto sessione client
+     */
 
     private void handleEditRestaurant(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
@@ -218,6 +336,23 @@ public class RestaurantHandler implements CommandHandler {
         ctx.write(ok ? "ok" : "error");
     }
 
+    /**
+     * Gestisce il comando {@code deleteRestaurant}.
+     *
+     * <p>Legge ID ristorante e verifica che l'utente loggato
+     * ne sia proprietario; in caso contrario restituisce {@code denied}.</p>
+     *
+     * <p>Altrimenti invoca {@link DBHandler#deleteRestaurant(int)}
+     * e restituisce:</p>
+     *
+     * <ul>
+     *     <li>{@code ok} eliminazione riuscita</li>
+     *     <li>{@code error} problema lato DB</li>
+     * </ul>
+     *
+     * @param ctx contesto sessione client
+     */
+
     private void handleDeleteRestaurant(ClientContext ctx)
                 throws IOException, SQLException, InterruptedException {
 
@@ -232,6 +367,37 @@ public class RestaurantHandler implements CommandHandler {
             boolean ok = db.deleteRestaurant(restId);
             ctx.write(ok ? "ok" : "error");
         }
+
+    /**
+     * Gestisce il comando {@code getRestaurants}.
+     *
+     * <p>Metodo complesso che effettua una ricerca filtrata sui ristoranti.
+     * Legge numerosi parametri (modalità ricerca, intervallo prezzo, stelle,
+     * filtraggio preferiti, range geografico, categorie, ecc.).
+     * </p>
+     *
+     * <p>Possibili risposte errore:</p>
+     * <ul>
+     *     <li>{@code coordinates} → range o coordinate non numeric</li>
+     *     <li>{@code price} → range di prezzo non valido</li>
+     *     <li>{@code stars} → range stelle non valido</li>
+     *     <li>{@code invalid} → input incoerente</li>
+     *     <li>{@code location} → ricerca per luogo errata</li>
+     * </ul>
+     *
+     * <p>In caso di successo restituisce:</p>
+     *
+     * <pre>
+     * ok
+     * [numero_pagine]
+     * [numero_risultati_pagina]
+     * per ogni ristorante:
+     *     id
+     *     nome
+     * </pre>
+     *
+     * @param ctx client context di comunicazione
+     */
 
     private void handleGetRestaurants(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
@@ -376,6 +542,19 @@ public class RestaurantHandler implements CommandHandler {
         }
     }
 
+    /**
+     * Gestisce il comando {@code getRestaurantInfo}.
+     *
+     * <p>Legge l'ID ristorante e restituisce sempre 12 valori in ordine:
+     * nome, nazione, città, indirizzo, lat, lon,
+     * prezzo medio, categorie, delivery, online,
+     * media stelle, numero recensioni.</p>
+     *
+     * <p>Se il ristorante non esiste, restituisce 12 stringhe vuote.</p>
+     *
+     * @param ctx gestione sessione client
+     */
+
     private void handleGetRestaurantInfo(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
 
@@ -392,12 +571,36 @@ public class RestaurantHandler implements CommandHandler {
             ctx.write(s);
     }
 
+    /**
+     * Restituisce il numero di pagine di ristoranti
+     * inseriti dall'utente loggato.
+     *
+     * <p>Risposta: un intero in formato stringa.</p>
+     *
+     * @param ctx sessione client
+     */
+
     private void handleGetMyRestaurantsPages(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
 
         int pages = db.getUserRestaurantsPages(ctx.getLoggedUserId());
         ctx.write(Integer.toString(pages));
     }
+
+    /**
+     * Restituisce un elenco paginato dei ristoranti inseriti
+     * dal ristoratore attualmente loggato.
+     *
+     * <p>Formato risposta:</p>
+     * <pre>
+     * [numero]
+     * (ripetuto numero volte):
+     *     id
+     *     nome
+     * </pre>
+     *
+     * @param ctx contesto comunicazione
+     */
 
     private void handleGetMyRestaurants(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
@@ -414,6 +617,15 @@ public class RestaurantHandler implements CommandHandler {
         }
     }
 
+    /**
+     * Restituisce il numero di pagine disponibili di recensioni
+     * per un certo ristorante.
+     *
+     * <p>Risposta: intero positivo (anche 0)</p>
+     *
+     * @param ctx sessione client
+     */
+
     private void handleGetReviewsPages(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
 
@@ -421,6 +633,25 @@ public class RestaurantHandler implements CommandHandler {
         int pages = db.getReviewsPageCount(restId);
         ctx.write(Integer.toString(pages));
     }
+
+    /**
+     * Restituisce le recensioni associate ad un ristorante
+     * in forma paginata.
+     *
+     * <p>Formato risposta:</p>
+     *
+     * <pre>
+     * [size]
+     * per ogni recensione:
+     *     id_recensione
+     *     stelle
+     *     testo
+     *     n/y  (se esiste risposta del ristoratore)
+     *     [testo risposta] se presente
+     * </pre>
+     *
+     * @param ctx sessione client
+     */
 
     private void handleGetReviews(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
@@ -451,6 +682,20 @@ public class RestaurantHandler implements CommandHandler {
         }
     }
 
+    /**
+     * Restituisce la recensione dell'utente loggato
+     * per un ristorante specifico.
+     *
+     * <p>Il formato è sempre:</p>
+     *
+     * <pre>
+     * [stelle] (0 se mai recensito)
+     * [testo]
+     * </pre>
+     *
+     * @param ctx contesto sessione client
+     */
+
     private void handleGetMyReview(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
 
@@ -470,6 +715,19 @@ public class RestaurantHandler implements CommandHandler {
         }
     }
 
+    /**
+     * Inserisce una nuova recensione lasciata dall’utente loggato
+     * su un ristorante selezionato.
+     *
+     * <p>Restituisce:</p>
+     * <ul>
+     *     <li>{@code ok}</li>
+     *     <li>{@code error} se fallisce DB</li>
+     * </ul>
+     *
+     * @param ctx contesto sessione client
+     */
+
     private void handleAddReview(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
 
@@ -481,6 +739,17 @@ public class RestaurantHandler implements CommandHandler {
         ctx.write(ok ? "ok" : "error");
     }
 
+    /**
+     * Modifica una recensione esistente dell’utente sul ristorante corrente.
+     *
+     * <p>Restituisce:</p>
+     * <ul>
+     *     <li>{@code ok}</li>
+     *     <li>{@code error} errore DB</li>
+     * </ul>
+     *
+     * @param ctx contesto comunicazione client
+     */
     private void handleEditReview(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
 
@@ -492,6 +761,18 @@ public class RestaurantHandler implements CommandHandler {
         ctx.write(ok ? "ok" : "error");
     }
 
+    /**
+     * Elimina una recensione dell'utente.
+     *
+     * <p>Risposta:</p>
+     * <ul>
+     *     <li>{@code ok}</li>
+     *     <li>{@code error}</li>
+     * </ul>
+     *
+     * @param ctx sessione client
+     */
+
     private void handleRemoveReview(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
 
@@ -501,6 +782,17 @@ public class RestaurantHandler implements CommandHandler {
         ctx.write(ok ? "ok" : "error");
     }
 
+    /**
+     * Restituisce la risposta del ristoratore ad una recensione.
+     *
+     * <p>Formato risposta:</p>
+     * <ul>
+     *     <li>{@code ok} + testo risposta</li>
+     *     <li>{@code none} se non esiste</li>
+     * </ul>
+     *
+     * @param ctx contesto sessione client
+     */
     private void handleGetResponse(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
 
@@ -518,6 +810,15 @@ public class RestaurantHandler implements CommandHandler {
         }
     }
 
+    /**
+     * Aggiunge una risposta ufficiale del ristoratore
+     * ad una recensione.
+     *
+     * <p>Controlla tramite DB se l'utente loggato possiede quel ristorante;
+     * se non è autorizzato restituisce {@code denied}.</p>
+     *
+     * @param ctx sessione client corrente
+     */
     private void handleAddResponse(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
 
@@ -533,6 +834,19 @@ public class RestaurantHandler implements CommandHandler {
         ctx.write(ok ? "ok" : "error");
     }
 
+    /**
+     * Modifica la risposta precedentemente inserita
+     * dal ristoratore alla recensione.
+     *
+     * <p>Risposte possibili:</p>
+     * <ul>
+     *     <li>{@code ok}</li>
+     *     <li>{@code denied}</li>
+     *     <li>{@code error}</li>
+     * </ul>
+     *
+     * @param ctx sessione active client
+     */
     private void handleEditResponse(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
 
@@ -548,6 +862,14 @@ public class RestaurantHandler implements CommandHandler {
         ctx.write(ok ? "ok" : "error");
     }
 
+    /**
+     * Rimuove la risposta del ristoratore ad una recensione.
+     *
+     * <p>Verifica la proprietà sulla recensione
+     * tramite DB; altrimenti ritorna {@code denied}.</p>
+     *
+     * @param ctx sessione client
+     */
     private void handleRemoveResponse(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
 
@@ -562,6 +884,18 @@ public class RestaurantHandler implements CommandHandler {
         ctx.write(ok ? "ok" : "error");
     }
 
+    /**
+     * Verifica se il ristorante indicato
+     * è presente tra i preferiti dell'utente loggato.
+     *
+     * <p>Risposta:</p>
+     * <ul>
+     *     <li>{@code y}</li>
+     *     <li>{@code n}</li>
+     * </ul>
+     *
+     * @param ctx contesto sessione client
+     */
     private void handleIsFavourite(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
 
@@ -570,6 +904,18 @@ public class RestaurantHandler implements CommandHandler {
 
         ctx.write(fav ? "y" : "n");
     }
+
+    /**
+     * Aggiunge un ristorante ai preferiti dell’utente loggato.
+     *
+     * <p>Risposta:</p>
+     * <ul>
+     *     <li>{@code ok}</li>
+     *     <li>{@code error}</li>
+     * </ul>
+     *
+     * @param ctx sessione client
+     */
 
     private void handleAddFavourite(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
@@ -580,6 +926,18 @@ public class RestaurantHandler implements CommandHandler {
         ctx.write(ok ? "ok" : "error");
     }
 
+    /**
+     * Rimuove un ristorante dai preferiti dell’utente loggato.
+     *
+     * <p>Risposta:</p>
+     * <ul>
+     *     <li>{@code ok}</li>
+     *     <li>{@code error}</li>
+     * </ul>
+     *
+     * @param ctx contesto sessione client
+     */
+
     private void handleRemoveFavourite(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
 
@@ -589,6 +947,17 @@ public class RestaurantHandler implements CommandHandler {
         ctx.write(ok ? "ok" : "error");
     }
 
+    /**
+     * Restituisce il numero di pagine di recensioni create dall’utente.
+     *
+     * <p>Formato risposta:</p>
+     * <pre>
+     * ok
+     * [n_pagine]
+     * </pre>
+     *
+     * @param ctx sessione client
+     */
     private void handleGetMyReviewsPages(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
 
@@ -602,6 +971,21 @@ public class RestaurantHandler implements CommandHandler {
         ctx.write(Integer.toString(pages));
     }
 
+    /**
+     * Restituisce l'elenco paginato delle recensioni dell’utente loggato.
+     *
+     * <p>Formato risposta:</p>
+     *
+     * <pre>
+     * [size]
+     * per ogni recensione:
+     *     nome_ristorante
+     *     stelle
+     *     testo
+     * </pre>
+     *
+     * @param ctx sessione client
+     */
     private void handleGetMyReviews(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
 
@@ -621,7 +1005,16 @@ public class RestaurantHandler implements CommandHandler {
             ctx.write(r[2]); // testo
         }
     }
-
+    /**
+     * Verifica se una stringa è nulla o contiene solo spazi bianchi.
+     *
+     * <p>È un piccolo helper interno usato per validare i campi obbligatori
+     * ricevuti dal client prima di procedere con le operazioni sul database.</p>
+     *
+     * @param s stringa da controllare
+     * @return {@code true} se {@code s} è {@code null} oppure vuota dopo trim,
+     *         {@code false} altrimenti
+     */
     private boolean isBlank(String s) {
         return s == null || s.trim().isEmpty();
     }

@@ -9,25 +9,35 @@ import javafx.application.Platform;
 import javafx.scene.Node;
 
 /**
- * Interfaccia che fornisce un sistema unificato di:
- * - verifica connessione al server
- * - disabilitazione UI in fallback
- * - tentativo automatico di riconnessione
- * - ritorno alla scena "App" se il server rimane offline
+ * Interfaccia che fornisce un sistema unificato per la gestione della connettività
+ * verso il server da parte dei controller dell'applicazione.
  *
- * MEMO: Va implementata da tutti i controller che comunicano col server.
+ * <p>Le responsabilità principali comprendono:</p>
+ * <ul>
+ *     <li>verifica dello stato di connessione verso il server</li>
+ *     <li>abilitazione/disabilitazione della UI in caso di disconnessione</li>
+ *     <li>fallback automatico con tentativo di riconnessione</li>
+ *     <li>ritorno alla scena principale in caso di indisponibilità prolungata</li>
+ * </ul>
+ *
+ * <p>Ogni controller che effettua comunicazioni col server deve implementare questa interfaccia.</p>
  */
 public interface OnlineChecker {
 
-    /**
-     * Fornisce la lista dei nodi UI (pulsanti, campi input, ecc.)
-     * che devono essere disabilitati quando il server è offline.
+     /**
+     * Restituisce la lista di nodi dell'interfaccia utente che devono poter essere
+     * abilitati/disabilitati in base allo stato del server.
+     *
+     * <p>Tipicamente contiene pulsanti, campi di input o sezioni cliccabili.</p>
+     *
+     * @return array di nodi UI da poter gestire dinamicamente
      */
     Node[] getInteractiveNodes();
 
 
     /**
-     * Disabilita ogni nodo definito da getInteractiveNodes().
+     * Disabilita tutti i nodi restituiti da {@link #getInteractiveNodes()}.
+     * <p>Utilizzato durante il fallback e quando il server risulta irraggiungibile.</p>
      */
     default void disableUI() {
         Node[] nodes = getInteractiveNodes();
@@ -38,7 +48,8 @@ public interface OnlineChecker {
     }
 
     /**
-     * Riabilita i nodi disabilitati.
+     * Riabilita i nodi precedentemente disabilitati.
+     * <p>Tipicamente invocato quando il server torna raggiungibile.</p>
      */
     default void enableUI() {
         Node[] nodes = getInteractiveNodes();
@@ -50,8 +61,14 @@ public interface OnlineChecker {
 
 
     /**
-     * Controllo unificato dello stato del server.
-     * Se offline → fallback() e ritorna false
+     * Verifica lo stato del server tramite {@link Communicator#isOnline()}.
+     * <p>Se il server non risulta raggiungibile:</p>
+     * <ul>
+     *     <li>attiva il fallback</li>
+     *     <li>restituisce {@code false}</li>
+     * </ul>
+     *
+     * @return true se il server è online, false altrimenti
      */
     default boolean checkOnline() {
         if (Communicator.isOnline())
@@ -63,11 +80,19 @@ public interface OnlineChecker {
 
 
     /**
-     * Fallback unificato:
-     * - mostra warning
-     * - disabilita la UI
-     * - dopo 5 secondi ricontrolla
-     * - se rimane offline → torna alla scena App
+     * Esegue la procedura di fallback centralizzata nel caso in cui il server risultasse offline.
+     *
+     * <p>Comportamento:</p>
+     * <ul>
+     *     <li>disabilita l'interfaccia utente</li>
+     *     <li>mostra un messaggio di avviso globale tramite {@link SceneManager}</li>
+     *     <li>attende un periodo predefinito (1 minuto)</li>
+     *     <li>al termine esegue un nuovo controllo sulla connessione</li>
+     *     <li>
+     *          se il server è tornato online → riabilita la UI
+     *          <br>altrimenti → ritorna automaticamente alla scena principale "App"
+     *     </li>
+     * </ul>
      */
     default void fallback() {
         ClientLogger.getInstance().warning("Server offline – fallback engaged");

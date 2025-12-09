@@ -1,30 +1,60 @@
 package com.theknife.app;
 
+import java.io.IOException;
+
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
 /**
- * Classe utility per la gestione delle scene JavaFX.
- * Gestisce anche messaggi globali da mostrare nella scena "App".
+ * Classe di utilità per la gestione centralizzata delle scene JavaFX.
+ *
+ * <p>Offre un sistema unificato per:</p>
+ * <ul>
+ *     <li>caricare dinamicamente file FXML</li>
+ *     <li>impostare la scena corrente</li>
+ *     <li>mostrare messaggi globali nella scena "App"</li>
+ *     <li>gestire il contesto di navigazione (es. “torna indietro”)</li>
+ * </ul>
+ *
+ * <p>La scena iniziale viene caricata tramite {@link #init(Stage)}.</p>
  */
 public class SceneManager {
-
+    /** Stage principale dell'applicazione. */
     private static Stage stage;
-
+    /** Messaggio globale da mostrare nella scena "App". */
     private static String appMessage = null;
+    /** Colore associato al messaggio (es. rosso o verde). */
     private static String appMessageColor = null;
-
-    // Contesto di navigazione per il "torna indietro"
+    /** Contesto di navigazione utilizzato per ripristinare la schermata precedente. */
     private static String previousNavigation = null;
 
-    public static void init(Stage s) throws java.io.IOException {
+    /**
+     * Inizializza lo Stage principale e carica la scena iniziale.
+     *
+     * @param s lo stage principale JavaFX
+     * @throws IOException se la scena iniziale non può essere caricata
+    */
+    public static void init(Stage s) throws IOException {
         stage = s;
         changeScene("App");
     }
 
-    public static void changeScene(String sceneName) throws java.io.IOException {
+    /**
+     * Cambia la scena visualizzata caricando un nuovo file FXML.
+     *
+     * <p>Regole:</p>
+     * <ul>
+     *     <li>Carica la scena associata al nome passato come parametro</li>
+     *     <li>Ripulisce il messaggio globale se la nuova scena non è "App"</li>
+     *     <li>In caso di errore, ripristina la scena "App" mostrando un messaggio d’avviso</li>
+     * </ul>
+     *
+     * @param sceneName nome della scena da caricare
+     * @throws IOException se il file FXML non può essere aperto
+    */
+    public static void changeScene(String sceneName) throws IOException {
         try {
             String path = "/scenes/" + sceneName + ".fxml";
             Parent root = FXMLLoader.load(SceneManager.class.getResource(path));
@@ -42,27 +72,53 @@ public class SceneManager {
             stage.show();
         }
     }
-
+    /**
+     * Restituisce l'eventuale messaggio globale da visualizzare nella scena "App".
+     *
+     * @return array contenente messaggio e colore associato,
+     *         oppure {@code null} se non è presente un messaggio
+    */
     public static String[] getAppMessage() {
         if (appMessage == null)
             return null;
         return new String[]{appMessage, appMessageColor};
     }
 
+
+    /**
+     * Imposta un messaggio di conferma da mostrare nella scena principale.
+     *
+     * @param text testo del messaggio da visualizzare
+    */
     public static void setAppAlert(String text) {
         appMessage = text;
         appMessageColor = "green";
     }
 
+    /**
+     * Imposta un messaggio di avviso/errore da mostrare nella scena principale.
+     *
+     * @param text testo del messaggio da visualizzare
+    */
     public static void setAppWarning(String text) {
         appMessage = text;
         appMessageColor = "red";
     }
 
+    /**
+     * Imposta il contesto di navigazione, utile per ripristinare la scena precedente.
+     *
+     * @param ctx identificatore logico del contesto (es. "Favorites", "ViewRestaurants")
+     */
     public static void setPreviousNavigation(String ctx) {
         previousNavigation = ctx;
     }
 
+    /**
+     * Restituisce l'ultimo contesto di navigazione impostato.
+     *
+     * @return una stringa che rappresenta il contesto di ritorno
+     */
     public static String getPreviousNavigation() {
         return previousNavigation;
     }

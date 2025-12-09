@@ -5,23 +5,40 @@ import java.sql.SQLException;
 import com.theknife.app.User;
 
 /**
- * Handler singleton per i comandi di autenticazione.
- * Gestisce login, registrazione, logout e recupero delle informazioni utente.
- * Responsabile di delegare al servizio User per la validazione e memorizzazione.
- * 
- * @author Mattia Sindoni 750760 VA
- * @author Erica Faccio 751654 VA
- * @author Giovanni Isgrò 753536 VA
+ * Gestore dei comandi relativi all'autenticazione lato server.
+ * <p>
+ * Implementa i comandi del protocollo di autenticazione testuale tra client e server:
+ * </p>
+ *
+ * <ul>
+ *     <li>{@code login} — validazione credenziali e inizializzazione sessione</li>
+ *     <li>{@code register} — registrazione nuovo utente</li>
+ *     <li>{@code logout} — invalidazione sessione corrente</li>
+ *     <li>{@code getUserInfo} — restituzione delle informazioni dell'utente autenticato</li>
+ * </ul>
+ *
+ * <p>
+ * Questa classe funge da bridge tra:
+ * </p>
+ * <ul>
+ *     <li>il protocollo di comunicazione lato socket fornito da {@link ClientContext}</li>
+ *     <li>le logiche di business utente, incapsulate in {@link User}</li>
+ * </ul>
+ *
+ * <p>
+ * La classe è un singleton e deve essere recuperata tramite {@link #getInstance()}.
+ * </p>
  */
+
 public class AuthHandler implements CommandHandler {
 
     /** Istanza singleton dell'AuthHandler. */
     private static AuthHandler instance = null;
 
     /**
-     * Restituisce l'istanza singleton dell'AuthHandler.
+     * Restituisce l'unica istanza dell'handler.
      *
-     * @return istanza singleton
+     * @return istanza singleton di {@link AuthHandler}
      */
     public static synchronized AuthHandler getInstance() {
         if (instance == null)
@@ -29,23 +46,42 @@ public class AuthHandler implements CommandHandler {
         return instance;
     }
 
-    /** Servizio per la gestione degli utenti. */
+     /**
+     * Servizio applicativo centralizzato per la gestione utenti.
+     * Si occupa di:
+     * <ul>
+     *     <li>validazione credenziali</li>
+     *     <li>creazione account</li>
+     *     <li>recupero informazioni utente</li>
+     * </ul>
+     */
     private final User userService = User.getInstance();
 
     /**
-     * Costruttore privato per il pattern singleton.
+     * Costruttore privato, utilizzato dal pattern Singleton.
      */
     private AuthHandler() {}
 
     /**
-     * Gestisce i comandi di autenticazione: login, register, logout, getUserInfo.
+     * Gestisce un comando testuale fornito dal client.
      *
-     * @param cmd comando da gestire
-     * @param ctx contesto della sessione client
-     * @return true se il comando era riconosciuto, false altrimenti
-     * @throws IOException se si verifica un errore di I/O
-     * @throws SQLException se si verifica un errore di database
-     * @throws InterruptedException se il thread viene interrotto
+     * <p>Il protocollo previsto è il seguente:</p>
+     *
+     * <table border="1">
+     *     <tr><th>Comando</th><th>Effetto</th></tr>
+     *     <tr><td>login</td><td>Invoca {@link #handleLogin(ClientContext)}</td></tr>
+     *     <tr><td>register</td><td>Invoca {@link #handleRegister(ClientContext)}</td></tr>
+     *     <tr><td>logout</td><td>Invoca {@link #handleLogout(ClientContext)}</td></tr>
+     *     <tr><td>getUserInfo</td><td>Invoca {@link #handleGetUserInfo(ClientContext)}</td></tr>
+     * </table>
+     *
+     * @param cmd comando ricevuto dal client
+     * @param ctx contesto di sessione, incapsula lettura/scrittura su socket
+     * @return {@code true} se il comando è stato gestito, {@code false} altrimenti
+     *
+     * @throws IOException se si verificano problemi I/O sulla socket
+     * @throws SQLException se si verificano errori DB lato service
+     * @throws InterruptedException se si verifica un'interruzione del thread handler
      */
     @Override
     public boolean handle(String cmd, ClientContext ctx)
@@ -62,14 +98,27 @@ public class AuthHandler implements CommandHandler {
         return true;
     }
 
-    /**
-     * Gestisce il comando "login".
-     * Legge username e password dal client e verifica le credenziali.
+     /**
+     * Gestisce il comando {@code login}.
+     * <p>
+     * Flusso del protocollo lato server:
+     * </p>
      *
-     * @param ctx contesto della sessione client
-     * @throws IOException se si verifica un errore di I/O
-     * @throws SQLException se si verifica un errore di database
-     * @throws InterruptedException se il thread viene interrotto
+     * <ol>
+     *     <li>legge username e password dal client</li>
+     *     <li>interroga il servizio utenti</li>
+     *     <li>risponde con uno dei valori:</li>
+     * </ol>
+     *
+     * <ul>
+     *     <li>{@code ok} → credenziali accettate</li>
+     *     <li>{@code username} → utente non trovato</li>
+     *     <li>{@code password} → password errata</li>
+     * </ul>
+     *
+     * Se login riuscito → il contesto viene marcato come autenticato.
+     *
+     * @param ctx contesto di sessione
      */
     private void handleLogin(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
@@ -94,13 +143,22 @@ public class AuthHandler implements CommandHandler {
     }
 
     /**
-     * Gestisce il comando "register".
-     * Legge i dati di registrazione dal client e crea un nuovo account utente.
+     * Gestisce il comando {@code register}.
      *
-     * @param ctx contesto della sessione client
-     * @throws IOException se si verifica un errore di I/O
-     * @throws SQLException se si verifica un errore di database
-     * @throws InterruptedException se il thread viene interrotto
+     * <p>Flusso:</p>
+     * <ol>
+     *     <li>legge i dati di registrazione dal client</li>
+     *     <li>invoca {@link User#registerUser(...)}</li>
+     *     <li>risponde al client con esito testuale</li>
+     * </ol>
+     *
+     * <p>Possibili risposte:</p>
+     * <ul>
+     *     <li>{@code ok}</li>
+     *     <li>{@code missing}</li>
+     *     <li>{@code credentials} (username già esistente)</li>
+     *     <li>{@code password} (non rispetta policy)</li>
+     * </ul>
      */
     private void handleRegister(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
@@ -122,13 +180,10 @@ public class AuthHandler implements CommandHandler {
         ctx.write(esito);
     }
 
-    /**
-     * Gestisce il comando "logout".
-     * Disconnette l'utente dalla sessione.
-     *
-     * @param ctx contesto della sessione client
-     * @throws IOException se si verifica un errore di I/O
-     */
+   /**
+     * Gestisce il comando {@code logout}.
+     * Invalida la sessione associata alla socket, azzerando {@code userId}.
+    */
     private void handleLogout(ClientContext ctx) throws IOException {
         ctx.setLoggedUserId(-1);
         ctx.write("ok");
@@ -136,15 +191,24 @@ public class AuthHandler implements CommandHandler {
 
     
     /**
-    * Gestisce il comando "getUserInfo".
-    * Legge le informazioni dell'utente attualmente loggato dalla sessione
-    * e le invia al client.
-    *
-    * @param ctx contesto della sessione client
-    * @throws IOException se si verifica un errore di I/O
-    * @throws SQLException se si verifica un errore di database
-    * @throws InterruptedException se il thread viene interrotto
-    */
+     * Gestisce il comando {@code getUserInfo}.
+     *
+     * <p>Il server risponde inviando tre righe:</p>
+     *
+     * <pre>
+     * nome
+     * cognome
+     * y|n   (ristoratore o utente normale)
+     * </pre>
+     *
+     * <p>Se non è autenticato:</p>
+     *
+     * <pre>
+     * ""
+     * ""
+     * n
+     * </pre>
+     */
     private void handleGetUserInfo(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
 
@@ -166,9 +230,9 @@ public class AuthHandler implements CommandHandler {
             return;
         }
 
-        ctx.write(info[0]); // nome
-        ctx.write(info[1]); // cognome
-        ctx.write(info[2]); // y/n is_ristoratore
+        ctx.write(info[0]); 
+        ctx.write(info[1]); 
+        ctx.write(info[2]); 
     }
 }
 

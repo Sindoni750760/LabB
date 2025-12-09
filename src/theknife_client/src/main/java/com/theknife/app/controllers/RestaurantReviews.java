@@ -16,21 +16,48 @@ import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 
 /**
- * Controller per la schermata delle recensioni di un ristorante.
- * Gestisce la visualizzazione delle recensioni, la paginazione,
- * e consente agli utenti di aggiungere/modificare la propria recensione.
- * I ristoratori possono rispondere alle recensioni ricevute.
+ * Controller per la schermata dedicata alla visualizzazione delle recensioni di un ristorante.
  *
- * Implementa OnlineChecker per fallback e riconnessione.
+ * <p>Responsabilità principali:</p>
+ * <ul>
+ *     <li>Caricare e mostrare recensioni con supporto paginazione</li>
+ *     <li>Gestire aggiunta/modifica recensioni lato utente</li>
+ *     <li>Gestire inserimento o modifica risposta lato ristoratore</li>
+ *     <li>Mostrare informazioni di intestazione (media recensioni, numero recensioni)</li>
+ * </ul>
+ *
+ * <p>La classe gestisce inoltre logiche condizionali basate sul tipo di utente:</p>
+ * <ul>
+ *     <li>Utente normale:
+ *         <ul>
+ *             <li>Può sempre aggiungere/modificare la propria recensione</li>
+ *         </ul>
+ *     </li>
+ *     <li>Ristoratore:
+ *         <ul>
+ *             <li>Può rispondere esclusivamente ad una recensione selezionata</li>
+ *         </ul>
+ *     </li>
+ * </ul>
+ *
+ * <p>Implementa {@link OnlineChecker} per:</p>
+ * <ul>
+ *     <li>Disattivare UI quando il server non risponde</li>
+ *     <li>Tentare riconnessione automatica</li>
+ *     <li>Fallback verso schermata principale in caso di persistenza offline</li>
+ * </ul>
  */
 public class RestaurantReviews implements OnlineChecker {
 
+    /** Indica se l'utente è autenticato nell'applicazione. */
     private static boolean is_logged;
+    /** Indica se l'utente loggato è ristoratore. */
     private static boolean is_restaurateur;
-
+    /** Identificativi delle recensioni attualmente visualizzate. */
     private static String[] reviews_ids;
-
+    /** Numero totale di pagine restituite dal server. */
     private static int total_pages;
+    /** Pagina attualmente caricata. */
     private static int current_page;
 
     @FXML private Label no_reviews_label;
@@ -42,6 +69,21 @@ public class RestaurantReviews implements OnlineChecker {
     @FXML private Button add_review_btn;
     @FXML private ListView<String> reviews_listview;
 
+    /**
+     * Inizializza la schermata dei commenti caricando i dati relativi al ristorante.
+     *
+     * <p>Effettua le seguenti azioni:</p>
+     * <ol>
+     *     <li>Reset della UI</li>
+     *     <li>Determina se l'utente è registrato e se è ristoratore</li>
+     *     <li>Carica intestazione ristorante (media recensioni, numero recensioni)</li>
+     *     <li>Interroga il server per numero totale pagine</li>
+     *     <li>Carica e renderizza la prima pagina</li>
+     *     <li>Configura celle della lista per supporto multilinea</li>
+     * </ol>
+     *
+     * @throws IOException se si verifica errore durante il recupero dati o cambio scena
+     */
     @FXML
     private void initialize() throws IOException {
         ClientLogger.getInstance().info("RestaurantReviews initialized for restaurant: " + EditingRestaurant.getId());
@@ -66,7 +108,6 @@ public class RestaurantReviews implements OnlineChecker {
             } else {
                 no_reviews_label.setVisible(true);
 
-                // ⭐ Utente normale può sempre recensire
                 if (is_logged && !is_restaurateur)
                     add_review_btn.setDisable(false);
             }
@@ -80,10 +121,18 @@ public class RestaurantReviews implements OnlineChecker {
     }
 
 
-    /* =====================================================================
-       UTENTE / RISTORATORE -> LOGICA DI VISIBILITÀ E TESTI DEL BOTTONE
-       ===================================================================== */
-
+    /**
+     * Imposta il comportamento dell’interfaccia in funzione:
+     * <ul>
+     *     <li>dell'identità dell'utente</li>
+     *     <li>del ruolo (ristoratore o utente normale)</li>
+     *     <li>dell’eventuale recensione già inserita</li>
+     * </ul>
+     *
+     * <p>Viene anche aggiornato il testo del pulsante principale.</p>
+     *
+     * @throws IOException se la comunicazione verso il server fallisce
+     */
     private void setupUserMode() throws IOException {
         String[] user_info = User.getInfo();
         is_logged = user_info != null;
@@ -97,13 +146,11 @@ public class RestaurantReviews implements OnlineChecker {
         is_restaurateur = user_info[2].equals("y");
 
         if (is_restaurateur) {
-            // Il ristoratore può rispondere SOLO se seleziona una recensione
             add_review_btn.setText("Rispondi / Modifica risposta");
             add_review_btn.setDisable(true);
             return;
         }
 
-        // ---- UTENTE NORMALE ----
         if (!checkOnline()) return;
 
         Communicator.send("getMyReview");
@@ -113,21 +160,25 @@ public class RestaurantReviews implements OnlineChecker {
         if (starsStr == null) { fallback(); return; }
 
         int stars = Integer.parseInt(starsStr);
-        Communicator.read(); // scarto testo o marker
+        Communicator.read();
 
         if (stars > 0)
             add_review_btn.setText("Modifica recensione");
         else
             add_review_btn.setText("Aggiungi recensione");
 
-        // ⭐ Utente normale: bottone sempre abilitato
         add_review_btn.setDisable(false);
     }
 
 
-    /* =====================================================================
-                                    HEADER
-       ===================================================================== */
+      // =============================== HEADER ================================
+    /**
+     * Carica nell'interfaccia le informazioni generali del ristorante:
+     * <ul>
+     *     <li>numero totale recensioni</li>
+     *     <li>media valutazioni</li>
+     * </ul>
+     */
 
     private void loadRestaurantHeader() {
         String[] info = EditingRestaurant.getInfo();
@@ -141,10 +192,13 @@ public class RestaurantReviews implements OnlineChecker {
     }
 
 
-    /* =====================================================================
-                            LETTURA NUMERO PAGINE
-       ===================================================================== */
+      // ===================== PAGINAZIONE – COUNT PAGINE ======================
 
+    /**
+     * Recupera dal server il numero totale di pagine disponibili per le recensioni del ristorante.
+     *
+     * @throws IOException se il server non risponde correttamente
+     */
     private void loadTotalPages() throws IOException {
         if(!checkOnline()) return;
         Communicator.send("getReviewsPages");
@@ -157,9 +211,22 @@ public class RestaurantReviews implements OnlineChecker {
     }
 
 
-    /* =====================================================================
-                             CARICAMENTO PAGINA RECENSIONI
-       ===================================================================== */
+ // ============================= PAGINAZIONE ==============================
+
+    /**
+     * Carica una specifica pagina di recensioni per il ristorante corrente.
+     *
+     * <p>Flusso interno:</p>
+     * <ol>
+     *     <li>Aggiorna pagina corrente e UI paginazione</li>
+     *     <li>Interroga il server col protocollo "getReviews"</li>
+     *     <li>Legge ID, testo, stelle e risposta del ristoratore</li>
+     *     <li>Formatta il risultato per visualizzazione multilinea</li>
+     * </ol>
+     *
+     * @param page indice pagina richiesta
+     * @throws IOException se la comunicazione con il server fallisce
+     */
 
     private void changePage(int page) throws IOException {
         if (!checkOnline()) return;
@@ -203,7 +270,6 @@ public class RestaurantReviews implements OnlineChecker {
             }
         }
 
-        // Formatting
         String[] formatted = new String[size];
         for (int i = 0; i < size; i++)
             formatted[i] = stars[i] + "/5 " + texts[i] +
@@ -211,26 +277,42 @@ public class RestaurantReviews implements OnlineChecker {
 
         reviews_listview.getItems().setAll(formatted);
 
-        // ⭐ Utente normale = bottone sempre attivo
         if (is_logged && !is_restaurateur)
             add_review_btn.setDisable(false);
     }
 
 
-    /* =====================================================================
-                                    EVENTI UI
-       ===================================================================== */
+    // ============================== EVENTI UI ===============================
 
+    /**
+     * Carica la pagina precedente rispetto a quella corrente.
+     *
+     * @throws IOException se il server non risponde
+     */
     @FXML
     private void prevPage() throws IOException {
         changePage(--current_page);
     }
 
+    /**
+     * Carica la pagina successiva rispetto a quella corrente.
+     *
+     * @throws IOException se il server non risponde
+     */
     @FXML
     private void nextPage() throws IOException {
         changePage(++current_page);
     }
 
+    /**
+     * Permette:
+     * <ul>
+     *     <li>all'utente di scrivere o modificare la propria recensione</li>
+     *     <li>al ristoratore di rispondere/modificare una risposta</li>
+     * </ul>
+     *
+     * @throws IOException se la scena successiva non è caricabile
+     */
     @FXML
     private void addReview() throws IOException {
         if (!checkOnline()) return;
@@ -243,15 +325,27 @@ public class RestaurantReviews implements OnlineChecker {
         SceneManager.changeScene("WriteReview");
     }
 
+    /**
+     * Aggiorna l’abilitazione del pulsante <i>Rispondi/Modifica</i>
+     * in base alla recensione selezionata.
+     */
     @FXML
     private void checkSelected() {
         if (is_restaurateur) {
-            // Il ristoratore può rispondere solo a una recensione selezionata
             add_review_btn.setDisable(reviews_listview.getSelectionModel().getSelectedIndex() < 0);
         }
-        // UTENTE NORMALE -> NON disabilitare il bottone!
     }
 
+    /**
+     * Torna alla schermata precedente in modo coerente al ruolo dell’utente:
+     * <ul>
+     *     <li>ristoratore → pagina "MyRestaurants"</li>
+     *     <li>utente normale → pagina "ViewRestaurantInfo"</li>
+     *     <li>utente guest → pagina lista ristoranti</li>
+     * </ul>
+     *
+     * @throws IOException se il cambio scena fallisce
+    */
     @FXML
     private void goBack() throws IOException {
         if (!is_logged) {
@@ -266,10 +360,16 @@ public class RestaurantReviews implements OnlineChecker {
     }
 
 
-    /* =====================================================================
-                                  ONLINE CHECKER
-       ===================================================================== */
+    // =============================== ONLINE CHECKER ==========================
 
+    /**
+     * Restituisce i nodi UI gestibili da {@link OnlineChecker}.
+     * <p>
+     * Verranno disattivati durante fallback e riattivati alla riconnessione.
+     * </p>
+     *
+     * @return lista nodi interattivi
+    */
     @Override
     public Node[] getInteractiveNodes() {
         return new Node[]{
@@ -278,9 +378,16 @@ public class RestaurantReviews implements OnlineChecker {
     }
 
 
-    /* =====================================================================
-                                   LIST VIEW FORMAT
-       ===================================================================== */
+    // ======================= FORMATTAZIONE LIST VIEW ========================
+
+    /**
+     * Configura le celle della {@link ListView} affinché:
+     * <ul>
+     *     <li>supportino testo multilinea</li>
+     *     <li>adattino l’altezza al contenuto</li>
+     *     <li>non ritaglino testo interno</li>
+     * </ul>
+     */
 
     private void setupListCellFactory() {
         reviews_listview.setCellFactory(lv -> new ListCell<String>() {

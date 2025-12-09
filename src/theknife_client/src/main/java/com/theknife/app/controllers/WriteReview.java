@@ -9,6 +9,7 @@ import com.theknife.app.SceneManager;
 import com.theknife.app.User;
 
 import javafx.fxml.FXML;
+import javafx.scene.Node;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
@@ -16,26 +17,58 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 
 /**
- * Controller per la schermata di scrittura/modifica recensione o risposta.
- * Gestisce:
- * - modalità utente (recensione con stelle)
- * - modalità ristoratore (risposta alla recensione)
- * - limite caratteri
- * - pubblicazione / eliminazione
+ * Controller della schermata dedicata alla scrittura o modifica di una recensione
+ * o alla risposta del ristoratore ad essa.
  *
- * Implementa OnlineChecker per fallback unificato in caso di server offline.
+ * <p>Si occupa di:</p>
+ * <ul>
+ *     <li>gestire la distinzione tra utente normale e ristoratore</li>
+ *     <li>gestire aggiunta, modifica ed eliminazione di recensioni</li>
+ *     <li>gestire aggiunta, modifica ed eliminazione delle risposte del ristoratore</li>
+ *     <li>validare numero di stelle e lunghezza testo</li>
+ *     <li>gestire fallback e disabilitazione UI se server offline</li>
+ * </ul>
+ *
+ * <p>Modalità operative:</p>
+ * <ul>
+ *     <li><b>Utente</b> → recensisce con stelle e testo (max 255 caratteri)</li>
+ *     <li><b>Ristoratore</b> → risponde ad una recensione esistente</li>
+ * </ul>
+ *
+ * <p>Implementa {@link OnlineChecker} per automatizzare il comportamento
+ * in caso di server non raggiungibile.</p>
  */
-public class WriteReview implements OnlineChecker {
 
+public class WriteReview implements OnlineChecker {
+    /** Numero di stelle correnti selezionate dall'utente. */
     private static int stars;
+    /** {@True} se l'utente corrente è ristoratore. */
     private static boolean is_restaurateur;
+    /** {@True} se stiamo modificando una recensione/risposta esistente. */
     private static boolean is_editing;
 
     @FXML private Button stars_1_btn, stars_2_btn, stars_3_btn, stars_4_btn, stars_5_btn;
     @FXML private Button publish_btn, delete_btn;
     @FXML private Label stars_label, max_chars_label, notification_label;
     @FXML private TextArea text_area;
-
+    
+    /**
+     * Inizializza la schermata determinando:
+     * <ul>
+     *     <li>il ruolo utente/ristoratore</li>
+     *     <li>se esiste una recensione o risposta da modificare</li>
+     *     <li>informazioni da pre-popolare</li>
+     * </ul>
+     *
+     * <p>Flow di inizializzazione:</p>
+     * <ol>
+     *     <li>Verifica connessione server</li>
+     *     <li>Identifica ruolo utente</li>
+     *     <li>Configura UI appropriata</li>
+     * </ol>
+     *
+     * @throws IOException se la comunicazione col server fallisce
+     */
     @FXML
     private void initialize() throws IOException {
         ClientLogger.getInstance().info("WriteReview initialized");
@@ -56,6 +89,22 @@ public class WriteReview implements OnlineChecker {
         }
     }
 
+    /**
+     * Configura modalità ristoratore:
+     * <ul>
+     *     <li>Nasconde la scelta delle stelle</li>
+     *     <li>Pre-carica eventuale risposta già presente</li>
+     *     <li>Aggiorna pulsanti in base al contesto</li>
+     * </ul>
+     *
+     * Il comportamento avviene tramite protocollo:
+     * <pre>
+     * getResponse
+     * └─ idRecensione
+     * </pre>
+     *
+     * @throws IOException se server non risponde
+     */
     private void setupRestaurateurMode() throws IOException {
 
         stars_1_btn.setVisible(false);
@@ -90,6 +139,23 @@ public class WriteReview implements OnlineChecker {
         }
     }
 
+     /**
+     * Configura modalità utente:
+     * <ul>
+     *     <li>Carica stelle e testo eventuali già presenti</li>
+     *     <li>Determina se stiamo modificando o creando una recensione</li>
+     * </ul>
+     *
+     * Protocollo:
+     * <pre>
+     * getMyReview
+     * └─ idRistorante
+     * → stars
+     * → text
+     * </pre>
+     *
+     * @throws IOException se server non risponde
+     */
     private void setupUserMode() throws IOException {
 
         Communicator.send("getMyReview");
@@ -121,7 +187,11 @@ public class WriteReview implements OnlineChecker {
         }
     }
 
-
+    /**
+     * Verifica limite caratteri del campo testo,
+     * tronca eventuale input > 255,
+     * e aggiorna il contatore UI.
+     */
     @FXML
     private void checkTextBox() {
         String text = text_area.getText();
@@ -134,7 +204,17 @@ public class WriteReview implements OnlineChecker {
         max_chars_label.setText(text.length() + "/255");
     }
 
-
+    /**
+     * Gestisce la pubblicazione della recensione o risposta.
+     *
+     * <p>Scelta della logica:</p>
+     * <ul>
+     *     <li>utente normale → {@link #sendUserReview()}</li>
+     *     <li>ristoratore → {@link #sendRestaurateurReview()}</li>
+     * </ul>
+     *
+     * @throws IOException se server non risponde
+     */
     @FXML
     private void publish() throws IOException {
 
@@ -149,7 +229,17 @@ public class WriteReview implements OnlineChecker {
 
         sendUserReview();
     }
-
+    /**
+     * Invio/modifica/eliminazione della risposta lato ristoratore.
+     *
+     * Protocollo utilizzato:
+     * <pre>
+     * addResponse  | editResponse
+     * removeResponse
+     * </pre>
+     *
+     * @throws IOException in caso di errore comunicazione
+     */
     private void sendRestaurateurReview() throws IOException {
         Communicator.send(is_editing ? "editResponse" : "addResponse");
         Communicator.send(Integer.toString(EditingRestaurant.getReviewId()));
@@ -163,6 +253,21 @@ public class WriteReview implements OnlineChecker {
 
         goBack();
     }
+
+    /**
+     * Invio/modifica/eliminazione recensione lato utente.
+     *
+     * <p>Controlla inoltre validità delle stelle quando si crea una nuova recensione.</p>
+     *
+     * Protocollo:
+     * <pre>
+     * addReview
+     * editReview
+     * removeReview
+     * </pre>
+     *
+     * @throws IOException in caso di errore comunicazione
+     */
 
     private void sendUserReview() throws IOException {
 
@@ -193,7 +298,15 @@ public class WriteReview implements OnlineChecker {
         goBack();
     }
 
-
+    /**
+     * Elimina recensione (utente) o risposta (ristoratore),
+     * previa conferma tramite alert.
+     *
+     * Inserisce il comando appropriato
+     * in base al ruolo utente.
+     *
+     * @throws IOException in caso di errore lato server
+     */
     @FXML
     private void delete() throws IOException {
 
@@ -228,31 +341,51 @@ public class WriteReview implements OnlineChecker {
         goBack();
     }
 
-
+    /**
+     * Imposta il numero di stelle selezionato dall'utente
+     * aggiornando l'etichetta UI.
+     *
+     * @param num valore stelle selezionato (1–5)
+     */
     private void setStar(int num) {
         stars = num;
         stars_label.setText(stars + " stelle");
     }
 
-    @FXML private void setStar1() { setStar(1); }
-    @FXML private void setStar2() { setStar(2); }
-    @FXML private void setStar3() { setStar(3); }
-    @FXML private void setStar4() { setStar(4); }
-    @FXML private void setStar5() { setStar(5); }
+    /** Wrapper UI 1 stella */ @FXML private void setStar1() { setStar(1); }
+    /** Wrapper UI 2 stelle */ @FXML private void setStar2() { setStar(2); }
+    /** Wrapper UI 3 stelle */ @FXML private void setStar3() { setStar(3); }
+    /** Wrapper UI 4 stelle */ @FXML private void setStar4() { setStar(4); }
+    /** Wrapper UI 5 stelle */ @FXML private void setStar5() { setStar(5); }
 
-
+    /**
+     * Mostra un messaggio all'utente nella schermata corrente.
+     *
+     * @param msg testo da mostrare
+     */
     private void setNotification(String msg) {
         notification_label.setVisible(true);
         notification_label.setText(msg);
     }
 
+    /**
+     * Torna alla schermata precedente delle recensioni.
+     *
+     * @throws IOException se cambio scena fallisce
+     */
     @FXML
     private void goBack() throws IOException {
         SceneManager.changeScene("RestaurantReviews");
     }
 
+    /**
+     * Restituisce i nodi interattivi che devono essere disabilitati
+     * in caso di server offline.
+     *
+     * @return controlli interattivi della schermata
+     */
     @Override
-    public javafx.scene.Node[] getInteractiveNodes() {
+    public Node[] getInteractiveNodes() {
         return new javafx.scene.Node[]{
                 stars_1_btn, stars_2_btn, stars_3_btn, stars_4_btn, stars_5_btn,
                 publish_btn, delete_btn,
