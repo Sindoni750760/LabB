@@ -72,6 +72,17 @@ public class SceneManager {
             stage.show();
         }
     }
+
+    /**
+     * 
+     * @return
+     */
+    public static void change(String sceneName, String fromContext) throws IOException {
+        setPreviousNavigation(fromContext);
+        changeScene(sceneName);
+    }
+
+
     /**
      * Restituisce l'eventuale messaggio globale da visualizzare nella scena "App".
      *
@@ -121,5 +132,15 @@ public class SceneManager {
      */
     public static String getPreviousNavigation() {
         return previousNavigation;
+    }
+
+    public static void goBack() throws IOException {
+        if (previousNavigation != null) {
+            String target = previousNavigation;
+            previousNavigation = null;
+            changeScene(target);
+        } else {
+            changeScene("App");
+        }
     }
 }

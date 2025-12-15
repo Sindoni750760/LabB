@@ -2,7 +2,6 @@ package com.theknife.app.Server;
 
 import java.sql.*;
 import java.util.ArrayList;
-import java.util.List;
 
 /**
  * CRUD relativo agli UTENTI.
@@ -26,7 +25,7 @@ import java.util.List;
  *     <li>metodi di utilità per query di conteggio</li>
  * </ul>
  */
-public abstract class UserCRUD extends GenericCRUD {
+public class UserCRUD extends GenericCRUD {
 
     /**
      * Inserisce un nuovo utente nella tabella {@code utenti}.

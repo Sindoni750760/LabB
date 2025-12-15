@@ -1,459 +1,334 @@
 package com.theknife.app.Server;
 
-import java.sql.SQLException;
-import java.sql.Date;
-import java.util.ArrayList;
-import java.util.List;
-
 /**
- * Repository principale del server.
+ * Facade centrale di accesso al database.
+ *
  * <p>
- * Espone un'unica istanza (singleton) e implementa le interfacce
- * {@link QueryUser} e {@link QueryRestaurant}.  
- * Delegando al livello superiore (GenericCRUD → UserCRUD → RestaurateurCRUD
- * → RestaurantCRUD), fornisce un'unica entrypoint per tutte le operazioni
- * legate a utenti, ristoranti, recensioni e preferiti.
+ * Questa classe rappresenta l'unico punto di accesso ai dati
+ * per il livello {@code Handler}. Implementa il pattern
+ * <b>Facade</b>, delegando le operazioni ai CRUD specializzati
+ * e fornendo un'API uniforme verso l'esterno.
  * </p>
+ *
+ * <p>
+ * Responsabilità principali:
+ * </p>
+ * <ul>
+ *     <li>Delegare le operazioni ai CRUD corretti</li>
+ *     <li>Centralizzare la gestione delle eccezioni SQL</li>
+ *     <li>Wrappare ogni errore in {@link ServerException}</li>
+ *     <li>Garantire coerenza e isolamento del layer DB</li>
+ * </ul>
+ *
+ * <p>
+ * Nessun {@code SQLException} o {@code InterruptedException}
+ * viene propagato oltre questo livello.
+ * </p>
+ *
+ * <p>
+ * Pattern applicati:
+ * </p>
+ * <ul>
+ *     <li><b>Singleton</b></li>
+ *     <li><b>Facade</b></li>
+ *     <li><b>Separation of Concerns</b></li>
+ * </ul>
  */
-public class DBHandler extends RestaurantCRUD implements QueryUser, QueryRestaurant {
+public final class DBHandler {
 
-    /** Istanza singleton. */
-    private static DBHandler instance = null;
+    /** Istanza singleton del DBHandler. */
+    private static DBHandler instance;
 
-    /** Costruttore privato (pattern Singleton). */
+    private final RestaurantCRUD restaurantCRUD;
+    private final ReviewCRUD reviewCRUD;
+    private final ResponseCRUD responseCRUD;
+    private final FavouriteCRUD favouriteCRUD;
+    private final UserCRUD userCRUD;
+
+    /**
+     * Costruttore privato.
+     * Inizializza i CRUD concreti.
+     */
     private DBHandler() {
-        super();
+        this.restaurantCRUD = new RestaurantCRUD();
+        this.reviewCRUD     = new ReviewCRUD();
+        this.responseCRUD   = new ResponseCRUD();
+        this.favouriteCRUD  = new FavouriteCRUD();
+        this.userCRUD       = new UserCRUD();
     }
 
     /**
-     * Restituisce l'unica istanza di {@code DBHandler}.
+     * Restituisce l'unica istanza del DBHandler.
      *
      * @return istanza singleton
      */
     public static synchronized DBHandler getInstance() {
-        if (instance == null) {
+        if (instance == null)
             instance = new DBHandler();
-        }
         return instance;
     }
 
-    /**
-     * Aggiunge un nuovo utente nel database.
-     *
-     * @param nome nome dell'utente
-     * @param cognome cognome dell'utente
-     * @param username username univoco
-     * @param passwordHashed password già hashata
-     * @param dataNascita data di nascita (può essere null)
-     * @param lat latitudine del domicilio
-     * @param lon longitudine del domicilio
-     * @param isRistoratore true se l’utente è un ristoratore
-     * @return true se l'inserimento è riuscito
-     */
-    @Override
-    public boolean addUser(String nome, String cognome, String username,
-                           String passwordHashed, Date dataNascita,
-                           double lat, double lon, boolean isRistoratore)
-            throws SQLException, InterruptedException {
+    /* ======================= RESTAURANTS ======================= */
 
-        long birth = (dataNascita == null ? -1L : dataNascita.getTime());
-        return super.addUser(nome, cognome, username, passwordHashed,
-                             birth, lat, lon, isRistoratore);
-    }
-
-    /**
-     * Verifica se esiste un utente con lo username specificato.
-     *
-     * @param username username da controllare
-     * @return true se l'utente esiste
-     */
-    @Override
-    public boolean userExists(String username)
-            throws SQLException, InterruptedException {
-
-        return super.getUserLoginInfo(username) != null;
-    }
-
-       /**
-     * Restituisce le informazioni necessarie al login:
-     * password hash + id utente.
-     *
-     * @param username username da cercare
-     * @return array contenente le info login, o null se non esiste
-     */
-    @Override
-    public String[] getUserLoginInfo(String username)
-            throws SQLException, InterruptedException {
-
-        return super.getUserLoginInfo(username);
-    }
-
-    /**
-     * Restituisce informazioni complete di un utente dato il suo ID.
-     *
-     * @param id id dell’utente
-     * @return array con nome, cognome e flag ristoratore
-     */
-    @Override
-    public String[] getUserInfoById(int id)
-            throws SQLException, InterruptedException {
-
-        return super.getUserInfo(id);
-    }
-
-
-    /**
-     * Aggiunge un nuovo ristorante.
-     *
-     * @return true se l'inserimento è riuscito
-     */
-    @Override
-    public boolean addRestaurant(int ownerId,
-                                 String nome,
-                                 String nazione,
-                                 String citta,
-                                 String indirizzo,
-                                 double lat,
-                                 double lon,
-                                 int fasciaPrezzo,
-                                 boolean delivery,
-                                 boolean online,
-                                 String tipoCucina)
-            throws SQLException {
+    public boolean addRestaurant(int ownerId, String name, String nation, String city,
+                                 String address, double lat, double lon,
+                                 int price, String tipoCucina,
+                                 boolean delivery, boolean online) {
 
         try {
-            return super.addRestaurant(
-                    ownerId,
-                    nome,
-                    nazione,
-                    citta,
-                    indirizzo,
-                    lat,
-                    lon,
-                    fasciaPrezzo,
-                    tipoCucina,
-                    delivery,
-                    online
+            return restaurantCRUD.addRestaurant(
+                    ownerId, name, nation, city, address,
+                    lat, lon, price, tipoCucina, delivery, online
             );
-        } catch (SQLException | InterruptedException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+        } catch (Exception e) {
+            throw new ServerException("Errore addRestaurant", e);
         }
-        return online;
     }
-    /**
-     * Restituisce una lista di ristoranti filtrati e paginati.
-     *
-     * @return lista di array [id, nome]
-     */
-    @Override
-    public List<String[]> listRestaurants(
+
+    public boolean editRestaurant(int restId, String name, String nation, String city,
+                                  String address, double lat, double lon,
+                                  int price, String tipoCucina,
+                                  boolean delivery, boolean online) {
+
+        try {
+            return restaurantCRUD.editRestaurant(
+                    restId, name, nation, city, address,
+                    lat, lon, price, tipoCucina, delivery, online
+            );
+        } catch (Exception e) {
+            throw new ServerException("Errore editRestaurant", e);
+        }
+    }
+
+    public boolean deleteRestaurant(int restId) {
+        try {
+            return restaurantCRUD.deleteRestaurant(restId);
+        } catch (Exception e) {
+            throw new ServerException("Errore deleteRestaurant", e);
+        }
+    }
+
+    public String[] getRestaurantInfo(int restId) {
+        try {
+            return restaurantCRUD.getRestaurantInfo(restId);
+        } catch (Exception e) {
+            throw new ServerException("Errore getRestaurantInfo", e);
+        }
+    }
+
+    public boolean hasAccess(int userId, int restId) {
+        try {
+            return restaurantCRUD.hasAccess(userId, restId);
+        } catch (Exception e) {
+            throw new ServerException("Errore hasAccess", e);
+        }
+    }
+
+    public int getUserRestaurantsPages(int userId) {
+        try {
+            return restaurantCRUD.getUserRestaurantsPages(userId);
+        } catch (Exception e) {
+            throw new ServerException("Errore getUserRestaurantsPages", e);
+        }
+    }
+
+    public String[][] getUserRestaurants(int userId, int page) {
+        try {
+            return restaurantCRUD.getUserRestaurants(userId, page);
+        } catch (Exception e) {
+            throw new ServerException("Errore getUserRestaurants", e);
+        }
+    }
+
+    public String[][] getRestaurantsWithFilter(
             int page,
-            String latStr, String lonStr, String rangeKmStr,
-            String priceMinStr, String priceMaxStr,
-            String hasDelivery, String hasOnline,
-            String starsMinStr, String starsMaxStr,
-            String category,
-            String nearMe,
-            Integer userId,
-            boolean onlyFavourites
-    ) throws SQLException, InterruptedException {
-
-        Double lat = null, lon = null, rangeKm = null;
-        Integer priceMin = null, priceMax = null;
-        Double starsMin = null, starsMax = null;
+            String nation,
+            String city,
+            Double lat, Double lon, Double rangeKm,
+            Integer priceMin, Integer priceMax,
+            boolean delivery, boolean online,
+            Double starsMin, Double starsMax,
+            int favouriteUserId,
+            String category) {
 
         try {
-            if (latStr != null && !latStr.isBlank())
-                lat = Double.parseDouble(latStr);
-            if (lonStr != null && !lonStr.isBlank())
-                lon = Double.parseDouble(lonStr);
-            if (rangeKmStr != null && !rangeKmStr.isBlank())
-                rangeKm = Double.parseDouble(rangeKmStr);
-        } catch (NumberFormatException ignored) {}
-
-        try {
-            if (priceMinStr != null && !priceMinStr.isBlank())
-                priceMin = Integer.parseInt(priceMinStr);
-            if (priceMaxStr != null && !priceMaxStr.isBlank())
-                priceMax = Integer.parseInt(priceMaxStr);
-        } catch (NumberFormatException ignored) {}
-
-        try {
-            if (starsMinStr != null && !starsMinStr.isBlank())
-                starsMin = Double.parseDouble(starsMinStr);
-            if (starsMaxStr != null && !starsMaxStr.isBlank())
-                starsMax = Double.parseDouble(starsMaxStr);
-        } catch (NumberFormatException ignored) {}
-
-        boolean delivery = "y".equalsIgnoreCase(hasDelivery);
-        boolean online   = "y".equalsIgnoreCase(hasOnline);
-        int favouriteUserId = (onlyFavourites && userId != null) ? userId : -1;
-
-        // logica "vicino a me" sta nel livello Handler
-        String[][] raw = super.getRestaurantsWithFilter(
-                page,
-                null, // gestita nel Handler
-                null, // city
-                lat, lon, rangeKm,
-                priceMin, priceMax,
-                delivery, online,
-                starsMin, starsMax,
-                favouriteUserId,
-                category
-        );
-
-        List<String[]> result = new ArrayList<>();
-        if (raw.length <= 1) return result;
-
-        for (int i = 1; i < raw.length; i++) {
-            result.add(new String[]{ raw[i][0], raw[i][1] });
-        }
-        return result;
-    }
-    /**
-     * Restituisce tutte le informazioni dettagliate su un ristorante.
-     *
-     * @param id id del ristorante
-     * @return array di stringhe con tutte le informazioni
-     */
-    @Override
-    public String[] getRestaurantInfo(int id)
-            throws SQLException, InterruptedException {
-
-        return super.getRestaurantInfo(id);
-    }
-    /**
-     * Modifica un ristorante esistente.
-     *
-     * @return true se l'update va a buon fine
-     */
-    @Override
-    public boolean editRestaurant(int id, String nome,
-                                  String nazione,
-                                  String citta,
-                                  String indirizzo,
-                                  double lat,
-                                  double lon,
-                                  int fasciaPrezzo,
-                                  boolean delivery,
-                                  boolean online,
-                                  String tipoCucina)
-            throws SQLException {
-
-        try {
-            return super.editRestaurant(
-                    id,
-                    nome,
-                    nazione,
-                    citta,
-                    indirizzo,
-                    lat,
-                    lon,
-                    fasciaPrezzo,
-                    tipoCucina,
-                    delivery,
-                    online
+            return restaurantCRUD.getRestaurantsWithFilter(
+                    page, nation, city,
+                    lat, lon, rangeKm,
+                    priceMin, priceMax,
+                    delivery, online,
+                    starsMin, starsMax,
+                    favouriteUserId, category
             );
-        } catch (SQLException | InterruptedException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+        } catch (Exception e) {
+            throw new ServerException("Errore getRestaurantsWithFilter", e);
         }
-        return online;
-    }
-    
-    /**
-     * Elimina un ristorante dato il suo ID.
-     *
-     * @return true se l'eliminazione è avvenuta
-     */
-    @Override
-    public boolean deleteRestaurant(int id)
-            throws SQLException, InterruptedException {
-
-        return super.deleteRestaurant(id);
-    }
-    
-    /**
-     * Restituisce il numero totale di pagine di ristoranti dell'utente.
-     */
-    @Override
-    public int getMyRestaurantsPageCount(int userId)
-            throws SQLException, InterruptedException {
-
-        return super.getUserRestaurantsPages(userId);
-    }
-    
-    /**
-     * Restituisce la pagina di ristoranti dell’utente.
-     */
-    @Override
-    public List<String[]> getMyRestaurants(int userId, int page)
-            throws SQLException, InterruptedException {
-
-        String[][] arr = super.getUserRestaurants(userId, page);
-        List<String[]> list = new ArrayList<>();
-        for (String[] r : arr) list.add(r);
-        return list;
     }
 
-    /**
-     * Restituisce quante pagine di recensioni possiede un ristorante.
-     */
-    @Override
-    public int getReviewsPageCount(int restaurantId)
-            throws SQLException, InterruptedException {
+    /* ======================= REVIEWS ======================= */
 
-        return super.getReviewsPageCount(restaurantId);
-    }
-    
-    /**
-     * Aggiunge una nuova recensione utente.
-     */
-    @Override
-    public boolean addReview(int userId, int restaurantId, int stars, String text)
-            throws SQLException, InterruptedException {
-
-        return super.addReview(userId, restaurantId, stars, text);
-    }
-    
-    /**
-     * Modifica una recensione utente esistente.
-     */
-    @Override
-    public boolean editReview(int userId, int restaurantId, int stars, String text)
-            throws SQLException, InterruptedException {
-
-        return super.editReview(userId, restaurantId, stars, text);
-    }
-    
-    /**
-     * Rimuove una recensione dell’utente.
-     */
-    @Override
-    public boolean removeReview(int userId, int restaurantId)
-            throws SQLException, InterruptedException {
-
-        return super.removeReview(userId, restaurantId);
-    }
-    
-    /**
-     * Restituisce la recensione dell’utente su un ristorante.
-     */
-    @Override
-    public String[] getMyReview(int userId, int restaurantId)
-            throws SQLException, InterruptedException {
-
-        return super.getMyReview(userId, restaurantId);
+    public int getReviewsPageCount(int restId) {
+        try {
+            return reviewCRUD.getReviewsPageCount(restId);
+        } catch (Exception e) {
+            throw new ServerException("Errore getReviewsPageCount", e);
+        }
     }
 
-    /**
-     * Restituisce quante pagine di recensioni ha l’utente.
-     */
-    @Override
-    public int getMyReviewsPageCount(int userId)
-            throws SQLException, InterruptedException {
-
-        return super.getUserReviewsPages(userId);
-    }
-    
-    /**
-     * Restituisce una pagina di recensioni dell’utente.
-     */
-    @Override
-    public List<String[]> getMyReviews(int userId, int page)
-            throws SQLException, InterruptedException {
-
-        String[][] arr = super.getUserReviews(userId, page);
-        List<String[]> list = new ArrayList<>();
-        for (String[] r : arr) list.add(r);
-        return list;
+    public String[][] getReviews(int restId, int page) {
+        try {
+            return reviewCRUD.getReviews(restId, page);
+        } catch (Exception e) {
+            throw new ServerException("Errore getReviews", e);
+        }
     }
 
-    /**
-     * Restituisce la risposta del ristoratore a una recensione.
-     */
-    @Override
-    public String getResponse(int reviewId)
-            throws SQLException, InterruptedException {
-
-        return super.getResponse(reviewId);
+    public String[] getMyReview(int userId, int restId) {
+        try {
+            return reviewCRUD.getMyReview(userId, restId);
+        } catch (Exception e) {
+            throw new ServerException("Errore getMyReview", e);
+        }
     }
 
-    /**
-     * Aggiunge una risposta a una recensione.
-     */
-    @Override
-    public boolean addResponse(int reviewId, String text)
-            throws SQLException, InterruptedException {
-
-        return super.addResponse(reviewId, text);
+    public boolean addReview(int userId, int restId, int stars, String text) {
+        try {
+            return reviewCRUD.addReview(userId, restId, stars, text);
+        } catch (Exception e) {
+            throw new ServerException("Errore addReview", e);
+        }
     }
 
-    /**
-     * Modifica una risposta già esistente.
-     */
-    @Override
-    public boolean editResponse(int reviewId, String text)
-            throws SQLException, InterruptedException {
-
-        return super.editResponse(reviewId, text);
+    public boolean editReview(int userId, int restId, int stars, String text) {
+        try {
+            return reviewCRUD.editReview(userId, restId, stars, text);
+        } catch (Exception e) {
+            throw new ServerException("Errore editReview", e);
+        }
     }
 
-    /**
-     * Rimuove una risposta del ristoratore.
-     */
-    @Override
-    public boolean removeResponse(int reviewId)
-            throws SQLException, InterruptedException {
-
-        return super.removeResponse(reviewId);
+    public boolean removeReview(int userId, int restId) {
+        try {
+            return reviewCRUD.removeReview(userId, restId);
+        } catch (Exception e) {
+            throw new ServerException("Errore removeReview", e);
+        }
     }
 
-    /**
-     * Verifica se un ristorante è tra i preferiti dell’utente.
-     */
-    @Override
-    public boolean isFavourite(int userId, int restaurantId)
-            throws SQLException, InterruptedException {
-
-        return super.isFavourite(userId, restaurantId);
+    public int getUserReviewsPages(int userId) {
+        try {
+            return userCRUD.getUserReviewsPages(userId);
+        } catch (Exception e) {
+            throw new ServerException("Errore getUserReviewsPages", e);
+        }
     }
 
-    /**
-     * Aggiunge un ristorante ai preferiti dell’utente.
-     */
-    @Override
-    public boolean addFavourite(int userId, int restaurantId)
-            throws SQLException, InterruptedException {
-
-        return super.addFavourite(userId, restaurantId);
+    public String[][] getUserReviews(int userId, int page) {
+        try {
+            return userCRUD.getUserReviews(userId, page);
+        } catch (Exception e) {
+            throw new ServerException("Errore getUserReviews", e);
+        }
     }
 
-    /**
-     * Rimuove un ristorante dai preferiti dell’utente.
-     */
-    @Override
-    public boolean removeFavourite(int userId, int restaurantId)
-            throws SQLException, InterruptedException {
+    /* ======================= RESPONSES ======================= */
 
-        return super.removeFavourite(userId, restaurantId);
+    public boolean canRespond(int userId, int reviewId) {
+        try {
+            return responseCRUD.canRespond(userId, reviewId);
+        } catch (Exception e) {
+            throw new ServerException("Errore canRespond", e);
+        }
     }
 
-    /**
-     * Restituisce le recensioni di un ristorante per pagina.
-     */    
-    @Override
-    public String[][] getReviews(int restaurantId, int page)
-            throws SQLException, InterruptedException {
-
-        // Chiama l’implementazione originale
-        String[][] arr = super.getReviews(restaurantId, page);
-
-        // Sicurezza: se dovesse mai essere null, restituiamo un array vuoto
-        if (arr == null)
-            return new String[0][0];
-
-        return arr;
+    public String getResponse(int reviewId) {
+        try {
+            return responseCRUD.getResponse(reviewId);
+        } catch (Exception e) {
+            throw new ServerException("Errore getResponse", e);
+        }
     }
+
+    public boolean addResponse(int reviewId, String text) {
+        try {
+            return responseCRUD.addResponse(reviewId, text);
+        } catch (Exception e) {
+            throw new ServerException("Errore addResponse", e);
+        }
+    }
+
+    public boolean editResponse(int reviewId, String text) {
+        try {
+            return responseCRUD.editResponse(reviewId, text);
+        } catch (Exception e) {
+            throw new ServerException("Errore editResponse", e);
+        }
+    }
+
+    public boolean removeResponse(int reviewId) {
+        try {
+            return responseCRUD.removeResponse(reviewId);
+        } catch (Exception e) {
+            throw new ServerException("Errore removeResponse", e);
+        }
+    }
+
+    /* ======================= FAVOURITES ======================= */
+
+    public boolean isFavourite(int userId, int restId) {
+        try {
+            return favouriteCRUD.isFavourite(userId, restId);
+        } catch (Exception e) {
+            throw new ServerException("Errore isFavourite", e);
+        }
+    }
+
+    public boolean addFavourite(int userId, int restId) {
+        try {
+            return favouriteCRUD.addFavourite(userId, restId);
+        } catch (Exception e) {
+            throw new ServerException("Errore addFavourite", e);
+        }
+    }
+
+    public boolean removeFavourite(int userId, int restId) {
+        try {
+            return favouriteCRUD.removeFavourite(userId, restId);
+        } catch (Exception e) {
+            throw new ServerException("Errore removeFavourite", e);
+        }
+    }
+
+    /* ======================= USERS ======================= */
+
+    public boolean addUser(String nome, String cognome, String username,
+                           String hashPassword, long birth,
+                           double lat, double lon, boolean isRistoratore) {
+
+        try {
+            return userCRUD.addUser(
+                    nome, cognome, username,
+                    hashPassword, birth,
+                    lat, lon, isRistoratore
+            );
+        } catch (Exception e) {
+            throw new ServerException("Errore addUser", e);
+        }
+    }
+
+    public String[] getUserLoginInfo(String username) {
+        try {
+            return userCRUD.getUserLoginInfo(username);
+        } catch (Exception e) {
+            throw new ServerException("Errore getUserLoginInfo", e);
+        }
+    }
+
+    public String[] getUserInfo(int id) {
+        try {
+            return userCRUD.getUserInfo(id);
+        } catch (Exception e) {
+            throw new ServerException("Errore getUserInfo", e);
+        }
+    }    
 }
