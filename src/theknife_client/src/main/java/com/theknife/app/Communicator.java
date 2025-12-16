@@ -40,6 +40,16 @@ public class Communicator {
     /** Stato di raggiungibilità del server. */
     private static boolean serverReachable = false;
 
+    /**
+     * Costruttore privato.
+     *
+     * <p>La classe {@code Communicator} è una utility class che fornisce
+     * esclusivamente metodi statici per la gestione della comunicazione
+     * client–server e non deve essere istanziata.</p>
+     */
+    private Communicator() {
+        /* utility class */
+    }
 
     /**
      * Inizializza il communicator memorizzando host e porta e tenta

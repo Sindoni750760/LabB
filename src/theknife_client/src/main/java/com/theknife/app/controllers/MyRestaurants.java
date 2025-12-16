@@ -46,6 +46,17 @@ public class MyRestaurants implements OnlineChecker {
     private int current_page = 0;
 
     /**
+     * Costruttore di default del controller {@code MyRestaurants}.
+     *
+     * <p>Il costruttore non esegue inizializzazioni esplicite poiché
+     * l'istanziazione del controller e l'iniezione dei campi {@code @FXML}
+     * sono gestite automaticamente dal framework JavaFX tramite {@code FXMLLoader}.</p>
+     */
+    public MyRestaurants() {
+        super();
+    }
+
+    /**
      * Inizializza la schermata caricando le pagine disponibili
      * e navigando alla prima, se presente.
      *
