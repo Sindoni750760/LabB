@@ -35,6 +35,17 @@ public class LoginController implements OnlineChecker {
     private Label notification_label;
 
     /**
+     * Costruttore di default del controller {@code LoginController}.
+     *
+     * <p>Il costruttore non esegue inizializzazioni esplicite poiché
+     * l'istanziazione del controller e l'iniezione dei campi {@code @FXML}
+     * sono gestite automaticamente dal framework JavaFX tramite {@code FXMLLoader}.</p>
+     */
+    public LoginController() {
+        super();
+    }
+
+    /**
      * Torna alla schermata principale dell'applicazione.
      *
      * @throws IOException se la nuova scena non viene caricata correttamente

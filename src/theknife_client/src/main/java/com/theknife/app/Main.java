@@ -28,6 +28,16 @@ package com.theknife.app;
 public class Main {
 
     /**
+     * Costruttore privato.
+     *
+     * <p>La classe {@code Main} funge esclusivamente da punto di ingresso
+     * standard per la JVM e non deve essere istanziata.</p>
+     */
+    private Main() {
+        /* entry-point class */
+    }
+
+    /**
      * Metodo principale dell'applicazione.
      * <p>Delegato unicamente alla chiamata di {@link App#main(String[])}, che gestisce
      * l'effettiva inizializzazione dell'interfaccia JavaFX e delle componenti interne.</p>

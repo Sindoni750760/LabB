@@ -39,6 +39,18 @@ public class FavouriteController implements OnlineChecker {
     private String[] fav_names;
 
     /**
+     * Costruttore di default del controller {@code FavouriteController}.
+     *
+     * <p>Il costruttore non esegue inizializzazioni esplicite poiché
+     * l'istanziazione del controller e l'iniezione dei campi {@code @FXML}
+     * sono gestite automaticamente dal framework JavaFX tramite {@code FXMLLoader}.</p>
+     */
+    public FavouriteController() {
+        super();
+    }
+
+
+    /**
      * Inizializza la schermata dei preferiti.
      * <p>Esegue:</p>
      * <ul>

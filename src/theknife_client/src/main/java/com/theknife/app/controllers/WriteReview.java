@@ -51,7 +51,18 @@ public class WriteReview implements OnlineChecker {
     @FXML private Button publish_btn, delete_btn;
     @FXML private Label stars_label, max_chars_label, notification_label;
     @FXML private TextArea text_area;
-    
+
+    /**
+     * Costruttore di default del controller {@code WriteReview}.
+     *
+     * <p>Il costruttore non esegue inizializzazioni esplicite poiché
+     * l'istanziazione del controller e l'iniezione dei campi {@code @FXML}
+     * sono gestite automaticamente dal framework JavaFX tramite {@code FXMLLoader}.</p>
+     */
+    public WriteReview() {
+        super();
+    }
+
     /**
      * Inizializza la schermata determinando:
      * <ul>

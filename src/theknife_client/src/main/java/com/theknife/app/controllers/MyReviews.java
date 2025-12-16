@@ -40,6 +40,17 @@ public class MyReviews implements OnlineChecker {
     @FXML private Button prev_btn, next_btn;
 
     /**
+     * Costruttore di default del controller {@code MyReviews}.
+     *
+     * <p>Il costruttore non esegue inizializzazioni esplicite poiché
+     * l'istanziazione del controller e l'iniezione dei campi {@code @FXML}
+     * sono gestite automaticamente dal framework JavaFX tramite {@code FXMLLoader}.</p>
+     */
+    public MyReviews() {
+        super();
+    }
+
+    /**
      * Inizializza la schermata e prepara l'interfaccia.
      *
      * <p>Passi principali:</p>

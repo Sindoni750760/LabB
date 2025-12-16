@@ -68,6 +68,17 @@ public class ViewRestaurants implements OnlineChecker {
     @FXML private Button clear_btn;
 
     /**
+     * Costruttore di default del controller {@code ViewRestaurants}.
+     *
+     * <p>Il costruttore non esegue inizializzazioni esplicite poiché
+     * l'istanziazione del controller e l'iniezione dei campi {@code @FXML}
+     * sono gestite automaticamente dal framework JavaFX tramite {@code FXMLLoader}.</p>
+     */
+    public ViewRestaurants() {
+        super();
+    }
+
+    /**
      * Inizializza l'interfaccia ripristinando lo stato grafico
      * e avvia automaticamente il caricamento iniziale dei ristoranti.
     */

@@ -37,6 +37,18 @@ public class EditRestaurant implements OnlineChecker {
     @FXML private CheckBox delivery_check, online_check;
     @FXML private Label notification_label;
 
+    /**
+     * Costruttore di default del controller {@code EditRestaurant}.
+     *
+     * <p>Il costruttore non esegue inizializzazioni esplicite poiché
+     * l'istanziazione del controller e l'iniezione dei campi {@code @FXML}
+     * sono gestite automaticamente dal framework JavaFX tramite {@code FXMLLoader}.</p>
+     */
+    public EditRestaurant() {
+        super();
+    }
+
+
   /**
      * Inizializza la schermata.
      * <br>Se è presente un ristorante in modifica (ID > 0), popola i campi del form

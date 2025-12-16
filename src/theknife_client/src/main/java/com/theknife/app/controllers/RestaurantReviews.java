@@ -70,6 +70,17 @@ public class RestaurantReviews implements OnlineChecker {
     @FXML private ListView<String> reviews_listview;
 
     /**
+     * Costruttore di default del controller {@code RestaurantReviews}.
+     *
+     * <p>Il costruttore non esegue inizializzazioni esplicite poiché
+     * l'istanziazione del controller e l'iniezione dei campi {@code @FXML}
+     * sono gestite automaticamente dal framework JavaFX tramite {@code FXMLLoader}.</p>
+     */
+    public RestaurantReviews() {
+        super();
+    }
+
+    /**
      * Inizializza la schermata dei commenti caricando i dati relativi al ristorante.
      *
      * <p>Effettua le seguenti azioni:</p>

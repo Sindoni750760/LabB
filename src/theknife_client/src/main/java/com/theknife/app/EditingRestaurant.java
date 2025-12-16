@@ -31,6 +31,17 @@ public class EditingRestaurant {
     private static String avg_stars, n_reviews, categories;
 
     /**
+     * Costruttore privato.
+     *
+     * <p>La classe {@code EditingRestaurant} è un contenitore statico di stato
+     * lato client e non deve essere istanziata.</p>
+     */
+    private EditingRestaurant() {
+        /* utility class */
+    }
+
+
+    /**
      * Imposta un ristorante come "attualmente selezionato" e ne recupera
      * tutte le informazioni dal server.
      *

@@ -45,6 +45,17 @@ public class ViewRestaurantInfo implements OnlineChecker {
     @FXML private Button fav_btn;
 
     /**
+     * Costruttore di default del controller {@code ViewRestaurantInfo}.
+     *
+     * <p>Il costruttore non esegue inizializzazioni esplicite poiché
+     * l'istanziazione del controller e l'iniezione dei campi {@code @FXML}
+     * sono gestite automaticamente dal framework JavaFX tramite {@code FXMLLoader}.</p>
+     */
+    public ViewRestaurantInfo() {
+        super();
+    }
+
+    /**
      * Inizializza la schermata caricando le informazioni relative al ristorante.
      *
      * <p>Il metodo esegue i seguenti passaggi:</p>

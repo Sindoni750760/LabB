@@ -49,6 +49,17 @@ public class RegisterController implements OnlineChecker {
     @FXML private Label notification_label;
 
     /**
+     * Costruttore di default del controller {@code RegisterController}.
+     *
+     * <p>Il costruttore non esegue inizializzazioni esplicite poiché
+     * l'istanziazione del controller e l'iniezione dei campi {@code @FXML}
+     * sono gestite automaticamente dal framework JavaFX tramite {@code FXMLLoader}.</p>
+     */
+    public RegisterController() {
+        super();
+    }
+
+    /**
      * Inizializza la schermata configurando il calendario.
      *
      * <p>Imposta una {@link DateCell} personalizzata che:</p>

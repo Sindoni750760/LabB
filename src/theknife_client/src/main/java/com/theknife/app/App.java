@@ -27,6 +27,17 @@ import java.util.Scanner;
 public class App extends Application {
 
     /**
+     * Costruttore di default dell'applicazione.
+     *
+     * <p>Il costruttore non esegue alcuna inizializzazione esplicita poiché
+     * il ciclo di vita dell'applicazione è gestito dal framework JavaFX
+     * tramite il metodo {@link #start(Stage)}.</p>
+     */
+    public App() {
+        super();
+    }
+
+    /**
      * Metodo di avvio JavaFX.
      *
      * <p>Esegue le seguenti operazioni:</p>

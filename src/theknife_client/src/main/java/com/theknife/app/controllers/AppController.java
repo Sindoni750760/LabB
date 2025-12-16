@@ -38,7 +38,19 @@ public class AppController implements OnlineChecker {
     @FXML private Button view_btn;
     @FXML private Button reconnect_btn;
     @FXML private Button fav_button;
-    
+
+
+    /**
+     * Costruttore di default del controller.
+     *
+     * <p>Il costruttore non esegue inizializzazioni esplicite poiché
+     * l'istanziazione e l'iniezione dei campi {@code @FXML} sono gestite
+     * automaticamente dal framework JavaFX tramite {@code FXMLLoader}.</p>
+     */
+    public AppController() {
+        super();
+    }
+
     /**
      * Metodo di inizializzazione dell'interfaccia.
      * <br>Viene invocato automaticamente da JavaFX al caricamento della view

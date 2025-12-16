@@ -31,6 +31,17 @@ public class SceneManager {
     private static String previousNavigation = null;
 
     /**
+     * Costruttore privato.
+     *
+     * <p>La classe {@code SceneManager} fornisce esclusivamente metodi statici
+     * per la gestione delle scene JavaFX e non deve essere istanziata.</p>
+     */
+    private SceneManager() {
+        /* utility class */
+    }
+
+
+    /**
      * Inizializza lo Stage principale e carica la scena iniziale.
      *
      * @param s lo stage principale JavaFX
@@ -74,8 +85,17 @@ public class SceneManager {
     }
 
     /**
-     * 
-     * @return
+     * Cambia scena impostando preventivamente il contesto di navigazione.
+     *
+     * <p>Questo metodo è un wrapper che:</p>
+     * <ul>
+     *     <li>salva il contesto di provenienza</li>
+     *     <li>delegata il cambio scena a {@link #changeScene(String)}</li>
+     * </ul>
+     *
+     * @param sceneName nome della scena di destinazione
+     * @param fromContext contesto logico di provenienza
+     * @throws IOException se il file FXML non può essere caricato
      */
     public static void change(String sceneName, String fromContext) throws IOException {
         setPreviousNavigation(fromContext);
@@ -134,6 +154,15 @@ public class SceneManager {
         return previousNavigation;
     }
 
+    /**
+     * Ripristina la scena precedente se presente nel contesto di navigazione.
+     *
+     * <p>Se un contesto precedente è stato impostato tramite
+     * {@link #setPreviousNavigation(String)}, viene caricata la relativa scena.
+     * In caso contrario, viene caricata la scena principale "App".</p>
+     *
+     * @throws IOException se il caricamento della scena fallisce
+     */
     public static void goBack() throws IOException {
         if (previousNavigation != null) {
             String target = previousNavigation;
