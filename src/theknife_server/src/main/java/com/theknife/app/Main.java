@@ -1,5 +1,8 @@
 package com.theknife.app;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.PrintWriter;
 import java.util.Scanner;
 
 /**
@@ -16,6 +19,12 @@ import java.util.Scanner;
  *     <li><b>stop</b> - arresta il server</li>
  * </ul>
  *
+ * <p>
+ * Al primo avvio del server viene richiesta all'amministratore
+ * la configurazione di accesso al database PostgreSQL, che viene
+ * salvata nel file {@code connection.ini}.
+ * </p>
+ *
  * Il server viene avviato sulla porta predefinita 12345.
  *
  * @author
@@ -31,9 +40,10 @@ public class Main {
      * Responsabilità del metodo:
      * </p>
      * <ul>
-     *     <li>istanziare il server tramite il singleton {@link ServerApplication}</li>
-     *     <li>avviarlo in ascolto sulla porta TCP predefinita</li>
-     *     <li>accettare comandi da console per interrompere l’esecuzione</li>
+     *     <li>verificare l'esistenza del file {@code connection.ini}</li>
+     *     <li>richiedere le credenziali DB al primo avvio</li>
+     *     <li>avviare il server tramite {@link ServerApplication}</li>
+     *     <li>gestire comandi amministrativi da console</li>
      * </ul>
      *
      * <p>
@@ -46,6 +56,43 @@ public class Main {
     public static void main(String[] args) {
 
         int port = 12345; // Porta del server
+
+        // --- Bootstrap configurazione DB ---
+        File iniFile = new File("connection.ini");
+
+        if (!iniFile.exists()) {
+            System.out.println("[MAIN] Prima esecuzione: configurazione database richiesta.");
+
+            try (Scanner sc = new Scanner(System.in);
+                 PrintWriter pw = new PrintWriter(new FileWriter(iniFile))) {
+
+                System.out.print("Host DB (default: localhost): ");
+                String host = sc.nextLine().trim();
+                if (host.isEmpty()) host = "localhost";
+
+                System.out.print("Nome database (default: theknife): ");
+                String dbName = sc.nextLine().trim();
+                if (dbName.isEmpty()) dbName = "theknife";
+
+                System.out.print("Username DB (default: postgres): ");
+                String user = sc.nextLine().trim();
+                if (user.isEmpty()) user = "postgres";
+
+                System.out.print("Password DB: ");
+                String pass = sc.nextLine();
+
+                pw.println("jdbc_url=jdbc:postgresql://" + host + ":5432/" + dbName);
+                pw.println("username=" + user);
+                pw.println("password=" + pass);
+
+                System.out.println("[MAIN] File connection.ini creato correttamente.");
+
+            } catch (Exception e) {
+                System.err.println("[MAIN] ERRORE durante la configurazione del database.");
+                e.printStackTrace();
+                return;
+            }
+        }
 
         ServerApplication server = ServerApplication.getInstance();
 

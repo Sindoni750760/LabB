@@ -1,6 +1,7 @@
 package com.theknife.app;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -20,13 +21,13 @@ import java.util.Properties;
  * └─ server.jar
  * </pre>
  *
- * <p>Se il file di configurazione non è presente, viene generato automaticamente
- * con valori predefiniti.</p>
+ * <p>Il file {@code connection.ini} deve essere creato al primo avvio
+ * del server dall'amministratore. Il client non gestisce in alcun modo
+ * la configurazione del database.</p>
  *
  * <p>Il componente si occupa di:</p>
  * <ul>
  *     <li>Caricare il driver JDBC PostgreSQL</li>
- *     <li>Individuare (o creare) il file di configurazione</li>
  *     <li>Leggere i parametri di connessione</li>
  *     <li>Fornire connessioni JDBC attive</li>
  * </ul>
@@ -48,16 +49,14 @@ public class ConnectionManager {
      * Costruttore privato.
      *
      * <p>Responsabilità:</p>
-     *
      * <ul>
      *     <li>Caricare il driver PostgreSQL</li>
-     *     <li>Ricercare la cartella {@code LabB}</li>
-     *     <li>Creare {@code connection.ini} se mancante</li>
-     *     <li>Leggere i parametri dal file</li>
+     *     <li>Individuare la cartella {@code LabB}</li>
+     *     <li>Leggere i parametri dal file {@code connection.ini}</li>
      * </ul>
      *
-     * @throws RuntimeException se non è possibile individuare {@code LabB}
-     *                          o se il file di configurazione risulta illeggibile.
+     * @throws RuntimeException se il file di configurazione è mancante
+     *                          o contiene parametri non validi.
      */
     private ConnectionManager() {
         try {
@@ -73,10 +72,18 @@ public class ConnectionManager {
         iniFile = new File(labbRoot, "connection.ini");
 
         if (!iniFile.exists()) {
-            createIniFile();
+            throw new RuntimeException(
+                "connection.ini mancante. Avviare il server per configurare il database."
+            );
         }
 
         loadIni();
+
+        if (password.isBlank()) {
+            throw new RuntimeException(
+                "Password PostgreSQL mancante in connection.ini"
+            );
+        }
     }
 
     /**
@@ -94,24 +101,11 @@ public class ConnectionManager {
      * Ricerca la cartella {@code LabB} risalendo progressivamente
      * dai percorsi parent della working directory corrente.
      *
-     * <p>Ricerca effettuata con priorità:</p>
-     * <ol>
-     *     <li>Verifica presenza sottocartella denominata {@code LabB}</li>
-     *     <li>Verifica se la directory corrente è {@code LabB}</li>
-     *     <li>Risale nella gerarchia dei parent</li>
-     * </ol>
-     *
-     * @return la directory radice del progetto oppure {@code null} se non individuata
+     * @return la directory radice del progetto oppure {@code null}
      */
     private File findLabBRoot() {
-        File start = new File(System.getProperty("user.dir"));
+        File current = new File(System.getProperty("user.dir"));
 
-        File sub = new File(start, "LabB");
-        if (sub.exists() && sub.isDirectory()) return sub;
-
-        if ("LabB".equalsIgnoreCase(start.getName())) return start;
-
-        File current = start;
         while (current != null) {
             if ("LabB".equalsIgnoreCase(current.getName()))
                 return current;
@@ -126,47 +120,16 @@ public class ConnectionManager {
     }
 
     /**
-     * Genera un file {@code connection.ini} con valori predefiniti.
-     *
-     * <p>Contenuto standard:</p>
-     *
-     * <pre>
-     * jdbc_url=jdbc:postgresql://localhost:5432/theknife
-     * username=postgres
-     * password=
-     * </pre>
-     *
-     * @throws RuntimeException se si verificano errori di scrittura
-     */
-    private void createIniFile() {
-        try (PrintWriter pw = new PrintWriter(new FileWriter(iniFile))) {
-            pw.println("jdbc_url=jdbc:postgresql://localhost:5432/theknife");
-            pw.println("username=postgres");
-            pw.println("password=");
-        } catch (IOException e) {
-            throw new RuntimeException("Impossibile creare il file connection.ini", e);
-        }
-    }
-
-    /**
      * Carica i parametri di connessione dal file {@code connection.ini}.
      *
-     * <p>Valori attesi:</p>
-     * <ul>
-     *     <li>{@code jdbc_url}</li>
-     *     <li>{@code username}</li>
-     *     <li>{@code password}</li>
-     * </ul>
-     *
-     * @throws RuntimeException se il file è mancante,
-     *                          danneggiato o con chiavi mancanti
+     * @throws RuntimeException se il file è danneggiato o incompleto
      */
     private void loadIni() {
         Properties prop = new Properties();
 
         try (FileInputStream fis = new FileInputStream(iniFile)) {
             prop.load(fis);
-        } catch (IOException e) {
+        } catch (Exception e) {
             throw new RuntimeException("Errore nella lettura del connection.ini", e);
         }
 
@@ -182,15 +145,6 @@ public class ConnectionManager {
     /**
      * Restituisce una connessione JDBC attiva verso il database configurato.
      *
-     * <p>Il metodo ritorna ogni volta una nuova connessione, che deve essere chiusa
-     * tramite try-with-resources:</p>
-     *
-     * <pre>
-     * try (Connection conn = ConnectionManager.getInstance().getConnection()) {
-     *     ...
-     * }
-     * </pre>
-     *
      * @return una connessione aperta verso PostgreSQL
      * @throws SQLException se il database non è raggiungibile
      *                      o le credenziali non sono valide
@@ -201,9 +155,6 @@ public class ConnectionManager {
 
     /**
      * Rilascia una connessione precedentemente ottenuta.
-     *
-     * <p>Metodo tollerante verso argomenti {@code null};
-     * equivale a {@link Connection#close()}.</p>
      *
      * @param c connessione da chiudere; può essere {@code null}
      */
