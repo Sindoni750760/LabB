@@ -58,7 +58,7 @@ public class ClientContext {
      * Flag che indica se la connessione è ancora attiva.
      * Utilizzato dagli handler per interrompere elaborazioni future.
      */
-    private boolean active = true;
+    private volatile boolean active = true;
 
     /**
      * Costruisce un nuovo contesto sessione per un client.
@@ -124,10 +124,10 @@ public class ClientContext {
      * @throws IOException se si verificano errori di I/O sul socket
      */
     public String read() throws IOException {
-        String msg = in.readLine();
-        if (msg != null) {
-            System.out.println("[Client " + socket.getInetAddress() + " IN] " + msg);        }
-        return msg;
+        if(!active){
+            return null;
+        }
+        return in.readLine();
     }
 
      /**
@@ -137,10 +137,12 @@ public class ClientContext {
      * @throws IOException se non è possibile scrivere sul socket
      */
     public void write(String msg) throws IOException {
+        if(!active){
+            return;
+        }
         out.write(msg);
         out.write("\n");
         out.flush();
-        System.out.println("[Client " + socket.getInetAddress() + " OUT] " + msg);
     }
 
      /**
@@ -156,8 +158,8 @@ public class ClientContext {
      * </p>
      */
     public void close() {
+        active = false;
         try { in.close(); } catch (Exception ignored) {}
         try { out.close(); } catch (Exception ignored) {}
-        try { socket.close(); } catch (Exception ignored) {}
     }
 }

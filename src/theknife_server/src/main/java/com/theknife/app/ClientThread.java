@@ -43,6 +43,8 @@ public class ClientThread extends Thread {
     /** Lista ordinata di handler registrati per l'elaborazione dei comandi. */
     private final List<CommandHandler> handlers = new ArrayList<>();
 
+    private volatile boolean running = true;
+
     /**
      * Costruisce una nuova istanza del thread client,
      * associandola al socket ricevuto.
@@ -92,6 +94,9 @@ public class ClientThread extends Thread {
             System.out.println("[Client " + socket.getInetAddress() + "] Disconnected");
         } finally {
             close();
+            try{
+                socket.close();
+            }catch(IOException ignored){}
         }
     }
 
@@ -114,7 +119,7 @@ public class ClientThread extends Thread {
      * @throws InterruptedException gestione operazioni concorrenti
      */
     private void loop() throws IOException, SQLException, InterruptedException {
-        while (true) {
+        while (running && ctx.isActive()) {
             String cmd = ctx.read();
             if (cmd == null) {
                 break;
@@ -151,5 +156,12 @@ public class ClientThread extends Thread {
         try {
             socket.close();
         } catch (IOException ignored) {}
+    }
+    
+    public void shutdown(){
+        running = false;
+        try{
+            socket.close();
+        }catch(IOException ignored){}
     }
 }

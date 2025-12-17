@@ -74,7 +74,7 @@ public class DisconnectHandler implements CommandHandler {
             return false;
 
         ctx.write("bye");
-        ctx.close();
+        ctx.deactivate();
         return true;
     }
 }

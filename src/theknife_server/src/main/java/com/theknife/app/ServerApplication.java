@@ -3,6 +3,8 @@ package com.theknife.app;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -49,10 +51,14 @@ public class ServerApplication {
     /** Thread che gestisce l'accettazione indipendente dei client. */
     private Thread acceptThread;
 
+    private final List<ClientThread> clients;
+
     /**
      * Costruttore privato per garantire l'unicità dell'istanza.
      */
-    private ServerApplication() {}
+    private ServerApplication() {
+        clients = new ArrayList<>();
+    }
 
     /**
      * Restituisce l’unica istanza del server.
@@ -120,7 +126,11 @@ public class ServerApplication {
                 Socket clientSocket = serverSocket.accept();
                 log.info("Client connesso: " + clientSocket.getInetAddress());
 
-                new ClientThread(clientSocket);
+                ClientThread ct = new ClientThread(clientSocket);
+                
+                synchronized(clients){
+                    clients.add(ct);
+                }
 
             } catch (IOException e) {
                 if (running.get()) {
@@ -164,6 +174,13 @@ public class ServerApplication {
                 serverSocket.close();
         } catch (IOException e) {
             log.error("Errore nella chiusura del socket principale: " + e.getMessage());
+        }
+
+        synchronized(clients){
+            for(ClientThread ct : clients){
+                ct.shutdown();
+            }
+            clients.clear();
         }
 
         if (acceptThread != null) {
