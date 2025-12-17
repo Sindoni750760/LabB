@@ -22,7 +22,12 @@ import java.util.Scanner;
  * <p>
  * Al primo avvio del server viene richiesta all'amministratore
  * la configurazione di accesso al database PostgreSQL, che viene
- * salvata nel file {@code connection.ini}.
+ * salvata nel file {@code connection.ini} nella directory {@code LabB}.
+ * </p>
+ *
+ * <p>
+ * Il server viene avviato solo dopo che la configurazione del database
+ * è stata correttamente caricata e validata.
  * </p>
  *
  * Il server viene avviato sulla porta predefinita 12345.
@@ -40,8 +45,10 @@ public class Main {
      * Responsabilità del metodo:
      * </p>
      * <ul>
+     *     <li>individuare la directory {@code LabB}</li>
      *     <li>verificare l'esistenza del file {@code connection.ini}</li>
      *     <li>richiedere le credenziali DB al primo avvio</li>
+     *     <li>inizializzare il {@link ConnectionManager}</li>
      *     <li>avviare il server tramite {@link ServerApplication}</li>
      *     <li>gestire comandi amministrativi da console</li>
      * </ul>
@@ -55,76 +62,96 @@ public class Main {
      */
     public static void main(String[] args) {
 
-        int port = 12345; // Porta del server
+        int port = 12345; // Porta TCP del server
 
-        // --- Bootstrap configurazione DB ---
-        File iniFile = new File("connection.ini");
+        System.out.println("[MAIN] Avvio bootstrap server...");
 
-        if (!iniFile.exists()) {
-            System.out.println("[MAIN] Prima esecuzione: configurazione database richiesta.");
+        // Scanner unico per tutta l'applicazione
+        try (Scanner scanner = new Scanner(System.in)) {
 
-            try (Scanner sc = new Scanner(System.in);
-                 PrintWriter pw = new PrintWriter(new FileWriter(iniFile))) {
-
-                System.out.print("Host DB (default: localhost): ");
-                String host = sc.nextLine().trim();
-                if (host.isEmpty()) host = "localhost";
-
-                System.out.print("Nome database (default: theknife): ");
-                String dbName = sc.nextLine().trim();
-                if (dbName.isEmpty()) dbName = "theknife";
-
-                System.out.print("Username DB (default: postgres): ");
-                String user = sc.nextLine().trim();
-                if (user.isEmpty()) user = "postgres";
-
-                System.out.print("Password DB: ");
-                String pass = sc.nextLine();
-
-                pw.println("jdbc_url=jdbc:postgresql://" + host + ":5432/" + dbName);
-                pw.println("username=" + user);
-                pw.println("password=" + pass);
-
-                System.out.println("[MAIN] File connection.ini creato correttamente.");
-
-            } catch (Exception e) {
-                System.err.println("[MAIN] ERRORE durante la configurazione del database.");
-                e.printStackTrace();
+            // --- Individuazione directory LabB ---
+            File labbRoot = ConnectionManager.findLabBRoot();
+            if (labbRoot == null) {
+                System.err.println("[MAIN] ERRORE: impossibile individuare la cartella 'LabB'.");
                 return;
             }
-        }
 
-        ServerApplication server = ServerApplication.getInstance();
+            File iniFile = new File(labbRoot, "connection.ini");
 
-        System.out.println("[MAIN] Avvio del server...");
+            // --- Prima esecuzione: creazione connection.ini ---
+            if (!iniFile.exists()) {
+                System.out.println("[MAIN] Prima esecuzione: configurazione database richiesta.");
 
-        // --- Avvio Server ---
-        if (!server.start(port)) {
-            System.out.println("[MAIN] ERRORE: impossibile avviare il server.");
-            return;
-        }
+                try (PrintWriter pw = new PrintWriter(new FileWriter(iniFile))) {
 
-        System.out.println("[MAIN] Server avviato sulla porta " + port);
-        System.out.println("[MAIN] Digita 'quit', 'exit' o 'stop' per arrestarlo.");
+                    System.out.print("Host DB (default: localhost): ");
+                    String host = scanner.nextLine().trim();
+                    if (host.isEmpty()) host = "localhost";
 
-        // --- Loop console amministrativo ---
-        try (Scanner scanner = new Scanner(System.in)) {
+                    System.out.print("Nome database (default: theknife): ");
+                    String dbName = scanner.nextLine().trim();
+                    if (dbName.isEmpty()) dbName = "theknife";
+
+                    System.out.print("Username DB (default: postgres): ");
+                    String user = scanner.nextLine().trim();
+                    if (user.isEmpty()) user = "postgres";
+
+                    System.out.print("Password DB: ");
+                    String pass = scanner.nextLine();
+
+                    pw.println("jdbc_url=jdbc:postgresql://" + host + ":5432/" + dbName);
+                    pw.println("username=" + user);
+                    pw.println("password=" + pass);
+
+                    System.out.println("[MAIN] File connection.ini creato correttamente in:");
+                    System.out.println("       " + iniFile.getAbsolutePath());
+
+                } catch (Exception e) {
+                    System.err.println("[MAIN] ERRORE durante la configurazione del database.");
+                    e.printStackTrace();
+                    return;
+                }
+            }
+
+            // --- Inizializzazione DB (BLOCCANTE) ---
+            try {
+                ConnectionManager.getInstance();
+            } catch (RuntimeException e) {
+                System.err.println("[MAIN] Errore inizializzazione DB: " + e.getMessage());
+                return;
+            }
+
+            // --- Avvio Server ---
+            ServerApplication server = ServerApplication.getInstance();
+
+            System.out.println("[MAIN] Avvio del server...");
+
+            if (!server.start(port)) {
+                System.err.println("[MAIN] ERRORE: impossibile avviare il server.");
+                return;
+            }
+
+            System.out.println("[MAIN] Server avviato sulla porta " + port);
+            System.out.println("[MAIN] Digita 'quit', 'exit' o 'stop' per arrestarlo.");
+
+            // --- Loop comandi amministrativi ---
             while (true) {
                 String cmd = scanner.nextLine();
 
                 if (cmd.equalsIgnoreCase("quit")
-                    || cmd.equalsIgnoreCase("exit")
-                    || cmd.equalsIgnoreCase("stop")) {
+                        || cmd.equalsIgnoreCase("exit")
+                        || cmd.equalsIgnoreCase("stop")) {
                     break;
                 }
 
                 System.out.println("[MAIN] Comando sconosciuto: " + cmd);
             }
-        }
 
-        // --- Arresto Server ---
-        System.out.println("[MAIN] Arresto del server...");
-        server.stop();
-        System.out.println("[MAIN] Server terminato correttamente.");
+            // --- Arresto Server ---
+            System.out.println("[MAIN] Arresto del server...");
+            server.stop();
+            System.out.println("[MAIN] Server terminato correttamente.");
+
+        }
     }
 }

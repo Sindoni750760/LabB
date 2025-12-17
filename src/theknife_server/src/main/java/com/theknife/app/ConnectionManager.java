@@ -103,7 +103,7 @@ public class ConnectionManager {
      *
      * @return la directory radice del progetto oppure {@code null}
      */
-    private File findLabBRoot() {
+    static File findLabBRoot() {
         File current = new File(System.getProperty("user.dir"));
 
         while (current != null) {
