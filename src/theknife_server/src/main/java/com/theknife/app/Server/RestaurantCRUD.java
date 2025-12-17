@@ -4,12 +4,66 @@ import java.sql.*;
 import java.util.ArrayList;
 
 /**
- * CRUD dedicato esclusivamente ai ristoranti (entità principale).
+ * CRUD dedicato alla gestione dei ristoranti.
+ *
+ * <p>
+ * Questa classe rappresenta l'implementazione concreta delle operazioni
+ * di accesso ai dati per l'entità <i>Ristorante</i>.
+ * </p>
+ *
+ * <p>
+ * Fornisce funzionalità per:
+ * </p>
+ * <ul>
+ *     <li>creazione, modifica e rimozione dei ristoranti</li>
+ *     <li>recupero delle informazioni dettagliate di un ristorante</li>
+ *     <li>ricerca avanzata dei ristoranti con filtri multipli</li>
+ * </ul>
+ *
+ * <p>
+ * Estende {@link RestaurateurCRUD} per riutilizzare
+ * la gestione delle connessioni e i controlli di accesso.
+ * </p>
+ *
+ * <p>
+ * Implementa le interfacce:
+ * </p>
+ * <ul>
+ *     <li>{@link QueryRestaurant}</li>
+ *     <li>{@link QueryRestaurantSearch}</li>
+ * </ul>
+ *
+ * <p>Pattern applicati:</p>
+ * <ul>
+ *     <li><b>DAO / CRUD</b></li>
+ *     <li><b>Facade</b> (tramite {@link DBHandler})</li>
+ * </ul>
  */
 public class RestaurantCRUD
         extends RestaurateurCRUD
         implements QueryRestaurant, QueryRestaurantSearch{
 
+    /**
+     * Inserisce un nuovo ristorante nel database.
+     *
+     * @param ownerId id del ristoratore proprietario
+     * @param name nome del ristorante
+     * @param nation nazione
+     * @param city città
+     * @param address indirizzo
+     * @param lat latitudine geografica
+     * @param lon longitudine geografica
+     * @param price fascia di prezzo
+     * @param tipoCucina categoria / tipo di cucina
+     * @param delivery indica se è disponibile il servizio delivery
+     * @param online indica se è disponibile la prenotazione online
+     *
+     * @return {@code true} se l'inserimento è avvenuto correttamente,
+     *         {@code false} altrimenti
+     *
+     * @throws SQLException errori di accesso al database
+     * @throws InterruptedException gestione concorrenza
+     */
     @Override
     public boolean addRestaurant(int ownerId, String name, String nation, String city,
                                  String address, double lat, double lon,
@@ -43,6 +97,28 @@ public class RestaurantCRUD
             return ps.executeUpdate() == 1;
         }
     }
+
+    /**
+     * Modifica i dati di un ristorante esistente.
+     *
+     * @param restId id del ristorante
+     * @param name nuovo nome
+     * @param nation nuova nazione
+     * @param city nuova città
+     * @param address nuovo indirizzo
+     * @param lat nuova latitudine
+     * @param lon nuova longitudine
+     * @param price nuova fascia di prezzo
+     * @param tipoCucina nuova categoria
+     * @param delivery nuovo stato delivery
+     * @param online nuovo stato prenotazione online
+     *
+     * @return {@code true} se la modifica ha successo,
+     *         {@code false} altrimenti
+     *
+     * @throws SQLException errori di accesso al database
+     * @throws InterruptedException gestione concorrenza
+     */
 
     @Override
     public boolean editRestaurant(int restId, String name, String nation, String city,
@@ -78,6 +154,16 @@ public class RestaurantCRUD
         }
     }
 
+    /**
+     * Elimina un ristorante dal database.
+     *
+     * @param restId id del ristorante da eliminare
+     * @return {@code true} se la rimozione ha successo,
+     *         {@code false} altrimenti
+     *
+     * @throws SQLException errori di accesso al database
+     * @throws InterruptedException gestione concorrenza
+     */
     @Override
     public boolean deleteRestaurant(int restId)
             throws SQLException, InterruptedException {
@@ -95,6 +181,26 @@ public class RestaurantCRUD
         }
     }
 
+    /**
+     * Recupera le informazioni complete di un ristorante.
+     *
+     * <p>
+     * I dati restituiti includono:
+     * </p>
+     * <ul>
+     *     <li>informazioni anagrafiche</li>
+     *     <li>coordinate geografiche</li>
+     *     <li>servizi disponibili</li>
+     *     <li>media stelle e numero recensioni</li>
+     * </ul>
+     *
+     * @param restId id del ristorante
+     * @return array di stringhe contenente i dati del ristorante,
+     *         oppure {@code null} se non esiste
+     *
+     * @throws SQLException errori di accesso al database
+     * @throws InterruptedException gestione concorrenza
+     */
     @Override
     public String[] getRestaurantInfo(int restId)
             throws SQLException, InterruptedException {
@@ -136,6 +242,50 @@ public class RestaurantCRUD
         }
     }
 
+    /**
+     * Recupera una lista paginata di ristoranti applicando filtri avanzati.
+     *
+     * <p>
+     * Supporta ricerche per:
+     * </p>
+     * <ul>
+     *     <li>località o coordinate geografiche</li>
+     *     <li>raggio chilometrico</li>
+     *     <li>fascia di prezzo</li>
+     *     <li>servizi disponibili</li>
+     *     <li>valutazione media</li>
+     *     <li>categoria</li>
+     *     <li>preferiti dell'utente</li>
+     * </ul>
+     *
+     * <p>
+     * Il risultato include nella prima riga:
+     * </p>
+     * <ul>
+     *     <li>numero totale di pagine</li>
+     *     <li>numero di elementi nella pagina corrente</li>
+     * </ul>
+     *
+     * @param page numero della pagina richiesta
+     * @param nation nazione (opzionale)
+     * @param city città (opzionale)
+     * @param lat latitudine (opzionale)
+     * @param lon longitudine (opzionale)
+     * @param rangeKm raggio in chilometri (opzionale)
+     * @param priceMin prezzo minimo (opzionale)
+     * @param priceMax prezzo massimo (opzionale)
+     * @param delivery filtro servizio delivery
+     * @param online filtro prenotazione online
+     * @param starsMin valutazione minima (opzionale)
+     * @param starsMax valutazione massima (opzionale)
+     * @param favouriteUserId id utente per filtro preferiti
+     * @param category categoria cucina (opzionale)
+     *
+     * @return matrice di stringhe contenente paginazione e risultati
+     *
+     * @throws SQLException errori di accesso al database
+     * @throws InterruptedException gestione concorrenza
+     */
     @Override
     public String[][] getRestaurantsWithFilter(
             int page,

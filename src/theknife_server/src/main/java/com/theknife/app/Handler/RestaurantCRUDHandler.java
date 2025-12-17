@@ -6,12 +6,43 @@ import java.io.IOException;
 import java.sql.SQLException;
 
 /**
- * Handler specializzato: CRUD ristoranti + lista ristoranti del ristoratore.
+ * Handler responsabile della gestione CRUD dei ristoranti
+ * e della visualizzazione dei ristoranti posseduti dal ristoratore.
+ *
+ * <p>
+ * Gestisce i comandi del protocollo applicativo relativi
+ * all'inserimento, modifica, cancellazione dei ristoranti
+ * e al recupero della lista dei ristoranti associati all'utente autenticato.
+ * </p>
+ *
+ * <p>
+ * I comandi supportati sono:
+ * </p>
+ * <ul>
+ *     <li>{@code addRestaurant}</li>
+ *     <li>{@code editRestaurant}</li>
+ *     <li>{@code deleteRestaurant}</li>
+ *     <li>{@code getMyRestaurantsPages}</li>
+ *     <li>{@code getMyRestaurants}</li>
+ * </ul>
+ *
+ * <p>
+ * L'handler delega la logica di persistenza al {@link DBHandler}
+ * e utilizza il {@link ClientContext} per la comunicazione
+ * con il client.
+ * </p>
+ *
+ * <p>Pattern utilizzato: <b>Singleton</b></p>
  */
 public class RestaurantCRUDHandler implements CommandHandler {
 
     private static RestaurantCRUDHandler instance = null;
 
+    /**
+     * Restituisce l'unica istanza del {@code RestaurantCRUDHandler}.
+     *
+     * @return istanza singleton dell'handler
+     */
     public static synchronized RestaurantCRUDHandler getInstance() {
         if (instance == null)
             instance = new RestaurantCRUDHandler();
@@ -22,6 +53,23 @@ public class RestaurantCRUDHandler implements CommandHandler {
 
     private RestaurantCRUDHandler() {}
 
+    /**
+     * Gestisce i comandi relativi alla gestione dei ristoranti.
+     *
+     * <p>
+     * In base al comando ricevuto, il metodo delega
+     * l'elaborazione al metodo specifico corrispondente.
+     * </p>
+     *
+     * @param cmd comando ricevuto dal client
+     * @param ctx contesto di sessione del client
+     * @return {@code true} se il comando è stato gestito,
+     *         {@code false} altrimenti
+     *
+     * @throws IOException errori di comunicazione
+     * @throws SQLException errori di accesso ai dati
+     * @throws InterruptedException gestione concorrenza
+     */
     @Override
     public boolean handle(String cmd, ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
@@ -38,6 +86,19 @@ public class RestaurantCRUDHandler implements CommandHandler {
         }
     }
 
+    /**
+     * Gestisce il comando {@code addRestaurant}.
+     *
+     * <p>
+     * Inserisce un nuovo ristorante associandolo
+     * all'utente autenticato.
+     * </p>
+     *
+     * @param ctx contesto di sessione del client
+     * @throws IOException errori di comunicazione
+     * @throws SQLException errori di accesso ai dati
+     * @throws InterruptedException gestione concorrenza
+     */
     private void handleAddRestaurant(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
 
@@ -96,6 +157,19 @@ public class RestaurantCRUDHandler implements CommandHandler {
         ctx.write(ok ? "ok" : "error");
     }
 
+    /**
+     * Gestisce il comando {@code editRestaurant}.
+     *
+     * <p>
+     * Modifica un ristorante esistente previa verifica
+     * dei permessi di accesso dell'utente autenticato.
+     * </p>
+     *
+     * @param ctx contesto di sessione del client
+     * @throws IOException errori di comunicazione
+     * @throws SQLException errori di accesso ai dati
+     * @throws InterruptedException gestione concorrenza
+     */
     private void handleEditRestaurant(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
 
@@ -167,6 +241,19 @@ public class RestaurantCRUDHandler implements CommandHandler {
         ctx.write(ok ? "ok" : "error");
     }
 
+    /**
+     * Gestisce il comando {@code deleteRestaurant}.
+     *
+     * <p>
+     * Elimina un ristorante esistente previa verifica
+     * dei permessi di accesso dell'utente autenticato.
+     * </p>
+     *
+     * @param ctx contesto di sessione del client
+     * @throws IOException errori di comunicazione
+     * @throws SQLException errori di accesso ai dati
+     * @throws InterruptedException gestione concorrenza
+     */
     private void handleDeleteRestaurant(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
 
@@ -189,6 +276,19 @@ public class RestaurantCRUDHandler implements CommandHandler {
         ctx.write(ok ? "ok" : "error");
     }
 
+    /**
+     * Gestisce il comando {@code getMyRestaurantsPages}.
+     *
+     * <p>
+     * Restituisce il numero di pagine di ristoranti
+     * posseduti dall'utente autenticato.
+     * </p>
+     *
+     * @param ctx contesto di sessione del client
+     * @throws IOException errori di comunicazione
+     * @throws SQLException errori di accesso ai dati
+     * @throws InterruptedException gestione concorrenza
+     */
     private void handleGetMyRestaurantsPages(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
 
@@ -196,6 +296,19 @@ public class RestaurantCRUDHandler implements CommandHandler {
         ctx.write(Integer.toString(pages));
     }
 
+    /**
+     * Gestisce il comando {@code getMyRestaurants}.
+     *
+     * <p>
+     * Restituisce la lista dei ristoranti posseduti
+     * dall'utente autenticato per la pagina richiesta.
+     * </p>
+     *
+     * @param ctx contesto di sessione del client
+     * @throws IOException errori di comunicazione
+     * @throws SQLException errori di accesso ai dati
+     * @throws InterruptedException gestione concorrenza
+     */
     private void handleGetMyRestaurants(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
 
@@ -218,6 +331,12 @@ public class RestaurantCRUDHandler implements CommandHandler {
         }
     }
 
+    /**
+     * Verifica se una stringa è nulla o composta esclusivamente da spazi.
+     *
+     * @param s stringa da controllare
+     * @return {@code true} se la stringa è nulla o vuota
+     */
     private boolean isBlank(String s) {
         return s == null || s.trim().isEmpty();
     }

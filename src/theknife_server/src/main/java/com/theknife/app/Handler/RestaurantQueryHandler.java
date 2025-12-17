@@ -6,12 +6,40 @@ import java.io.IOException;
 import java.sql.SQLException;
 
 /**
- * Handler specializzato: ricerca ristoranti + info ristorante.
+ * Handler responsabile della ricerca dei ristoranti e del recupero
+ * delle informazioni dettagliate di un ristorante.
+ *
+ * <p>
+ * Gestisce i comandi del protocollo applicativo relativi
+ * alla ricerca avanzata dei ristoranti e alla visualizzazione
+ * delle informazioni complete di un ristorante selezionato.
+ * </p>
+ *
+ * <p>
+ * I comandi supportati sono:
+ * </p>
+ * <ul>
+ *     <li>{@code getRestaurants}</li>
+ *     <li>{@code getRestaurantInfo}</li>
+ * </ul>
+ *
+ * <p>
+ * L'handler delega la logica
+ * al {@link DBHandler} e utilizza il {@link ClientContext}
+ * per la comunicazione con il client.
+ * </p>
+ *
+ * <p>Pattern utilizzato: <b>Singleton</b></p>
  */
 public class RestaurantQueryHandler implements CommandHandler {
 
     private static RestaurantQueryHandler instance = null;
 
+    /**
+     * Restituisce l'unica istanza del {@code RestaurantQueryHandler}.
+     *
+     * @return istanza singleton dell'handler
+     */
     public static synchronized RestaurantQueryHandler getInstance() {
         if (instance == null)
             instance = new RestaurantQueryHandler();
@@ -22,6 +50,23 @@ public class RestaurantQueryHandler implements CommandHandler {
 
     private RestaurantQueryHandler() {}
 
+    /**
+     * Gestisce i comandi relativi alla ricerca e consultazione dei ristoranti.
+     *
+     * <p>
+     * In base al comando ricevuto, il metodo delega
+     * l'elaborazione al metodo specifico corrispondente.
+     * </p>
+     *
+     * @param cmd comando ricevuto dal client
+     * @param ctx contesto di sessione del client
+     * @return {@code true} se il comando è stato gestito,
+     *         {@code false} altrimenti
+     *
+     * @throws IOException errori di comunicazione
+     * @throws SQLException errori di accesso ai dati
+     * @throws InterruptedException gestione concorrenza
+     */
     @Override
     public boolean handle(String cmd, ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
@@ -33,6 +78,32 @@ public class RestaurantQueryHandler implements CommandHandler {
         }
     }
 
+    /**
+     * Gestisce il comando {@code getRestaurants}.
+     *
+     * <p>
+     * Esegue una ricerca avanzata dei ristoranti applicando
+     * i filtri ricevuti dal client, tra cui:
+     * </p>
+     * <ul>
+     *     <li>ricerca per coordinate o località</li>
+     *     <li>range di distanza</li>
+     *     <li>fascia di prezzo</li>
+     *     <li>servizi disponibili</li>
+     *     <li>valutazione media</li>
+     *     <li>categoria</li>
+     *     <li>preferiti dell'utente</li>
+     * </ul>
+     *
+     * <p>
+     * I risultati vengono restituiti in forma paginata.
+     * </p>
+     *
+     * @param ctx contesto di sessione del client
+     * @throws IOException errori di comunicazione
+     * @throws SQLException errori di accesso ai dati
+     * @throws InterruptedException gestione concorrenza
+     */
     private void handleGetRestaurants(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
 
@@ -181,6 +252,24 @@ public class RestaurantQueryHandler implements CommandHandler {
         }
     }
 
+    /**
+     * Gestisce il comando {@code getRestaurantInfo}.
+     *
+     * <p>
+     * Recupera e restituisce al client le informazioni
+     * complete associate a un ristorante.
+     * </p>
+     *
+     * <p>
+     * In caso di ristorante non valido o inesistente,
+     * vengono restituiti campi vuoti.
+     * </p>
+     *
+     * @param ctx contesto di sessione del client
+     * @throws IOException errori di comunicazione
+     * @throws SQLException errori di accesso ai dati
+     * @throws InterruptedException gestione concorrenza
+     */
     private void handleGetRestaurantInfo(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
 

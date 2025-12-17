@@ -158,6 +158,20 @@ public class ClientThread extends Thread {
         } catch (IOException ignored) {}
     }
     
+    /**
+     * Permette l'arresto forzato del thread client
+     * <p>
+     * Il metodo viene invocato dal server durante la fase di shutdown globale per interrompere in modo ordinato tutte le connessioni attive.
+     * </p> 
+     * <p>
+     * L'operazione imposta il flag {@code running} a {@code false} e chiude il socket associato,
+     * causando lo sblocco di eventuali operazioni di lettura bloccanti ({@link ClientContext#read()}).
+     * </p>
+     * 
+     * <p>
+     * Dopo l'invocazione, il thread terminerà automaticamente il proprio ciclo di esecuzione
+     * </p>
+     */
     public void shutdown(){
         running = false;
         try{

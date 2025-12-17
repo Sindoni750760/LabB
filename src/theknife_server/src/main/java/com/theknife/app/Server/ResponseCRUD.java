@@ -2,10 +2,54 @@ package com.theknife.app.Server;
 
 import java.sql.*;
 
+/**
+ * CRUD specializzato per la gestione delle risposte del ristoratore alle recensioni.
+ *
+ * <p>
+ * Questa classe implementa tutte le operazioni di accesso ai dati
+ * relative alle risposte associate alle recensioni:
+ * </p>
+ * <ul>
+ *     <li>verifica dei permessi di risposta</li>
+ *     <li>lettura della risposta</li>
+ *     <li>inserimento, modifica e rimozione della risposta</li>
+ * </ul>
+ *
+ * <p>
+ * Estende {@link RestaurateurCRUD} per riutilizzare
+ * i controlli di accesso e la gestione delle connessioni.
+ * </p>
+ *
+ * <p>
+ * Implementa l'interfaccia {@link QueryResponse},
+ * fornendo un'implementazione concreta delle query SQL.
+ * </p>
+ *
+ * <p>Pattern applicati:</p>
+ * <ul>
+ *     <li><b>CRUD</b></li>
+ * </ul>
+ */
 public class ResponseCRUD
         extends RestaurateurCRUD
         implements QueryResponse {
 
+    /**
+     * Verifica se un ristoratore ha il permesso di rispondere a una recensione.
+     *
+     * <p>
+     * Il controllo avviene verificando che la recensione
+     * sia associata a un ristorante di cui l'utente è proprietario.
+     * </p>
+     *
+     * @param userId id dell'utente ristoratore
+     * @param reviewId id della recensione
+     * @return {@code true} se l'utente può rispondere,
+     *         {@code false} altrimenti
+     *
+     * @throws SQLException errori di accesso al database
+     * @throws InterruptedException gestione concorrenza
+     */
     @Override
     public boolean canRespond(int userId, int reviewId)
             throws SQLException, InterruptedException {
@@ -29,6 +73,20 @@ public class ResponseCRUD
         }
     }
 
+    /**
+     * Recupera la risposta associata a una recensione.
+     *
+     * <p>
+     * Se la recensione non ha una risposta,
+     * il metodo restituisce {@code null}.
+     * </p>
+     *
+     * @param reviewId id della recensione
+     * @return testo della risposta oppure {@code null}
+     *
+     * @throws SQLException errori di accesso al database
+     * @throws InterruptedException gestione concorrenza
+     */
     @Override
     public String getResponse(int reviewId)
             throws SQLException, InterruptedException {
@@ -51,6 +109,21 @@ public class ResponseCRUD
         }
     }
 
+    /**
+     * Inserisce una nuova risposta associata a una recensione.
+     *
+     * <p>
+     * Ogni recensione può avere al massimo una risposta.
+     * </p>
+     *
+     * @param reviewId id della recensione
+     * @param text testo della risposta
+     * @return {@code true} se l'inserimento ha successo,
+     *         {@code false} altrimenti
+     *
+     * @throws SQLException errori di accesso al database
+     * @throws InterruptedException gestione concorrenza
+     */
     @Override
     public boolean addResponse(int reviewId, String text)
             throws SQLException, InterruptedException {
@@ -70,6 +143,17 @@ public class ResponseCRUD
         }
     }
 
+    /**
+     * Modifica una risposta già esistente associata a una recensione.
+     *
+     * @param reviewId id della recensione
+     * @param text nuovo testo della risposta
+     * @return {@code true} se la modifica ha successo,
+     *         {@code false} altrimenti
+     *
+     * @throws SQLException errori di accesso al database
+     * @throws InterruptedException gestione concorrenza
+     */
     @Override
     public boolean editResponse(int reviewId, String text)
             throws SQLException, InterruptedException {
@@ -90,6 +174,16 @@ public class ResponseCRUD
         }
     }
 
+    /**
+     * Rimuove la risposta associata a una recensione.
+     *
+     * @param reviewId id della recensione
+     * @return {@code true} se la rimozione ha successo,
+     *         {@code false} altrimenti
+     *
+     * @throws SQLException errori di accesso al database
+     * @throws InterruptedException gestione concorrenza
+     */
     @Override
     public boolean removeResponse(int reviewId)
             throws SQLException, InterruptedException {

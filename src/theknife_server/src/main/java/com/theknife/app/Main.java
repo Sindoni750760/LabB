@@ -38,6 +38,16 @@ import java.util.Scanner;
  *     Giovanni Isgrò 753536 VA
  */
 public class Main {
+    /**
+     * Costruttore privato per impedire l'istanziazione della classe.
+     * 
+     * <p>
+     * La classe {@code Main} è utilizzata esclusivamente come entry-point dell'applicazione server e non deve essere istanziata
+     * </p>
+     */
+    private Main(){
+
+    }
 
     /**
      * Metodo principale di avvio del server.

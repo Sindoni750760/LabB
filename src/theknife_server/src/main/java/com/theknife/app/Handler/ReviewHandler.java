@@ -6,12 +6,34 @@ import java.io.IOException;
 import java.sql.SQLException;
 
 /**
- * Handler specializzato: gestione recensioni (ristorante + utente).
+ * Handler responsabile della gestione delle recensioni dei ristoranti.
+ *
+ * <p>
+ * Gestisce tutte le operazioni relative alle recensioni, incluse:
+ * </p>
+ * <ul>
+ *     <li>visualizzazione recensioni di un ristorante</li>
+ *     <li>visualizzazione recensione dell'utente</li>
+ *     <li>inserimento, modifica e rimozione recensioni</li>
+ *     <li>consultazione delle recensioni scritte dall'utente</li>
+ * </ul>
+ *
+ * <p>
+ * L'handler utilizza il {@link DBHandler} come facade
+ * per l'accesso al database e il {@link ClientContext}
+ * per la comunicazione con il client.
+ * </p>
+ *
  */
 public class ReviewHandler implements CommandHandler {
 
     private static ReviewHandler instance = null;
 
+    /**
+     * Restituisce l'unica istanza del {@code ReviewHandler}.
+     *
+     * @return istanza singleton dell'handler
+     */
     public static synchronized ReviewHandler getInstance() {
         if (instance == null)
             instance = new ReviewHandler();
@@ -22,6 +44,23 @@ public class ReviewHandler implements CommandHandler {
 
     private ReviewHandler() {}
 
+    /**
+     * Gestisce i comandi relativi alle recensioni.
+     *
+     * <p>
+     * In base al comando ricevuto, il metodo delega
+     * l'elaborazione al metodo di gestione specifico.
+     * </p>
+     *
+     * @param cmd comando ricevuto dal client
+     * @param ctx contesto di sessione del client
+     * @return {@code true} se il comando è stato gestito,
+     *         {@code false} altrimenti
+     *
+     * @throws IOException errori di comunicazione
+     * @throws SQLException errori di accesso ai dati
+     * @throws InterruptedException gestione concorrenza
+     */
     @Override
     public boolean handle(String cmd, ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
@@ -44,6 +83,19 @@ public class ReviewHandler implements CommandHandler {
         }
     }
 
+    /**
+     * Gestisce il comando {@code getReviewsPages}.
+     *
+     * <p>
+     * Restituisce il numero di pagine di recensioni
+     * associate a un ristorante.
+     * </p>
+     *
+     * @param ctx contesto di sessione del client
+     * @throws IOException errori di comunicazione
+     * @throws SQLException errori di accesso ai dati
+     * @throws InterruptedException gestione concorrenza
+     */
     private void handleGetReviewsPages(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
 
@@ -59,6 +111,20 @@ public class ReviewHandler implements CommandHandler {
         ctx.write(Integer.toString(pages));
     }
 
+    /**
+     * Gestisce il comando {@code getReviews}.
+     *
+     * <p>
+     * Restituisce le recensioni di un ristorante
+     * in forma paginata, includendo eventuali risposte
+     * del ristoratore.
+     * </p>
+     *
+     * @param ctx contesto di sessione del client
+     * @throws IOException errori di comunicazione
+     * @throws SQLException errori di accesso ai dati
+     * @throws InterruptedException gestione concorrenza
+     */
     private void handleGetReviews(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
 
@@ -94,6 +160,19 @@ public class ReviewHandler implements CommandHandler {
         }
     }
 
+    /**
+     * Gestisce il comando {@code getMyReview}.
+     *
+     * <p>
+     * Restituisce la recensione scritta dall'utente
+     * per un determinato ristorante, se presente.
+     * </p>
+     *
+     * @param ctx contesto di sessione del client
+     * @throws IOException errori di comunicazione
+     * @throws SQLException errori di accesso ai dati
+     * @throws InterruptedException gestione concorrenza
+     */
     private void handleGetMyReview(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
 
@@ -119,6 +198,19 @@ public class ReviewHandler implements CommandHandler {
         }
     }
 
+    /**
+     * Gestisce il comando {@code addReview}.
+     *
+     * <p>
+     * Inserisce una nuova recensione per un ristorante
+     * da parte dell'utente autenticato.
+     * </p>
+     *
+     * @param ctx contesto di sessione del client
+     * @throws IOException errori di comunicazione
+     * @throws SQLException errori di accesso ai dati
+     * @throws InterruptedException gestione concorrenza
+     */
     private void handleAddReview(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
 
@@ -137,6 +229,19 @@ public class ReviewHandler implements CommandHandler {
         ctx.write(ok ? "ok" : "error");
     }
 
+    /**
+     * Gestisce il comando {@code editReview}.
+     *
+     * <p>
+     * Modifica una recensione esistente scritta
+     * dall'utente autenticato.
+     * </p>
+     *
+     * @param ctx contesto di sessione del client
+     * @throws IOException errori di comunicazione
+     * @throws SQLException errori di accesso ai dati
+     * @throws InterruptedException gestione concorrenza
+     */
     private void handleEditReview(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
 
@@ -155,6 +260,19 @@ public class ReviewHandler implements CommandHandler {
         ctx.write(ok ? "ok" : "error");
     }
 
+    /**
+     * Gestisce il comando {@code removeReview}.
+     *
+     * <p>
+     * Rimuove una recensione precedentemente
+     * inserita dall'utente autenticato.
+     * </p>
+     *
+     * @param ctx contesto di sessione del client
+     * @throws IOException errori di comunicazione
+     * @throws SQLException errori di accesso ai dati
+     * @throws InterruptedException gestione concorrenza
+     */
     private void handleRemoveReview(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
 
@@ -170,6 +288,19 @@ public class ReviewHandler implements CommandHandler {
         ctx.write(ok ? "ok" : "error");
     }
 
+    /**
+     * Gestisce il comando {@code getMyReviewsPages}.
+     *
+     * <p>
+     * Restituisce il numero di pagine di recensioni
+     * scritte dall'utente autenticato.
+     * </p>
+     *
+     * @param ctx contesto di sessione del client
+     * @throws IOException errori di comunicazione
+     * @throws SQLException errori di accesso ai dati
+     * @throws InterruptedException gestione concorrenza
+     */
     private void handleGetMyReviewsPages(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
 
@@ -180,6 +311,19 @@ public class ReviewHandler implements CommandHandler {
         ctx.write(Integer.toString(pages));
     }
 
+    /**
+     * Gestisce il comando {@code getMyReviews}.
+     *
+     * <p>
+     * Restituisce l'elenco delle recensioni
+     * scritte dall'utente autenticato in forma paginata.
+     * </p>
+     *
+     * @param ctx contesto di sessione del client
+     * @throws IOException errori di comunicazione
+     * @throws SQLException errori di accesso ai dati
+     * @throws InterruptedException gestione concorrenza
+     */
     private void handleGetMyReviews(ClientContext ctx)
             throws IOException, SQLException, InterruptedException {
 

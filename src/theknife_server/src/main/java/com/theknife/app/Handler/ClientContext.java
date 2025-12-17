@@ -30,7 +30,7 @@ import java.nio.charset.StandardCharsets;
  * </p>
  *
  * <p><b>Nota:</b> Una sessione viene considerata attiva fino a quando
- * il socket è aperto e non è stato invocato {@link #deactivate()}.</p>
+ * il socket è aperto e non è stato invocato.</p>
  */
 public class ClientContext {
 
