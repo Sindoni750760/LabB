@@ -33,7 +33,13 @@ import java.sql.*;
 public class ResponseCRUD
         extends RestaurateurCRUD
         implements QueryResponse {
-
+    
+    /**
+     * Costruttore 
+     */
+    public ResponseCRUD(){
+        
+    }
     /**
      * Verifica se un ristoratore ha il permesso di rispondere a una recensione.
      *

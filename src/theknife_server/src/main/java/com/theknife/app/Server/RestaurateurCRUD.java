@@ -23,6 +23,12 @@ import java.util.List;
  * </ul>
  */
 public abstract class RestaurateurCRUD extends UserCRUD {
+    /**
+     * Costruttore 
+     */
+    public RestaurateurCRUD(){
+        
+    }
 
     /**
      * Verifica se un utente è autorizzato a modificare un ristorante.

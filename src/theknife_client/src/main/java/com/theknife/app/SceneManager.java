@@ -8,17 +8,17 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 
 /**
- * Classe di utilità per la gestione centralizzata delle scene JavaFX.
- *
- * <p>Offre un sistema unificato per:</p>
- * <ul>
- *     <li>caricare dinamicamente file FXML</li>
- *     <li>impostare la scena corrente</li>
- *     <li>mostrare messaggi globali nella scena "App"</li>
- *     <li>gestire il contesto di navigazione (es. “torna indietro”)</li>
- * </ul>
- *
- * <p>La scena iniziale viene caricata tramite {@link #init(Stage)}.</p>
+ * Gestore centralizzato della navigazione tra le scene JavaFX del client.
+ * 
+ * <p>
+ * Questa classe incapsula la logica di caricamento e cambio delle viste, 
+ * fornendo un unico punto di accesso e coerente alla navigazione
+ * </p>
+ * 
+ * <p>
+ * E' stato scelto un approccio centralizzato al fine di semplificarne il 
+ * controllo del flusso applicativo e la gestione dello stato
+ * </p>
  */
 public class SceneManager {
     /** Stage principale dell'applicazione. */

@@ -25,6 +25,13 @@ public class FavouriteCRUD
         implements QueryFavourite {
 
     /**
+     * Costruttore 
+     */
+    public FavouriteCRUD(){
+
+    }
+    
+    /**
      * Verifica se un ristorante è presente tra i preferiti di un utente.
      *
      * <p>

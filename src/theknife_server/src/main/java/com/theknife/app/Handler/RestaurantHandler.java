@@ -30,9 +30,9 @@ import java.sql.SQLException;
  * completamente l'elaborazione.
  * </p>
  *
- * <p>Pattern utilizzato:
- *     <li><b>Singleton</b></li>
- * </p>
+ * Pattern utilizzato:
+ *   <p>Singleton</p>
+ * 
  */
 public class RestaurantHandler implements CommandHandler {
 

@@ -16,7 +16,11 @@ import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 
 /**
- * Controller per la schermata dedicata alla visualizzazione delle recensioni di un ristorante.
+ * Controller della vista di dettaglio delle recensioni di un ristorante.
+ * <p>
+ * Accorpa la gestione delle recensioni e delle risposte in quanto strettamente
+ * legate alla stessa vista applicativa
+ * </p>
  *
  * <p>Responsabilità principali:</p>
  * <ul>

@@ -16,11 +16,20 @@ import com.theknife.app.ServerLogger;
  */
 public class ServerException extends RuntimeException {
 
+    /**
+     * Crea una ServerException con messaggio descrittivo
+     * @param message messaggio di errore
+     */
     public ServerException(String message) {
         super(message);
         ServerLogger.getInstance().error(message);
     }
 
+    /**
+     * Crea una ServerException con causa originale
+     * @param message messaggio di errore
+     * @param cause eccezione originaria
+     */
     public ServerException(String message, Throwable cause) {
         super(message, cause);
         ServerLogger.getInstance().error(message + " | causa: " + cause.getMessage());

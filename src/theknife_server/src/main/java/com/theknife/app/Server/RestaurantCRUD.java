@@ -42,6 +42,12 @@ import java.util.ArrayList;
 public class RestaurantCRUD
         extends RestaurateurCRUD
         implements QueryRestaurant, QueryRestaurantSearch{
+    /**
+     * Costruttore 
+     */
+    public RestaurantCRUD(){
+        
+    }
 
     /**
      * Inserisce un nuovo ristorante nel database.

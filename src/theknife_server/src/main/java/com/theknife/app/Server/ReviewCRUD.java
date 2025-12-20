@@ -28,6 +28,13 @@ public class ReviewCRUD
         implements QueryReview {
 
     /**
+     * Costruttore 
+     */
+    public ReviewCRUD(){
+        
+    }
+    
+    /**
      * Restituisce il numero di pagine di recensioni associate a un ristorante.
      *
      * <p>
@@ -235,14 +242,11 @@ public class ReviewCRUD
     }
 
     /**
-     * Modifica una recensione esistente dell'utente per un ristorante.
+     * Cancella una recensione esistente dell'utente.
      *
      * @param userId ID dell'utente autore
      * @param restId ID del ristorante
-     * @param stars nuovo numero di stelle
-     * @param text nuovo testo della recensione
-     * @return {@code true} se la modifica è avvenuta correttamente
-     *
+     * @return {@code true} se la modifica è avvenuta correttamente     *
      * @throws SQLException errore SQL
      * @throws InterruptedException thread interrotto
      */

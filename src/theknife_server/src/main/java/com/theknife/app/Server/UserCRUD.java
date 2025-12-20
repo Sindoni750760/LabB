@@ -25,7 +25,15 @@ import java.util.ArrayList;
  *     <li>metodi di utilità per query di conteggio</li>
  * </ul>
  */
-public class UserCRUD extends GenericCRUD {
+public class UserCRUD 
+    extends GenericCRUD {
+
+    /**
+     * Costruttore 
+     */
+    public UserCRUD(){
+        
+    }   
 
     /**
      * Inserisce un nuovo utente nella tabella {@code utenti}.
