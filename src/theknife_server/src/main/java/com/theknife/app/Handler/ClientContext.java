@@ -34,9 +34,6 @@ import java.nio.charset.StandardCharsets;
  */
 public class ClientContext {
 
-    /** Socket della connessione client-server. */
-    private final Socket socket;
-    
     /** Reader usato per ricevere messaggi testuali dal client. */
     private final BufferedReader in;
     
@@ -67,7 +64,6 @@ public class ClientContext {
      * @throws IOException se non è possibile ottenere gli stream di I/O
      */
     public ClientContext(Socket socket) throws IOException {
-        this.socket = socket;
         this.in = new BufferedReader(
                 new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8)
         );
