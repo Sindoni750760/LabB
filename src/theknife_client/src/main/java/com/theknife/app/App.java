@@ -7,7 +7,8 @@ import java.io.FileWriter;
 import java.util.Scanner;
 
 /**
- * Classe di avvio dell'applicazione JavaFX.
+ * Classe di avvio dell'applicazione JavaFX
+ * Fornisce l'entry-point grafico dell'applicazione grafica client JavaFX.
  *
  * <p>Responsabilità principali:</p>
  * <ul>

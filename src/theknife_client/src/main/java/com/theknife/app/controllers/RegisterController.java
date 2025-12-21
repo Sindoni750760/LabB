@@ -17,7 +17,7 @@ import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 
 /**
- * Controller della schermata di registrazione utente.
+ * Controller dedicato alla registrazione utente.
  *
  * <p>Consente di:</p>
  * <ul>
@@ -27,6 +27,10 @@ import javafx.scene.control.TextField;
  *     <li>gestire le risposte ricevute dal backend</li>
  * </ul>
  *
+ * <p> La separazione dal {@link LoginController} consente di mantenere
+ * distinata la logica di validazione e invio dati di registrazione
+ * </p>
+ * 
  * <p>Implementa {@link OnlineChecker} per il fallback automatico
  * in caso di server non raggiungibile.</p>
  */

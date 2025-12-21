@@ -4,8 +4,12 @@ import java.io.IOException;
 
 /**
  * Classe statica che gestisce lo stato dell'utente attualmente autenticato nel client.
- *
- * <p>Fornisce funzionalità per:</p>
+ * <p>
+ * Questa classe viene utilizzata esclusivamente per mantenere lo stato dell'utente
+ * autenticato all'interno dell'interfaccia grafica
+ * </p>
+ * 
+ * <p>Funzionalità principali:</p>
  * <ul>
  *     <li>eseguire il login e memorizzare le informazioni utente</li>
  *     <li>effettuare logout locale e remoto</li>

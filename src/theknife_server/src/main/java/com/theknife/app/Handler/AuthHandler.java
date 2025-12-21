@@ -24,7 +24,7 @@ import com.theknife.app.User;
  *     <li>il protocollo di comunicazione lato socket fornito da {@link ClientContext}</li>
  *     <li>le logiche di business utente, incapsulate in {@link User}</li>
  * </ul>
- *
+ * 
  * <p>
  * La classe è un singleton e deve essere recuperata tramite {@link #getInstance()}.
  * </p>
