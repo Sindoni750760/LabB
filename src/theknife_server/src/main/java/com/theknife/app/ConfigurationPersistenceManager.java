@@ -89,9 +89,12 @@ public abstract class ConfigurationPersistenceManager {
                 System.out.print("Password DB: ");
                 String pass = scanner.nextLine();
 
+                // Crittografa la password usando SecurityManager
+                String encryptedPassword = SecurityManager.getInstance().hashPassword(pass);
+
                 pw.println("jdbc_url=jdbc:postgresql://" + host + ":5432/" + dbName);
                 pw.println("username=" + user);
-                pw.println("password=" + pass);
+                pw.println("password=" + encryptedPassword);
 
                 System.out.println("[CONFIG] File connection.ini creato/ricreato correttamente in:");
                 System.out.println("       " + iniFile.getAbsolutePath());
