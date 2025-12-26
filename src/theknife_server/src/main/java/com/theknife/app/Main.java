@@ -1,8 +1,6 @@
 package com.theknife.app;
 
 import java.io.File;
-import java.io.FileWriter;
-import java.io.PrintWriter;
 import java.util.Scanner;
 
 /**
@@ -74,56 +72,24 @@ public class Main {
 
         int port = 12345; // Porta TCP del server
 
-        System.out.println("[MAIN] Avvio bootstrap server...");
+        System.out.println("[MAIN] Avvio server...");
 
-        // Scanner unico per tutta l'applicazione
         try (Scanner scanner = new Scanner(System.in)) {
 
-            // --- Individuazione directory LabB ---
+            //Individuazione directory LabB
             File labbRoot = ConnectionManager.findLabBRoot();
             if (labbRoot == null) {
                 System.err.println("[MAIN] ERRORE: impossibile individuare la cartella 'LabB'.");
                 return;
             }
 
-            File iniFile = new File(labbRoot, "connection.ini");
-
-            // --- Prima esecuzione: creazione connection.ini ---
-            if (!iniFile.exists()) {
-                System.out.println("[MAIN] Prima esecuzione: configurazione database richiesta.");
-
-                try (PrintWriter pw = new PrintWriter(new FileWriter(iniFile))) {
-
-                    System.out.print("Host DB (default: localhost): ");
-                    String host = scanner.nextLine().trim();
-                    if (host.isEmpty()) host = "localhost";
-
-                    System.out.print("Nome database (default: theknife): ");
-                    String dbName = scanner.nextLine().trim();
-                    if (dbName.isEmpty()) dbName = "theknife";
-
-                    System.out.print("Username DB (default: postgres): ");
-                    String user = scanner.nextLine().trim();
-                    if (user.isEmpty()) user = "postgres";
-
-                    System.out.print("Password DB: ");
-                    String pass = scanner.nextLine();
-
-                    pw.println("jdbc_url=jdbc:postgresql://" + host + ":5432/" + dbName);
-                    pw.println("username=" + user);
-                    pw.println("password=" + pass);
-
-                    System.out.println("[MAIN] File connection.ini creato correttamente in:");
-                    System.out.println("       " + iniFile.getAbsolutePath());
-
-                } catch (Exception e) {
-                    System.err.println("[MAIN] ERRORE durante la configurazione del database.");
-                    e.printStackTrace();
-                    return;
-                }
+            // --- Gestione persistenza configuration.ini ---
+            if (!ConfigurationPersistenceManager.ensureConfigurationExists(labbRoot, scanner)) {
+                System.err.println("[MAIN] ERRORE: impossibile configurare il database.");
+                return;
             }
 
-            // --- Inizializzazione DB (BLOCCANTE) ---
+            //Inizializzazione DB (BLOCCANTE)
             try {
                 ConnectionManager.getInstance();
             } catch (RuntimeException e) {
@@ -131,7 +97,7 @@ public class Main {
                 return;
             }
 
-            // --- Avvio Server ---
+            //Avvio Server
             ServerApplication server = ServerApplication.getInstance();
 
             System.out.println("[MAIN] Avvio del server...");
@@ -144,7 +110,7 @@ public class Main {
             System.out.println("[MAIN] Server avviato sulla porta " + port);
             System.out.println("[MAIN] Digita 'quit', 'exit' o 'stop' per arrestarlo.");
 
-            // --- Loop comandi amministrativi ---
+            //Loop comandi amministrativi
             while (true) {
                 String cmd = scanner.nextLine();
 
@@ -157,7 +123,7 @@ public class Main {
                 System.out.println("[MAIN] Comando sconosciuto: " + cmd);
             }
 
-            // --- Arresto Server ---
+            //Arresto Server
             System.out.println("[MAIN] Arresto del server...");
             server.stop();
             System.out.println("[MAIN] Server terminato correttamente.");

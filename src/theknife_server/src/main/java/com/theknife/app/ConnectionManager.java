@@ -98,14 +98,19 @@ public class ConnectionManager {
     }
 
     /**
-     * Ricerca la cartella {@code LabB} risalendo progressivamente
-     * dai percorsi parent della working directory corrente.
+     * Ricerca la cartella radice del progetto, la quale avviene nel seguente modo:
+     * <ol>
+     *     <li>Cerca una cartella denominata {@code LabB}</li>
+     *     <li>Se la ricerca primaria fallisce, ricerca un file {@code pom.xml} (indicatore di radice Maven)</li>
+     *     <li>Utilizza la working directory corrente come fallback</li>
+     * </ol>
      *
      * @return la directory radice del progetto oppure {@code null}
      */
     static File findLabBRoot() {
         File current = new File(System.getProperty("user.dir"));
 
+        // Strategia 1: Ricerca della cartella denominata "LabB"
         while (current != null) {
             if ("LabB".equalsIgnoreCase(current.getName()))
                 return current;
@@ -116,15 +121,45 @@ public class ConnectionManager {
 
             current = current.getParentFile();
         }
-        return null;
+
+        // Strategia 2: Ricerca della radice Maven (file pom.xml)
+        current = new File(System.getProperty("user.dir"));
+        while (current != null) {
+            File pomFile = new File(current, "pom.xml");
+            if (pomFile.exists() && pomFile.isFile()) {
+                System.out.println("[DB] Cartella 'LabB' non trovata. Utilizzo della radice Maven: " + current.getAbsolutePath());
+                return current;
+            }
+            current = current.getParentFile();
+        }
+
+        // Strategia 3: Fallback alla working directory corrente
+        File workingDir = new File(System.getProperty("user.dir"));
+        System.out.println("[DB] AVVERTENZA: Utilizzo della working directory come radice: " + workingDir.getAbsolutePath());
+        return workingDir;
     }
 
     /**
      * Carica i parametri di connessione dal file {@code connection.ini}.
+     * Se il file è stato cancellato, viene ricreato automaticamente.
      *
      * @throws RuntimeException se il file è danneggiato o incompleto
      */
     private void loadIni() {
+        // Verifica se il file è stato cancellato durante l'esecuzione
+        if (!iniFile.exists()) {
+            System.out.println("[DB] AVVERTENZA: connection.ini non trovato. Tentativo di ricreazione...");
+            
+            // Tenta di ricrearlo con i valori precedenti se disponibili
+            if (!ConfigurationPersistenceManager.isConfigurationValid(iniFile)) {
+                // Se non è possibile ricrearlo, il metodo lancerà un'eccezione
+                throw new RuntimeException(
+                    "connection.ini è stato cancellato e non può essere ricreato automaticamente. " +
+                    "Avviare nuovamente il server per riconfigurare il database."
+                );
+            }
+        }
+        
         Properties prop = new Properties();
 
         try (FileInputStream fis = new FileInputStream(iniFile)) {
@@ -162,5 +197,31 @@ public class ConnectionManager {
         if (c != null) {
             try { c.close(); } catch (SQLException ignored) {}
         }
+    }
+
+    /**
+     * Ricrea il file {@code connection.ini} se è stato cancellato,
+     * utilizzando i parametri di configurazione attualmente caricati.
+     *
+     * <p>Questo metodo assicura la persistenza della configurazione
+     * anche se il file viene eliminato durante l'esecuzione del server.</p>
+     *
+     * @return {@code true} se il file è stato ricreato correttamente,
+     *         {@code false} altrimenti
+     */
+    public synchronized boolean restorePersistentConfiguration() {
+        File labbRoot = findLabBRoot();
+        
+        if (labbRoot == null) {
+            System.err.println("[DB] ERRORE: cartella 'LabB' non trovata per ripristino configurazione.");
+            return false;
+        }
+
+        return ConfigurationPersistenceManager.recreateConfigurationWithValues(
+            labbRoot, 
+            this.jdbcUrl, 
+            this.username, 
+            this.password
+        );
     }
 }
