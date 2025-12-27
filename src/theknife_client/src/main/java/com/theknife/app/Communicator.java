@@ -123,8 +123,9 @@ public class Communicator {
     */
     public static boolean send(String msg){
         try {
-            ClientLogger.getInstance().info("Communicator.send() - Sending: " + msg);
-            writer.write(msg + "\n");
+            String escapeMsg = msg.replaceAll("\n", " /$%/ ");
+            ClientLogger.getInstance().info("Communicator.send() - Sending: " + escapeMsg);
+            writer.write(escapeMsg + "\n");
             writer.flush();
             return true;
 
@@ -149,15 +150,16 @@ public class Communicator {
     public static String read(){
         try {
             String msg = reader.readLine();
+            String escapeMsg = msg.replaceAll("/$%/", "\n");
             ClientLogger.getInstance().info("Communicator.read() - Received: " + msg);
 
-            if (msg == null) {
+            if (escapeMsg == null) {
                 serverReachable = false;
                 close();
                 return null;
             }
 
-            return msg;
+            return escapeMsg;
 
         } catch (IOException e) {
             ClientLogger.getInstance().error("Communicator.read() - Error: " + e.getMessage());
@@ -166,7 +168,6 @@ public class Communicator {
             return null;
         }
     }
-
 
     /**
      * Invio di più messaggi consecutivi con attesa di un'unica risposta finale.
