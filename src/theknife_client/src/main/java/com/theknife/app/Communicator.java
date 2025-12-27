@@ -121,9 +121,9 @@ public class Communicator {
      * @param msg messaggio da inviare
      * @return {@code true} se l'invio è andato a buon fine, {@code false} se si verifica errore
     */
-    public static boolean send(String msg){
+    public static boolean send(String msg) {
         try {
-            String escapeMsg = msg.replaceAll("\n", " /$%/ ");
+            String escapeMsg = msg.replace("\n", " /$%/ ");
             ClientLogger.getInstance().info("Communicator.send() - Sending: " + escapeMsg);
             writer.write(escapeMsg + "\n");
             writer.flush();
@@ -147,19 +147,18 @@ public class Communicator {
      *
      * @return stringa letta dal server oppure {@code null} se il server è disconnesso
     */
-    public static String read(){
+    public static String read() {
         try {
             String msg = reader.readLine();
-            String escapeMsg = msg.replaceAll("/$%/", "\n");
-            ClientLogger.getInstance().info("Communicator.read() - Received: " + msg);
-
-            if (escapeMsg == null) {
+            if (msg == null) {
                 serverReachable = false;
                 close();
                 return null;
             }
-
-            return escapeMsg;
+            
+            ClientLogger.getInstance().info("Communicator.read() - Received: " + msg);
+            String unescapeMsg = msg.replace(" /$%/ ", "\n");
+            return unescapeMsg;
 
         } catch (IOException e) {
             ClientLogger.getInstance().error("Communicator.read() - Error: " + e.getMessage());
