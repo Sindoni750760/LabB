@@ -27,6 +27,14 @@ import java.util.Scanner;
 public abstract class ConfigurationPersistenceManager {
 
     /**
+     * Costruttore privato
+     */
+    private ConfigurationPersistenceManager(){
+
+    }
+
+
+    /**
      * Verifica l'esistenza e l'integrità del file {@code connection.ini}.
      * Se il file è mancante, lo ricrea interattivamente.
      *

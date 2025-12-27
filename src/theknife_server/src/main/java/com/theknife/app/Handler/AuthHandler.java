@@ -273,6 +273,7 @@ public class AuthHandler implements CommandHandler {
 
     /**
      * Metodo di debug che restituisce il numero di utenti attualmente loggati
+     * @return il numero di utenti che hanno effettuato il login
      */
     public static int getLoggedInUsersCount(){
         synchronized(loggedInUserIds){
