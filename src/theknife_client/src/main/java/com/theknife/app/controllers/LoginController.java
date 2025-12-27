@@ -126,6 +126,11 @@ public class LoginController implements OnlineChecker {
                 ClientLogger.getInstance().warning("Login failed: incorrect password for user - " + username.getText());
                 setNotification("Password errata");
                 return;
+            
+            case "already_logged_in":
+                ClientLogger.getInstance().warning("Login failed: user already logged in - " + username.getText());
+                setNotification("Utente già connesso da un altro client. Disconnettersi dall'altro client per potersi collegare");
+                return;
 
             default:
                 ClientLogger.getInstance().error("Unexpected login response: " + response);

@@ -93,6 +93,11 @@ public class ClientThread extends Thread {
         } catch (Exception e) {
             System.out.println("[Client " + socket.getInetAddress() + "] Disconnected");
         } finally {
+            int userId = ctx.getLoggedUserId();
+            if(userId > 0){
+                AuthHandler.handleClientDisconnect(userId);
+            }
+
             close();
             try{
                 socket.close();

@@ -2,6 +2,10 @@ package com.theknife.app.Handler;
 
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+
 import com.theknife.app.User;
 
 /**
@@ -34,6 +38,8 @@ public class AuthHandler implements CommandHandler {
 
     /** Istanza singleton dell'AuthHandler. */
     private static AuthHandler instance = null;
+
+    private static final Set<Integer> loggedInUserIds = Collections.synchronizedSet(new HashSet<>());
 
     /**
      * Restituisce l'unica istanza dell'handler.
@@ -139,6 +145,15 @@ public class AuthHandler implements CommandHandler {
             return;
         }
 
+        synchronized(loggedInUserIds){
+            if(loggedInUserIds.contains(id)){
+                ctx.write("already_logged_in");
+                return;
+            }
+
+            loggedInUserIds.add(id);
+        }
+
         ctx.setLoggedUserId(id);
         ctx.write("ok");
     }
@@ -186,6 +201,14 @@ public class AuthHandler implements CommandHandler {
      * Invalida la sessione associata alla socket, azzerando {@code userId}.
     */
     private void handleLogout(ClientContext ctx) throws IOException {
+        int userId = ctx.getLoggedUserId();
+
+        if(userId > 0){
+            synchronized (loggedInUserIds){
+                loggedInUserIds.remove(userId);
+            }
+        }
+        
         ctx.setLoggedUserId(-1);
         ctx.write("ok");
     }
@@ -234,6 +257,27 @@ public class AuthHandler implements CommandHandler {
         ctx.write(info[0]); 
         ctx.write(info[1]); 
         ctx.write(info[2]); 
+    }
+    /**
+     * Metodo statico per gestire disconnessioni improvvise,
+     * richiamato quando un client si disconnette senza fare logout
+     * @param userId Id dell'utente attualmente loggato
+     */
+    public static void handleClientDisconnect(int userId){
+        if(userId > 0){
+            synchronized(loggedInUserIds){
+                loggedInUserIds.remove(userId);
+            }
+        }
+    }
+
+    /**
+     * Metodo di debug che restituisce il numero di utenti attualmente loggati
+     */
+    public static int getLoggedInUsersCount(){
+        synchronized(loggedInUserIds){
+            return loggedInUserIds.size();
+        }
     }
 }
 
