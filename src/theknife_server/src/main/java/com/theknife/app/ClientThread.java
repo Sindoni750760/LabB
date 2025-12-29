@@ -97,11 +97,8 @@ public class ClientThread extends Thread {
             if(userId > 0){
                 AuthHandler.handleClientDisconnect(userId);
             }
-
-            close();
-            try{
-                socket.close();
-            }catch(IOException ignored){}
+            shutdown();
+            ServerApplication.getInstance().removeClient(this);
         }
     }
 
@@ -142,6 +139,7 @@ public class ClientThread extends Thread {
 
             if (!handled) {
                 ctx.write("unknown_command");
+                return;
             }
         }
     }
@@ -179,8 +177,6 @@ public class ClientThread extends Thread {
      */
     public void shutdown(){
         running = false;
-        try{
-            socket.close();
-        }catch(IOException ignored){}
+        close();
     }
 }

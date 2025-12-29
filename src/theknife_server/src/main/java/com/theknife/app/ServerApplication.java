@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -57,7 +58,7 @@ public class ServerApplication {
      * Costruttore privato per garantire l'unicità dell'istanza.
      */
     private ServerApplication() {
-        clients = new ArrayList<>();
+        clients = Collections.synchronizedList(new ArrayList<>());
     }
 
     /**
@@ -190,6 +191,15 @@ public class ServerApplication {
         }
 
         log.info("Server arrestato correttamente.");
+    }
+
+    /**
+     * Metodo che effettua la disconnessione del client dal server
+     * 
+     * @param client il client che deve essere disocnnesso
+     */
+    public void removeClient(ClientThread client){
+        clients.remove(client);
     }
 
     /**

@@ -132,6 +132,7 @@ public class Communicator {
         } catch (IOException e) {
             ClientLogger.getInstance().error("Communicator.send() - Error: " + e.getMessage());
             serverReachable = false;
+            close();
             return false;
         }
     }
@@ -183,8 +184,9 @@ public class Communicator {
     */
 
     public static String request(String... args) throws IOException {
-        if (!serverReachable)
-            throw new IOException("Server offline");
+        if (!serverReachable){
+            return null;
+        }
 
         for (String s : args)
             send(s);
