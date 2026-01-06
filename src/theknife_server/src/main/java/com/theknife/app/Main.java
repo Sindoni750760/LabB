@@ -1,95 +1,86 @@
 package com.theknife.app;
 
-import java.io.File;
 import java.util.Scanner;
 
 /**
  * Entry-point dell'applicazione server.
+ *
  * <p>
- * Questa classe avvia il server principale e rimane in ascolto
- * sulla console per ricevere comandi amministrativi.
+ * La classe {@code Main} rappresenta il punto di ingresso dell'applicazione
+ * lato server e coordina l'intero processo di avvio controllato del sistema.
  * </p>
  *
- * <p>I comandi supportati sono:</p>
+ * <p>
+ * In particolare, questa classe si occupa di:
+ * </p>
  * <ul>
- *     <li><b>quit</b> - arresta il server</li>
- *     <li><b>exit</b> - arresta il server</li>
- *     <li><b>stop</b> - arresta il server</li>
+ *     <li>verificare la presenza del file di configurazione {@code connection.ini}</li>
+ *     <li>richiedere interattivamente le credenziali di accesso al database al primo avvio</li>
+ *     <li>inizializzare il {@link ConnectionManager}</li>
+ *     <li>avviare l'applicazione server tramite {@link ServerApplication}</li>
+ *     <li>gestire comandi amministrativi da console</li>
  * </ul>
  *
  * <p>
- * Al primo avvio del server viene richiesta all'amministratore
- * la configurazione di accesso al database PostgreSQL, che viene
- * salvata nel file {@code connection.ini} nella directory {@code LabB}.
- * </p>
- *
- * <p>
- * Il server viene avviato solo dopo che la configurazione del database
+ * Il server viene avviato esclusivamente se la configurazione del database
  * è stata correttamente caricata e validata.
  * </p>
  *
- * Il server viene avviato sulla porta predefinita 12345.
+ * <p>
+ * Porta TCP di default: <b>12345</b>.
+ * </p>
  *
  * @author
  *     Mattia Sindoni 750760 VA<br>
  *     Erica Faccio 751654 VA<br>
  *     Giovanni Isgrò 753536 VA
  */
-public class Main {
-    /**
-     * Costruttore privato per impedire l'istanziazione della classe.
-     * 
-     * <p>
-     * La classe {@code Main} è utilizzata esclusivamente come entry-point dell'applicazione server e non deve essere istanziata
-     * </p>
-     */
-    private Main(){
 
-    }
+public final class Main {
 
     /**
-     * Metodo principale di avvio del server.
-     * <p>
-     * Responsabilità del metodo:
-     * </p>
-     * <ul>
-     *     <li>individuare la directory {@code LabB}</li>
-     *     <li>verificare l'esistenza del file {@code connection.ini}</li>
-     *     <li>richiedere le credenziali DB al primo avvio</li>
-     *     <li>inizializzare il {@link ConnectionManager}</li>
-     *     <li>avviare il server tramite {@link ServerApplication}</li>
-     *     <li>gestire comandi amministrativi da console</li>
-     * </ul>
+     * Costruttore privato.
      *
      * <p>
-     * Il metodo resta in ascolto sulla console finché l’utente
-     * non digita uno dei comandi di terminazione.
+     * Impedisce l'istanziazione della classe {@code Main}, che è utilizzata
+     * esclusivamente come entry-point dell'applicazione.
      * </p>
-     *
-     * @param args argomenti da linea di comando (ignorati)
      */
+    private Main() { }
+
+    /**
+     * Metodo principale di avvio dell'applicazione server.
+     *
+     * <p>
+     * Il metodo esegue le seguenti operazioni, in ordine sequenziale:
+     * </p>
+     * <ol>
+     *     <li>verifica e/o crea il file {@code connection.ini}</li>
+     *     <li>inizializza il {@link ConnectionManager}</li>
+     *     <li>avvia il server sulla porta TCP configurata</li>
+     *     <li>rimane in ascolto di comandi amministrativi da console</li>
+     * </ol>
+     *
+     * <p>
+     * L'esecuzione del metodo è bloccante fino alla ricezione di un comando
+     * di terminazione.
+     * </p>
+     *
+     * @param args argomenti da linea di comando (non utilizzati)
+     */
+
     public static void main(String[] args) {
 
-        int port = 12345; // Porta TCP del server
-
+        final int port = 12345;
         System.out.println("[MAIN] Avvio server...");
 
         try (Scanner scanner = new Scanner(System.in)) {
 
-            //Individuazione directory LabB
-            File labbRoot = ConnectionManager.findLabBRoot();
-            if (labbRoot == null) {
-                System.err.println("[MAIN] ERRORE: impossibile individuare la cartella 'LabB'.");
+            if (!ConfigurationPersistenceManager.ensureConfigurationExists(scanner)) {
+                System.err.println("[MAIN] ERRORE: configurazione database non valida.");
                 return;
             }
 
-            // --- Gestione persistenza configuration.ini ---
-            if (!ConfigurationPersistenceManager.ensureConfigurationExists(labbRoot, scanner)) {
-                System.err.println("[MAIN] ERRORE: impossibile configurare il database.");
-                return;
-            }
-
-            //Inizializzazione DB (BLOCCANTE)
             try {
                 ConnectionManager.getInstance();
             } catch (RuntimeException e) {
@@ -97,11 +88,7 @@ public class Main {
                 return;
             }
 
-            //Avvio Server
             ServerApplication server = ServerApplication.getInstance();
-
-            System.out.println("[MAIN] Avvio del server...");
-
             if (!server.start(port)) {
                 System.err.println("[MAIN] ERRORE: impossibile avviare il server.");
                 return;
@@ -110,24 +97,19 @@ public class Main {
             System.out.println("[MAIN] Server avviato sulla porta " + port);
             System.out.println("[MAIN] Digita 'quit', 'exit' o 'stop' per arrestarlo.");
 
-            //Loop comandi amministrativi
             while (true) {
                 String cmd = scanner.nextLine();
-
                 if (cmd.equalsIgnoreCase("quit")
                         || cmd.equalsIgnoreCase("exit")
                         || cmd.equalsIgnoreCase("stop")) {
                     break;
                 }
-
                 System.out.println("[MAIN] Comando sconosciuto: " + cmd);
             }
 
-            //Arresto Server
             System.out.println("[MAIN] Arresto del server...");
             server.stop();
             System.out.println("[MAIN] Server terminato correttamente.");
-
         }
     }
 }
