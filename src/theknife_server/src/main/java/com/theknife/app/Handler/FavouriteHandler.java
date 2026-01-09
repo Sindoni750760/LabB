@@ -75,6 +75,7 @@ public class FavouriteHandler implements CommandHandler {
             case "isFavourite"     -> { handleIsFavourite(ctx); return true; }
             case "addFavourite"    -> { handleAddFavourite(ctx); return true; }
             case "removeFavourite" -> { handleRemoveFavourite(ctx); return true; }
+            case "getFavourites" -> {handleGetFavourites(ctx); return true;}
             default -> { return false; }
         }
     }
@@ -161,5 +162,39 @@ public class FavouriteHandler implements CommandHandler {
 
         boolean ok = db.removeFavourite(ctx.getLoggedUserId(), restId);
         ctx.write(ok ? "ok" : "error");
+    }
+    /**
+     * Gestisce il comando {@code getFavourites}
+     * <p>
+     * Restituisce tutti i ristoranti preferiti dell'utente autenticato
+     * Il formato di risposta è simile a {@code getRestaurants}
+     * </p>
+     * @param ctx contesto di sessione del client
+     * @throws IOException errori di comunicazione
+     * @throws SQLException errori di accesso ai dati
+     * @throws InterruptedException gestione concorrenza
+     */
+    private void handleGetFavourites(ClientContext ctx)
+    throws IOException, SQLException, InterruptedException{
+        int page;
+        try{
+            page = Integer.parseInt(ctx.read());
+        }catch(NumberFormatException e){
+            ctx.write("error");
+            return;
+        }
+        int userId = ctx.getLoggedUserId();
+        
+        int pages = db.getFavouritesPages(userId);
+        String[][] favourites = db.getFavourites(userId, page);
+
+        ctx.write("ok");
+        ctx.write(String.valueOf(pages));
+        ctx.write(String.valueOf(favourites.length));
+
+        for(String[] fav: favourites){
+            ctx.write(fav[0]);
+            ctx.write(fav[1]);
+        }
     }
 }

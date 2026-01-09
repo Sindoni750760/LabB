@@ -23,6 +23,9 @@ import java.sql.*;
 public class FavouriteCRUD
         extends GenericCRUD
         implements QueryFavourite {
+    
+    private static final int PAGE_SIZE = 10;
+
 
     /**
      * Costruttore 
@@ -130,6 +133,75 @@ public class FavouriteCRUD
             ps.setInt(2, restId);
 
             return ps.executeUpdate() == 1;
+        }
+    }
+    /**
+     * Calcola il numero di pagine dei ristoranti preferiti di un utente.
+     *
+     * @param userId id dell'utente
+     * @return numero di pagine (arrotondato per eccesso)
+     * @throws SQLException in caso di errore SQL
+     * @throws InterruptedException in caso di interruzione del thread
+     */
+    public int getFavouritesPages(int userId) throws SQLException, InterruptedException{
+        String sql = """
+                SELECT COUNT(*)
+                FROM preferiti
+                WHERE id_utente = ?
+                """;
+        try(Connection conn = connMgr.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
+            ps.setInt(1, userId);
+
+            try(ResultSet rs = ps.executeQuery()){
+                if(rs.next()){
+                    int count = rs.getInt(1);
+                    return (int) Math.ceil((double) count / PAGE_SIZE);
+                }
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * Recupera i ristoranti preferiti di un utente con paginazione.
+     *
+     * @param userId id dell'utente
+     * @param page numero di pagina (0-based)
+     * @return matrice di stringhe [id_ristorante, nome_ristorante]
+     * @throws SQLException in caso di errore SQL
+     * @throws InterruptedException in caso di interruzione del thread
+     */
+    public String[][] getFavourites(int userId, int page) throws SQLException, InterruptedException {
+        int offset = page * PAGE_SIZE;
+        
+        String sql = """
+            SELECT r.id, r.nome
+            FROM preferiti p
+            JOIN "RistorantiTheKnife" r ON p.id_ristorante = r.id
+            WHERE p.id_utente = ?
+            ORDER BY r.nome
+            LIMIT ? OFFSET ?
+        """;
+
+        try (Connection conn = connMgr.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, userId);
+            ps.setInt(2, PAGE_SIZE);
+            ps.setInt(3, offset);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                java.util.List<String[]> results = new java.util.ArrayList<>();
+                
+                while (rs.next()) {
+                    String[] row = new String[2];
+                    row[0] = String.valueOf(rs.getInt("id"));
+                    row[1] = rs.getString("nome");
+                    results.add(row);
+                }
+                
+                return results.toArray(new String[0][0]);
+            }
         }
     }
 }

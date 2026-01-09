@@ -68,13 +68,9 @@ public class FavouriteController implements OnlineChecker {
     }
 
     /**
-     * Carica la lista di ristoranti preferiti utilizzando il protocollo
-     * {@code getRestaurants} con filtro esclusivo sulle preferenze dell'utente.
-     * <br>Aggiorna la lista visibile nella UI.
-     *
-     * <p>In caso di disconnessione o risposta inconsistente da parte del server,
-     * invoca il fallback.</p>
-     *
+     * Carica la lista di ristoranti preferiti utilizzando il comando
+     * {@code getFavourites} che ottiene direttamente i preferiti dell'utente.
+     * 
      * @throws IOException se la comunicazione con il server fallisce
      */
     private void loadFavorites() throws IOException {
@@ -85,34 +81,21 @@ public class FavouriteController implements OnlineChecker {
         remove_btn.setDisable(true);
         view_btn.setDisable(true);
 
-        Communicator.send("getRestaurants");
-        Communicator.send("0");          // page
-        Communicator.send("all");        // mode
-        Communicator.send("-");          // first
-        Communicator.send("-");          // second
-        Communicator.send("-");          // range
-        Communicator.send("-");          // price min
-        Communicator.send("-");          // price max
-        Communicator.send("-");          // category
-        Communicator.send("n");          // delivery filter
-        Communicator.send("n");          // online filter
-        Communicator.send("-");          // stars min
-        Communicator.send("-");          // stars max
-        Communicator.send("y");          // ONLY FAVOURITES !!!
+        // Usa il nuovo comando specifico per i preferiti
+        String response = Communicator.request("getFavourites", "0"); // pagina 0
 
-        String resp = Communicator.read();
-        if (resp == null) {
+        if ("SERVER_OFFLINE".equals(response)) {
             fallback();
             return;
         }
 
-        if (!"ok".equals(resp)) {
+        if (!"ok".equals(response)) {
             notification_label.setVisible(true);
-            notification_label.setText("Errore dal server: " + resp);
+            notification_label.setText("Errore dal server: " + response);
             return;
         }
 
-        // pagine (non ci interessa)
+        // Leggi pagine (non usate ma necessarie per il protocollo)
         String pages = Communicator.read();
         String sizeStr = Communicator.read();
 

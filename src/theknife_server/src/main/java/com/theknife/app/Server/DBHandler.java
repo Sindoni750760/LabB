@@ -686,5 +686,44 @@ public final class DBHandler {
         } catch (Exception e) {
             throw new ServerException("Errore getUserInfo", e);
         }
-    }    
+    }
+     /**
+     * Restituisce il numero di pagine dei ristoranti preferiti dell'utente.
+     *
+     * <p>
+     * Delega l'operazione al metodo
+     * {@link FavouriteCRUD#getFavouritesPages(int)}.
+     * </p>
+     *
+     * @param userId id dell'utente
+     * @return numero di pagine disponibili
+     * @throws ServerException in caso di errore di accesso ai dati
+     */
+    public int getFavouritesPages(int userId){
+        try{
+            return favouriteCRUD.getFavouritesPages(userId);
+        }catch(Exception e){
+            throw new ServerException("Errore getFavouritesPages", e);
+        }
+    }
+     /**
+     * Recupera i ristoranti preferiti dell'utente per una specifica pagina.
+     *
+     * <p>
+     * Delega l'operazione al metodo
+     * {@link FavouriteCRUD#getFavourites(int, int)}.
+     * </p>
+     *
+     * @param userId id dell'utente
+     * @param page numero di pagina richiesta
+     * @return matrice contenente i ristoranti preferiti
+     * @throws ServerException in caso di errore di accesso ai dati
+     */
+    public String[][] getFavourites(int userId, int page) {
+        try {
+            return favouriteCRUD.getFavourites(userId, page);
+        } catch (Exception e) {
+            throw new ServerException("Errore getFavourites", e);
+        }
+    }
 }

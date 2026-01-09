@@ -4,6 +4,7 @@ import com.theknife.app.Handler.AuthHandler;
 import com.theknife.app.Handler.ClientContext;
 import com.theknife.app.Handler.CommandHandler;
 import com.theknife.app.Handler.DisconnectHandler;
+import com.theknife.app.Handler.FavouriteHandler;
 import com.theknife.app.Handler.RestaurantHandler;
 
 import java.io.IOException;
@@ -74,6 +75,7 @@ public class ClientThread extends Thread {
         handlers.add(AuthHandler.getInstance());
         handlers.add(RestaurantHandler.getInstance());
         handlers.add(DisconnectHandler.getInstance());
+        handlers.add(FavouriteHandler.getInstance());
 
         start();
     }

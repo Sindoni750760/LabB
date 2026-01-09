@@ -45,4 +45,23 @@ public interface QueryFavourite {
      * @throws Exception in caso di errore durante l'accesso ai dati
      */
     boolean removeFavourite(int userId, int restId) throws Exception;
+
+     /**
+     * Calcola il numero di pagine dei ristoranti preferiti di un utente.
+     *
+     * @param userId id dell'utente
+     * @return numero di pagine (arrotondato per eccesso)
+     * @throws Exception in caso di errore durante l'accesso ai dati
+     */
+    int getFavouritesPages(int userId) throws Exception;
+    
+    /**
+     * Recupera i ristoranti preferiti di un utente con paginazione.
+     *
+     * @param userId id dell'utente
+     * @param page numero di pagina (0-based)
+     * @return matrice di stringhe [id_ristorante, nome_ristorante]
+     * @throws Exception in caso di errore durante l'accesso ai dati
+     */
+    String[][] getFavourites(int userId, int page) throws Exception;
 }
