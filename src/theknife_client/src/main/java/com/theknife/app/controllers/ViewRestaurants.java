@@ -94,6 +94,9 @@ public class ViewRestaurants implements OnlineChecker {
         prev_btn.setDisable(true);
         next_btn.setDisable(true);
 
+        restaurants_listview.getSelectionModel()
+            .selectedIndexProperty()
+            .addListener((obs, oldVal, newVal) -> checkSelected());
         clearFilters();
     }
 
@@ -190,7 +193,7 @@ public class ViewRestaurants implements OnlineChecker {
         Communicator.send("getRestaurants");
         Communicator.send(Integer.toString(page));
 
-        Communicator.send(searchMode.equals("all") ? "all" : searchMode);
+        Communicator.send(searchMode);
         Communicator.send(field1);
         Communicator.send(field2);
 
@@ -328,7 +331,7 @@ public class ViewRestaurants implements OnlineChecker {
         field2_input.clear();
         field1 = "-";
         field2 = "-";
-
+        
         range_field.clear();
 
         price_min_field.clear();
@@ -416,6 +419,7 @@ public class ViewRestaurants implements OnlineChecker {
             searchPage(0);
         } catch (Exception e) {
             ClientLogger.getInstance().error("Failed to load all restaurants");
+            setNotification("Errore di connessione al server.");
         }
     }
 }

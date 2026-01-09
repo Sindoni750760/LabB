@@ -185,13 +185,16 @@ public class Communicator {
 
     public static String request(String... args) throws IOException {
         if (!serverReachable){
-            return null;
+            return "SERVER_OFFLINE";
         }
 
         for (String s : args)
-            send(s);
+            if(!send(s)){
+                return "SERVER_OFFLINE";
+            };
 
-        return read();
+        String response = read();
+        return response != null ? response : "SERVER_OFFLINE";
     }
 
 

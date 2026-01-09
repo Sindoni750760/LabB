@@ -92,13 +92,14 @@ public class ClientThread extends Thread {
             loop();
         } catch (Exception e) {
             System.out.println("[Client " + socket.getInetAddress() + "] Disconnected");
-        } finally {
-            int userId = ctx.getLoggedUserId();
-            if(userId > 0){
-                AuthHandler.handleClientDisconnect(userId);
+        }finally {
+            try {
+                DisconnectHandler.getInstance().handle("handler disconnesso", ctx);
+            } catch (Exception ignored) {
+            } finally {
+                close();
+                System.out.println("[Client " + socket.getInetAddress() + "] Cleaned up");
             }
-            shutdown();
-            ServerApplication.getInstance().removeClient(this);
         }
     }
 
@@ -139,7 +140,7 @@ public class ClientThread extends Thread {
 
             if (!handled) {
                 ctx.write("unknown_command");
-                return;
+                continue;
             }
         }
     }
