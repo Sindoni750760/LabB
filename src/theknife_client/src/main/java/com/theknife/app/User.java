@@ -33,6 +33,13 @@ public class User{
     /** Indica se l'utente autenticato è un ristoratore. */
     private static boolean isRestaurateur = false;
 
+    /**
+     * Costruttore
+     */
+    public User(){
+
+    }
+
      /**
      * Effettua il login presso il server usando il protocollo testuale.
      *
