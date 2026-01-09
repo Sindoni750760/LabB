@@ -122,17 +122,22 @@ public class Communicator {
      * @return {@code true} se l'invio è andato a buon fine, {@code false} se si verifica errore
     */
     public static boolean send(String msg) {
+        if (!serverReachable) {
+            return false;
+        }
+        
         try {
             String escapeMsg = msg.replace("\n", " /$%/ ");
             ClientLogger.getInstance().info("Communicator.send() - Sending: " + escapeMsg);
             writer.write(escapeMsg + "\n");
             writer.flush();
             return true;
-
         } catch (IOException e) {
             ClientLogger.getInstance().error("Communicator.send() - Error: " + e.getMessage());
             serverReachable = false;
             close();
+            // Notifica l'UI che il server è offline
+            notifyServerOffline();
             return false;
         }
     }
@@ -149,22 +154,30 @@ public class Communicator {
      * @return stringa letta dal server oppure {@code null} se il server è disconnesso
     */
     public static String read() {
+        if (!serverReachable) {
+            return null;
+        }
+        
         try {
             String msg = reader.readLine();
             if (msg == null) {
                 serverReachable = false;
                 close();
+                notifyServerOffline();
                 return null;
             }
             
             ClientLogger.getInstance().info("Communicator.read() - Received: " + msg);
             String unescapeMsg = msg.replace(" /$%/ ", "\n");
             return unescapeMsg;
-
+        } catch (java.net.SocketTimeoutException ste) {
+            ClientLogger.getInstance().alert("Communicator.read() - Timeout, server potrebbe essere offline");
+            return null;
         } catch (IOException e) {
             ClientLogger.getInstance().error("Communicator.read() - Error: " + e.getMessage());
             serverReachable = false;
             close();
+            notifyServerOffline();
             return null;
         }
     }
@@ -210,5 +223,19 @@ public class Communicator {
         try { if (socket != null && !socket.isClosed()) socket.close(); } catch (Exception ignored) {}
 
         serverReachable = false;
+    }
+
+    /**
+     * Notifica all'interfaccia utente che il server è offline
+     */
+    private static void notifyServerOffline() {
+        SwingUtilities.invokeLater(() -> {
+            JOptionPane.showMessageDialog(
+                null,
+                "Connessione al server persa.\nVerifica che il server sia attivo.",
+                "Server Offline",
+                JOptionPane.WARNING_MESSAGE
+            );
+        });
     }
 }

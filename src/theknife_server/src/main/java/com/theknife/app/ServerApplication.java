@@ -166,30 +166,49 @@ public class ServerApplication {
             log.warning("Stop ignorato: server non in esecuzione.");
             return;
         }
-
+        
         log.info("Arresto server in corso...");
         running.set(false);
-
+        
+        synchronized(clients) {
+            log.info("Interruzione di " + clients.size() + " client...");
+            for (ClientThread ct : clients) {
+                ct.shutdown();
+            }
+        }
+        
         try {
-            if (serverSocket != null)
+            if (serverSocket != null) {
                 serverSocket.close();
+            }
         } catch (IOException e) {
             log.error("Errore nella chiusura del socket principale: " + e.getMessage());
         }
-
-        synchronized(clients){
-            for(ClientThread ct : clients){
-                ct.shutdown();
+        
+        try {
+            Thread.sleep(2000); // 2 secondi di attesa
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        
+        synchronized(clients) {
+            for (ClientThread ct : clients) {
+                if (ct.isAlive()) {
+                    log.warning("Forzata interruzione di client thread rimasto vivo");
+                    ct.interrupt();
+                }
             }
             clients.clear();
         }
-
+        
         if (acceptThread != null) {
             try {
-                acceptThread.join();
-            } catch (InterruptedException ignored) {}
+                acceptThread.join(3000); // Aspetta al massimo 3 secondi
+            } catch (InterruptedException e) {
+                acceptThread.interrupt();
+            }
         }
-
+        
         log.info("Server arrestato correttamente.");
     }
 

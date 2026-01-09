@@ -8,6 +8,7 @@ import com.theknife.app.Handler.RestaurantHandler;
 
 import java.io.IOException;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -43,6 +44,8 @@ public class ClientThread extends Thread {
     /** Lista ordinata di handler registrati per l'elaborazione dei comandi. */
     private final List<CommandHandler> handlers = new ArrayList<>();
 
+    private static final int READ_TIMEOUT = 1000;
+
     private volatile boolean running = true;
 
     /**
@@ -65,6 +68,7 @@ public class ClientThread extends Thread {
      */
     public ClientThread(Socket socket) throws IOException {
         this.socket = socket;
+        this.socket.setSoTimeout(READ_TIMEOUT);
         this.ctx = new ClientContext(socket);
 
         handlers.add(AuthHandler.getInstance());
@@ -90,14 +94,19 @@ public class ClientThread extends Thread {
         System.out.println("[Client " + socket.getInetAddress() + "] Connected");
         try {
             loop();
+        } catch (InterruptedException e) {
+            // Thread interrotto esplicitamente
+            Thread.currentThread().interrupt(); // Ripristina il flag
         } catch (Exception e) {
-            System.out.println("[Client " + socket.getInetAddress() + "] Disconnected");
-        }finally {
+            System.out.println("[Client " + socket.getInetAddress() + "] Disconnected - " + e.getClass().getSimpleName());
+        } finally {
             try {
                 DisconnectHandler.getInstance().handle("handler disconnesso", ctx);
             } catch (Exception ignored) {
             } finally {
                 close();
+                // Rimuovi questo client dalla lista del server
+                ServerApplication.getInstance().removeClient(this);
                 System.out.println("[Client " + socket.getInetAddress() + "] Cleaned up");
             }
         }
@@ -122,24 +131,27 @@ public class ClientThread extends Thread {
      * @throws InterruptedException gestione operazioni concorrenti
      */
     private void loop() throws IOException, SQLException, InterruptedException {
-        while (running && ctx.isActive()) {
-            String cmd = ctx.read();
-            if (cmd == null) {
+        while(running && ctx.isActive()){
+            String cmd = null;
+            try{
+                cmd = ctx.read();
+            }catch(SocketTimeoutException e){
+                continue;
+            }
+            if(cmd == null){
                 break;
             }
 
             System.out.println("[Client " + socket.getInetAddress() + " IN] " + cmd);
-
             boolean handled = false;
-            for (CommandHandler h : handlers) {
-                if (h.handle(cmd, ctx)) {
+            for(CommandHandler h : handlers){
+                if(h.handle(cmd, ctx)){
                     handled = true;
                     break;
                 }
             }
-
-            if (!handled) {
-                ctx.write("unknown_command");
+            if(!handled){
+                ctx.write("unkown_command");
                 continue;
             }
         }
@@ -176,8 +188,15 @@ public class ClientThread extends Thread {
      * Dopo l'invocazione, il thread terminerà automaticamente il proprio ciclo di esecuzione
      * </p>
      */
-    public void shutdown(){
+    public void shutdown() {
         running = false;
+        // Imposta un timeout molto breve per sbloccare la lettura
+        try {
+            socket.setSoTimeout(100);
+        } catch (IOException ignored) {
+        }
+        // Interrompi il thread
+        this.interrupt();
         close();
     }
 }
